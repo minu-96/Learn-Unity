@@ -62,7 +62,7 @@ function renderMe(){
   <div class="note">수료 기준: 구간 문제의 ${PASS_SOLVED*100}% 이상을 해결하고, 푼 문제 중 ${PASS_SELF*100}% 이상은 정답을 보지 않고 풀기. 복습 유지율은 복습한 문제 중 기억이 이어지고 있는 비율이에요.</div>
   <div class="card" style="gap:6px"><b>분야별 현황</b><table class="tbl"><thead><tr><th>분야</th><th></th><th>해결</th><th>자력</th></tr></thead><tbody>${cats}</tbody></table></div>
   ${redo.length?`<div class="card" style="gap:6px"><b>다시 보면 좋은 문제</b><div class="note">여러 번 막혔거나 정답을 참고해서 푼 문제예요.</div>${redo.map(o=>`<button class="pc" data-p="${o.p.id}"><span class="t">${esc(o.p.title)}</span><span class="note">${esc(CATS.find(c=>c.id===o.p.cat).name)} · 시도 ${o.r.tries||0}</span></button>`).join('')}</div>`:''}</div>`;
- document.querySelectorAll('#main .pc').forEach(b=>b.onclick=()=>{const p=byId(b.dataset.p);V.cat=p.cat;V.tab='train';openProblem(p.id)});
+ document.querySelectorAll('#main .pc').forEach(b=>b.onclick=()=>openProblem(b.dataset.p));
 }
 
 /* ---------- 운영진 ---------- */

@@ -23,8 +23,11 @@ public/                 Firebase Hosting이 그대로 서비스하는 정적 사
   js/p_*.js             분야별 문제 (90개)
   js/practice.js        단계별 "Unity에서 직접 해보기"
   js/store.js           Firebase 어댑터 (설정이 없으면 게스트 모드)
+  js/lessons.js         단계별 짧은 개념 설명(핵심 3줄 + 예제 코드)
+  js/glossary.js        문제 속 용어를 누르면 뜻이 뜨는 용어 풀이
   js/views.js           로그인 · 내 기록 · 운영진 화면
-  js/ui.js              메인 UI
+  js/learn.js           오늘(홈) · 학습 지도 · 단계 화면
+  js/ui.js              상태·저장·복습·문제 화면
   js/firebase-config.js Firebase 웹 앱 설정 (배포 시 채움)
 firestore.rules         보안 규칙
 firebase.json           호스팅 + 규칙 설정

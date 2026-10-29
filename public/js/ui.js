@@ -10,8 +10,8 @@ function md(t){
 const VER=3;
 const DAY=86400000;
 const BOX_DAYS=[1,3,7,16,35];
-let S={v:VER,solved:{},dict:{},custom:[],drafts:{},review:{},practice:{}};
-let V={tab:'train',cat:'csharp',pid:null,mode:null};
+let S={v:VER,solved:{},dict:{},custom:[],drafts:{},review:{},practice:{},act:{},notes:{}};
+let V={tab:'home',cat:'csharp',pid:null,mode:null,tier:null,stage:null},liveTimer=0;
 let P=null; /* 현재 문제 화면의 임시 상태 */
 let me=null,guest=false,sample=null,saveTimer=0,saving=false,dirty=false,raf=0,aiCtl=null,draftTimer=0;
 const LS='unity-training-lab-v3';
@@ -25,7 +25,7 @@ function normalize(d){
  d=d||{};
  /* 예전 객관식 버전의 진행도는 문제가 달라져서 이어받지 않고, 개념 사전만 가져온다 */
  const fresh=d.v===VER;
- return {v:VER,solved:fresh?(d.solved||{}):{},dict:d.dict||{},custom:fresh?sanitizeCustom(d.custom):[],drafts:fresh?(d.drafts||{}):{},review:fresh?(d.review||{}):{},practice:d.practice||{}};
+ return {v:VER,solved:fresh?(d.solved||{}):{},dict:d.dict||{},custom:fresh?sanitizeCustom(d.custom):[],drafts:fresh?(d.drafts||{}):{},review:fresh?(d.review||{}):{},practice:d.practice||{},act:d.act||{},notes:d.notes||{}};
 }
 const lsKey=()=>me?LS+'-'+me.uid:LS;
 function loadLocal(){
@@ -57,7 +57,7 @@ async function flush(){
  if(!me||saving||!dirty)return;
  saving=true;dirty=false;
  try{
-  await Store.save({v:VER,solved:S.solved,dict:S.dict,review:S.review,practice:S.practice},{custom:S.custom,drafts:S.drafts},summarize(PROBLEMS,S.solved,S.review),probMap());
+  await Store.save({v:VER,solved:S.solved,dict:S.dict,review:S.review,practice:S.practice,act:S.act,notes:S.notes},{custom:S.custom,drafts:S.drafts},summarize(PROBLEMS,S.solved,S.review),probMap());
   setSync('저장됨');
  }catch(e){dirty=true;setSync('저장 실패 · 다시 시도 중');clearTimeout(saveTimer);saveTimer=setTimeout(flush,15000)}
  saving=false;if(dirty&&!saveTimer)saveTimer=setTimeout(flush,4000);
@@ -76,7 +76,7 @@ function schedule(p,pass,firstTry){
  const now=Date.now(),rv=S.review[p.id];
  if(V.mode==='review'&&rv){
   rv.box=pass&&firstTry?Math.min(BOX_DAYS.length-1,(rv.box||0)+1):0;
-  rv.due=now+BOX_DAYS[rv.box]*DAY;rv.last=now;rv.reps=(rv.reps||0)+1;return;
+  rv.due=now+BOX_DAYS[rv.box]*DAY;rv.last=now;rv.reps=(rv.reps||0)+1;if(pass)bumpAct();return;
  }
  if(!rv&&pass){
   const r=S.solved[p.id]||{};
@@ -87,6 +87,7 @@ function schedule(p,pass,firstTry){
 function record(p,ok,extra){
  const r=S.solved[p.id]||{ok:false,tries:0};
  r.tries=(r.tries||0)+1;
+ if(ok&&!r.ok)bumpAct();
  if(ok){
   const via=extra&&extra.via||'auto';
   if(via==='auto'){const clean=!(P&&P.peeked)&&(V.mode==='review'||!r.peek);r.via='auto';r.clean=!!(r.clean||clean)}
@@ -109,20 +110,24 @@ function run(o){
 /* ---------- 공통 렌더 ---------- */
 const dueList=()=>Object.entries(S.review).filter(([id,r])=>r.due<=Date.now()&&byId(id)).sort((a,b)=>a[1].due-b[1].due).map(([id])=>id);
 function updateTotal(){
- const el=$('#total');if(!el)return;
- const n=PROBLEMS.filter(p=>isSolved(p.id)).length,t=PROBLEMS.length,self=PROBLEMS.filter(p=>solvedKind(p.id)==='self').length;
- el.innerHTML=`<span>${n} / ${t} 해결 · 자력 ${self}</span><span class="bar"><i style="width:${t?n/t*100:0}%"></i></span>`;
  const rb=$('#revcount');if(rb){const d=dueList().length;rb.textContent=d?String(d):'';rb.hidden=!d}
 }
 function render(){
  cancelAnimationFrame(raf);if(aiCtl){aiCtl.abort();aiCtl=null}
+ const tabs=[['home','오늘'],['learn','학습'],['review','복습'],['dict','개념 사전'],['me','내 기록']].concat(me&&me.admin?[['admin','운영']]:[]);
  $('#app').innerHTML=`
- <header><div><h1>유니티 훈련소</h1><p class="sub">상황을 읽고 코드를 직접 작성하면 조건별로 채점해 주는 Unity 개발 연습장</p></div><div class="total" id="total"></div>${whoHTML()}</header>
- <nav class="tabs" role="tablist"><button role="tab" data-tab="train" aria-selected="${V.tab==='train'}">훈련</button><button role="tab" data-tab="review" aria-selected="${V.tab==='review'}">복습 <span class="badge new" id="revcount" hidden></span></button><button role="tab" data-tab="dict" aria-selected="${V.tab==='dict'}">개념 사전 <span class="note">${Object.keys(S.dict).length}</span></button><button role="tab" data-tab="me" aria-selected="${V.tab==='me'}">내 기록</button>${me&&me.admin?`<button role="tab" data-tab="admin" aria-selected="${V.tab==='admin'}">운영</button>`:''}</nav>
+ <header class="top"><div class="brand"><b>유니티 훈련소</b></div>
+ <nav class="tabs" role="tablist" aria-label="메뉴">${tabs.map(([k,l])=>`<button role="tab" data-tab="${k}" aria-selected="${V.tab===k}">${l}${k==='review'?' <span class="badge new" id="revcount" hidden></span>':''}</button>`).join('')}</nav>${whoHTML()}</header>
  <main id="main"></main>`;
- document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{V.tab=b.dataset.tab;V.pid=null;V.mode=null;render()});
+ document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>gotoTab(b.dataset.tab));
  updateTotal();
- if(V.pid)renderProblem(byId(V.pid));else if(V.tab==='dict')renderDict();else if(V.tab==='review')renderReview();else if(V.tab==='me')renderMe();else if(V.tab==='admin'&&me&&me.admin)renderAdmin();else renderTrain();
+ if(V.pid)renderProblem(byId(V.pid));
+ else if(V.tab==='dict')renderDict();
+ else if(V.tab==='review')renderReview();
+ else if(V.tab==='me')renderMe();
+ else if(V.tab==='admin'&&me&&me.admin)renderAdmin();
+ else if(V.tab==='learn')V.stage?renderStage():renderLearn();
+ else renderHome();
  const lo=$('#logout');if(lo)lo.onclick=()=>Store.signOut();
  const li=$('#login');if(li)li.onclick=()=>{guest=false;S=normalize({});renderLogin()};
 }
@@ -131,7 +136,7 @@ function whoHTML(){
  if(Store.configured)return `<div class="who"><span class="note">게스트 · 이 브라우저에만 저장</span><button class="btn ghost sm" id="login">로그인</button></div>`;
  return `<div class="who"><span class="note">이 브라우저에만 저장돼요</span></div>`;
 }
-const openProblem=(id,mode)=>{V.pid=id;V.mode=mode||null;render();window.scrollTo(0,0)};
+const openProblem=(id,mode)=>{const p=byId(id);V.pid=id;V.mode=mode||null;if(p&&mode==='review')V.tab='review';else if(p){V.tab='learn';V.stage={cat:p.cat,stage:p.stage}}render();window.scrollTo(0,0)};
 
 /* ---------- 훈련 목록 ---------- */
 function stageInfo(p){
@@ -146,28 +151,6 @@ function statusBadge(id){
  if(r&&r.tries)return `<span class="badge ai">시도 ${r.tries}</span>`;
  if(S.drafts[id])return '<span class="badge ai">작성 중</span>';
  return '';
-}
-function renderTrain(){
- const cat=CATS.find(c=>c.id===V.cat),list=allProblems().filter(p=>p.cat===V.cat);
- const cats=CATS.map(c=>{const ps=PROBLEMS.filter(p=>p.cat===c.id);const n=ps.filter(p=>isSolved(p.id)).length;
-  return `<button class="cat" data-c="${c.id}" aria-pressed="${V.cat===c.id}"><b>${c.name}</b><small>${c.desc}</small><span class="n">${n} / ${ps.length}</span></button>`}).join('');
- const card=p=>`<button class="pc" data-p="${p.id}"><span class="row">${p.world?'<span class="badge sim">시뮬레이션</span>':'<span class="badge">코드 작성</span>'}${p.ai?'<span class="badge ai">AI 생성</span>':''}${statusBadge(p.id)}</span><span class="t">${esc(p.title)}</span></button>`;
- const stages=cat.stages.map((st,si)=>{
-  const sp=list.filter(p=>p.stage===si+1),n=sp.filter(p=>isSolved(p.id)).length;
-  const cols=[1,2,3].map(lv=>{const ps=sp.filter(p=>p.level===lv);
-   return `<div class="lvcol"><h4>${LV[lv]}</h4>${ps.length?ps.map(card).join(''):'<div class="note">아직 문제가 없어요.</div>'}${sample?`<button class="btn ghost sm gen" data-s="${si+1}" data-l="${lv}">AI 문제 추가</button>`:''}</div>`}).join('');
-  const key=cat.id+':'+(si+1),pr=typeof PRACTICE!=='undefined'&&PRACTICE[key],done=S.practice[key]||[];
-  const prac=pr?`<details class="theory practice"><summary>Unity에서 직접 해보기 <span class="note">${done.filter(Boolean).length} / ${pr.checks.length}</span></summary><p>${esc(pr.task)}</p><div class="checks">${pr.checks.map((c,i)=>`<label class="chk"><input type="checkbox" data-k="${key}" data-i="${i}" ${done[i]?'checked':''}> <span>${esc(c)}</span></label>`).join('')}</div></details>`:'';
-  return `<section class="stage"><h2><span>단계 ${si+1}</span><span class="stitle">${esc(st.title)}</span><span class="note">${n} / ${sp.length}</span></h2>
-   <details class="theory"><summary>이론 요약</summary><p>${esc(st.theory)}</p></details><div class="lvgrid">${cols}</div>${prac}</section>`}).join('');
- $('#main').innerHTML=`<div style="display:flex;flex-direction:column;gap:22px"><div class="cats">${cats}</div>${stages}<div class="note" id="genmsg" role="status"></div></div>`;
- document.querySelectorAll('.cat').forEach(b=>b.onclick=()=>{V.cat=b.dataset.c;renderTrain()});
- document.querySelectorAll('.pc').forEach(b=>b.onclick=()=>openProblem(b.dataset.p));
- document.querySelectorAll('.gen').forEach(b=>b.onclick=()=>genSlot(b));
- document.querySelectorAll('.chk input').forEach(x=>x.onchange=()=>{
-  const k=x.dataset.k,arr=S.practice[k]||[];arr[+x.dataset.i]=x.checked;S.practice[k]=arr;persist();
-  const sm=x.closest('details').querySelector('summary .note');const pr=PRACTICE[k];sm.textContent=`${arr.filter(Boolean).length} / ${pr.checks.length}`;
- });
 }
 function aiErr(e){
  const c=e&&e.code;
@@ -187,10 +170,11 @@ function renderReview(){
    ${isDue?`<button class="btn sm" data-rv="${id}">처음부터 다시 풀기</button>`:''}${sample?`<button class="btn ghost sm" data-var="${id}">AI 변형 문제</button>`:''}</div></div>`};
  $('#main').innerHTML=`<div style="display:flex;flex-direction:column;gap:16px">
   <div class="card"><div><b>간격 반복 복습</b><div class="note">해결한 문제는 잊어버릴 즈음 다시 돌아와요. 복습할 때는 내 예전 코드 없이 시작 코드부터 다시 풀어요. 첫 시도에 통과하면 다음 복습까지 간격이 길어지고, 막히면 다시 짧아져요. 정답을 보거나 AI 판정으로 통과한 문제는 더 빨리 돌아와요.</div></div><div class="note" id="genmsg" role="status"></div></div>
-  ${due.length?`<h2 class="sec-h">지금 복습할 문제 ${due.length}개</h2>${due.slice(0,12).map(id=>row(id,S.review[id],true)).join('')}${due.length>12?`<div class="note">나머지 ${due.length-12}개는 위 문제를 끝내면 이어서 나와요. 하루에 10개 안팎이 적당해요.</div>`:''}`:'<div class="empty">지금 복습할 문제가 없어요.<br>문제를 해결하면 며칠 뒤 이곳에 다시 나타나요.</div>'}
+  ${due.length?`<div class="row sec-r"><h2 class="sec-h">지금 복습할 문제 ${due.length}개</h2><span style="flex:1"></span><button class="btn" id="revstart">복습 시작</button></div>${due.slice(0,12).map(id=>row(id,S.review[id],true)).join('')}${due.length>12?`<div class="note">나머지 ${due.length-12}개는 위 문제를 끝내면 이어서 나와요. 하루에 10개 안팎이 적당해요.</div>`:''}`:'<div class="empty">지금 복습할 문제가 없어요.<br>문제를 해결하면 며칠 뒤 이곳에 다시 나타나요.</div>'}
   ${later.length?`<details class="theory"><summary>예정된 복습 ${later.length}개</summary><div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">${later.map(([id,r])=>row(id,r,false)).join('')}</div></details>`:''}
  </div>`;
  document.querySelectorAll('[data-rv]').forEach(b=>b.onclick=()=>openProblem(b.dataset.rv,'review'));
+ const rs=$('#revstart');if(rs)rs.onclick=()=>openProblem(dueList()[0],'review');
  document.querySelectorAll('[data-var]').forEach(b=>b.onclick=()=>{const p=byId(b.dataset.var);genSlot(b,p)});
  updateTotal();
 }
@@ -260,31 +244,61 @@ function nextProblem(p){
  const after=list.slice(i+1).concat(list.slice(0,Math.max(0,i)));
  return after.find(x=>!isSolved(x.id))||null;
 }
+/* ---------- 조건 체크(입력하는 동안 바로 갱신되는 정적 검사) ---------- */
+function liveItems(p,code){
+ try{
+  const items=gradeStatic(Object.assign({},p,{starter:'\u0000'}),code).filter(i=>!i.base);
+  const same=clean(code).replace(/\s+/g,'')===clean(p.starter).replace(/\s+/g,'');
+  return same?items.map(i=>Object.assign({},i,{ok:false})):items;  /* 시작 코드 그대로면 아무것도 충족하지 않은 것으로 본다 */
+ }catch(e){return []}
+}
+function paintLive(){
+ const el=$('#live');if(!el||!P)return;
+ const p=P.p,items=liveItems(p,$('#code').value),met=items.filter(i=>i.ok).length;
+ const runs=!!(p.test||p.check||p.world);
+ el.innerHTML=`<div class="live-h"><b>조건 체크</b><span class="note">${items.length?`${met} / ${items.length} 충족`:'채점하면 코드를 실행해서 확인해요'}</span></div>
+  <ul class="chipsl">${items.map(i=>{const bad=!i.ok&&/^컴파일/.test(i.label);return `<li class="lc ${i.ok?'ok':bad?'bad':''}"><span aria-hidden="true">${i.ok?'✓':bad?'!':'○'}</span>${esc(i.label)}</li>`}).join('')}${runs?'<li class="lc run"><span aria-hidden="true">▶</span>동작 검사는 채점할 때 실행돼요</li>':''}</ul>`;
+}
+
 function renderProblem(p){
- if(!p){V.pid=null;return renderTrain()}
+ if(!p){V.pid=null;return render()}
  const review=V.mode==='review';
  const d=review?null:S.drafts[p.id];
  P={p,tries:0,hint:0,peeked:false,last:null,code:d?d.code:p.starter,firstFail:false};
- const sim=!!p.world;
- const editor=`<div class="edwrap"><pre class="gut" id="gut" aria-hidden="true"></pre><textarea class="ed" id="code" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="코드 편집기"></textarea></div>
-  <div class="tools"><button class="btn" id="grade">채점하기</button><button class="btn ghost sm" id="hintbtn">힌트 (0/${p.hints.length})</button><button class="btn ghost sm" id="reset">처음 코드로</button><button class="btn ghost sm" id="sol">정답 보기</button><span class="note">Ctrl/⌘ + Enter로도 채점해요</span></div>`;
- const backLabel=V.tab==='review'?'복습 목록':CATS.find(c=>c.id===p.cat).name+' 목록';
- $('#main').innerHTML=`<div class="card">
-  <button class="btn ghost sm back" id="back">← ${esc(backLabel)}</button>
-  <div class="row">${review?'<span class="badge new">복습</span>':''}${sim?'<span class="badge sim">시뮬레이션</span>':'<span class="badge">코드 작성</span>'}${p.ai?'<span class="badge ai">AI 생성</span>':''}<span class="note">${esc(stageInfo(p))}</span>${review?'':statusBadge(p.id)}</div>
-  <h2 class="pt">${esc(p.title)}</h2>
-  ${review?'<div class="msg info">복습이에요. 예전에 쓴 코드 없이 시작 코드부터 다시 풀어 보세요. 첫 채점에 통과하면 다음 복습 간격이 길어져요.</div>':''}
-  <div class="story">${esc(p.story)}</div>
-  <div class="spec"><div><h4>목표 (이 조건을 모두 만족해야 통과)</h4><ul>${li(p.goals)}</ul></div><div><h4>제한</h4>${p.limits.length?`<ul>${li(p.limits)}</ul>`:'<span class="note">별다른 제한은 없어요.</span>'}</div></div>
-  ${p.api?`<div class="apiline">쓸 만한 API · <code>${esc(p.api)}</code></div>`:''}
-  ${sim?`<div class="simgrid"><div style="display:flex;flex-direction:column;gap:8px;min-width:0">${editor}</div><div style="display:flex;flex-direction:column;gap:8px;min-width:0"><canvas class="cv" id="cv" width="960" height="540"></canvas><pre class="console" id="logs">채점하면 실행 모습과 Debug.Log 출력이 여기에 표시됩니다.</pre></div></div>`:`<div style="display:flex;flex-direction:column;gap:8px;min-width:0">${editor}</div>`}
-  <div class="hints" id="hints"></div>
-  <div class="result" id="result" role="status" aria-live="polite"></div>
-  <div id="done"></div>
-  <div id="solbox"></div>
-  <div class="tutor" id="tutor"></div></div>`;
- $('#back').onclick=()=>{V.pid=null;V.mode=null;render()};
- setupEditor(p);
+ const sim=!!p.world,seen=new Set();
+ const cat=CATS.find(c=>c.id===p.cat),stt=cat.stages[p.stage-1],tid=tierOf(p);
+ const sibs=stageProblems(p.cat,p.stage),si=sibs.findIndex(x=>x.id===p.id);
+ const T=t=>linkTerms(t,seen);
+ const editor=`<div class="tools top-tools"><button class="btn" id="grade">채점하기</button><button class="btn ghost sm" id="reset">처음 코드로</button><button class="btn ghost sm" id="sol">정답 보기</button><span class="note">Ctrl/⌘ + Enter로도 채점해요</span></div>
+  <div class="edwrap"><pre class="gut" id="gut" aria-hidden="true"></pre><textarea class="ed" id="code" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="코드 편집기"></textarea></div>
+  <div class="live" id="live" aria-live="polite"></div>`;
+ $('#main').innerHTML=`<div class="pscreen">
+  <div class="crumbs"><button class="btn ghost sm" id="back">← ${review?'복습 목록':'단계 화면'}</button><span class="note">${esc(tierName(tid))} › ${esc(cat.name)} › ${esc(stt.title)} · ${esc(LV[p.level])}</span><span style="flex:1"></span>
+   ${!review&&sibs.length>1?`<span class="pnav"><button class="btn ghost sm" id="prevp" aria-label="이전 문제" ${si<=0?'disabled':''}>◀</button><span class="note">${si+1} / ${sibs.length}</span><button class="btn ghost sm" id="nextp" aria-label="다음 문제" ${si>=sibs.length-1?'disabled':''}>▶</button></span>`:''}</div>
+  <div class="pgrid">
+   <section class="pleft card">
+    <div class="row">${review?'<span class="badge new">복습</span>':''}${sim?'<span class="badge sim">시뮬레이션</span>':'<span class="badge">코드 작성</span>'}${p.ai?'<span class="badge ai">AI 생성</span>':''}${review?'':statusBadge(p.id)}<span class="note">약 ${MIN_BY_LV[p.level]||8}분</span></div>
+    <h2 class="pt">${esc(p.title)}</h2>
+    ${review?'<div class="msg info">복습이에요. 예전에 쓴 코드 없이 시작 코드부터 다시 풀어 보세요. 첫 채점에 통과하면 다음 복습 간격이 길어져요.</div>':''}
+    <div class="story">${T(p.story)}</div>
+    <div class="spec1"><h4>목표 · 모두 만족해야 통과</h4><ul>${p.goals.map(g=>`<li>${T(g)}</li>`).join('')}</ul></div>
+    ${p.limits.length?`<div class="spec1"><h4>제한</h4><ul>${p.limits.map(g=>`<li>${T(g)}</li>`).join('')}</ul></div>`:''}
+    ${p.api?`<div class="apiline">쓸 만한 API · <code>${esc(p.api)}</code></div>`:''}
+    <div class="hintbox"><button class="btn ghost sm" id="hintbtn">힌트 보기 (0/${p.hints.length})</button><div class="hints" id="hints"></div></div>
+    <details class="stuck"><summary>막혔을 때</summary><div class="tutor" id="tutor"></div></details>
+   </section>
+   <section class="pright">
+    <div class="card edcard">${editor}</div>
+    ${sim?`<div class="card simcard"><canvas class="cv" id="cv" width="960" height="540"></canvas><pre class="console" id="logs">채점하면 실행 모습과 Debug.Log 출력이 여기에 표시됩니다.</pre></div>`:''}
+    <div class="result" id="result" role="status" aria-live="polite"></div>
+    <div id="done"></div>
+    <div id="solbox"></div>
+   </section>
+  </div></div>`;
+ $('#back').onclick=()=>{V.pid=null;V.mode=null;render();window.scrollTo(0,0)};
+ const goSib=k=>{const q=sibs[si+k];if(q)openProblem(q.id)};
+ const pv=$('#prevp'),nv=$('#nextp');if(pv)pv.onclick=()=>goSib(-1);if(nv)nv.onclick=()=>goSib(1);
+ setupEditor(p);paintLive();
  if(sim){const w=p.world;drawSim($('#cv'),w,[[0,w.start.x,w.start.y,w.target?w.target.cx+w.target.r:0,w.target?w.target.cy:0]],0)}
  $('#grade').onclick=()=>grade(p);
  $('#hintbtn').onclick=()=>showHint(p);
@@ -292,6 +306,7 @@ function renderProblem(p){
  $('#sol').onclick=()=>showSolution(p);
  if(isSolved(p.id)&&!review)showDone(p,false);
  bindTutor(p);
+ bindTerms($('#main'));
 }
 function setupEditor(p){
  const ta=$('#code'),gut=$('#gut');
@@ -303,7 +318,7 @@ function setupEditor(p){
  try{new ResizeObserver(()=>{gut.style.height=ta.clientHeight+'px'}).observe(ta)}catch(e){}
  ta.addEventListener('scroll',()=>{gut.scrollTop=ta.scrollTop});
  ta.addEventListener('input',()=>{
-  fit();P.code=ta.value;markLine(null);
+  fit();P.code=ta.value;markLine(null);clearTimeout(liveTimer);liveTimer=setTimeout(paintLive,180);
   if(V.mode==='review')return;
   clearTimeout(draftTimer);
   draftTimer=setTimeout(()=>{
@@ -389,7 +404,8 @@ function resultHTML(p,out){
  const req=items.filter(i=>i.sec!=='test'),tst=items.filter(i=>i.sec==='test');
  const head=out.pass?`<div class="sum ok">통과! 모든 조건(${tot}개)을 만족했어요.</div>`:`<div class="sum no">${tot}개 조건 중 ${n}개를 만족했어요. 미충족 항목을 고쳐서 다시 채점해 보세요.</div>`;
  const tool=!out.pass&&out.toolLimit&&!sample?`<div class="msg info">이 연습장의 C# 실행기는 Unity의 일부만 흉내 내요. 코드가 실제 Unity에서 맞다고 확신하면 아래 '채점이 이상해요'로 운영진에게 알려 주세요.</div>`:!out.pass&&out.toolLimit&&sample?`<div class="msg info">이 연습장의 C# 실행기는 Unity의 일부만 흉내 내요. 실제 Unity에서는 맞는 코드라고 생각되면 AI 판정으로 확인받을 수 있어요. <button class="btn ghost sm" id="inlineJudge">AI 판정 받기</button></div>`:'';
- return head+tool+(req.length?`<div class="res-sec"><h4>요구사항 · 컴파일 검사</h4><ul class="items">${req.map(row).join('')}</ul></div>`:'')+(tst.length?`<div class="res-sec"><h4>동작 검사 (코드를 실제로 실행)</h4><ul class="items">${tst.map(row).join('')}</ul></div>`:'');
+ const body=(req.length?`<div class="res-sec"><h4>요구사항 · 컴파일 검사</h4><ul class="items">${req.map(row).join('')}</ul></div>`:'')+(tst.length?`<div class="res-sec"><h4>동작 검사 (코드를 실제로 실행)</h4><ul class="items">${tst.map(row).join('')}</ul></div>`:'');
+ return head+tool+(out.pass?`<details class="resdet"><summary>조건별 결과 보기</summary>${body}</details>`:body);
 }
 async function grade(p){
  const btn=$('#grade');if(!btn||btn.disabled)return;
@@ -418,16 +434,36 @@ async function grade(p){
  $('#result').scrollIntoView({block:'nearest',behavior:'smooth'});
 }
 function showDone(p,fresh){
- const nx=V.mode==='review'?null:nextProblem(p);
+ const review=V.mode==='review';
+ const sibs=stageProblems(p.cat,p.stage),i=sibs.findIndex(x=>x.id===p.id);
+ const nx=review?null:(sibs.slice(i+1).find(x=>!isSolved(x.id))||nextUnsolved());
  const rv=S.review[p.id],nextDue=rv?Math.max(1,Math.round((rv.due-Date.now())/DAY)):null;
- const kind=solvedKind(p.id);
- const note=V.mode==='review'?(P.firstFail?'복습 통과! 처음에 막혔으니 곧 다시 복습할게요.':`복습 통과! 다음 복습은 ${nextDue}일 뒤예요.`):(kind==='peek'?'정답을 본 뒤 해결했어요. 며칠 뒤 복습에서 스스로 다시 풀어 보세요.':kind==='ai'?'AI 판정으로 통과했어요. 복습에서 자동 채점으로도 통과해 보세요.':'');
- $('#done').innerHTML=`<div class="donebox"><div class="verdict ok">${fresh?'해결했어요!':'이미 해결한 문제예요.'}</div>${note?`<div class="note">${esc(note)}</div>`:''}<div class="exp">${esc(p.why)}</div>${conceptChips(p)}
-  <details class="sol"><summary>모범 코드와 비교해 보기</summary><pre class="code" style="padding:10px 14px;margin-top:8px">${esc(p.solution)}</pre><div class="note" style="margin-top:6px">같은 결과를 내는 코드는 여러 가지일 수 있어요. 내 코드와 어떤 점이 다른지 비교해 보세요.</div></details>
-  <div class="tools">${nx?`<button class="btn" id="next">다음 문제 · ${esc(nx.title)}</button>`:''}${V.mode==='review'&&dueList().length?'<button class="btn" id="nextrev">다음 복습</button>':''}<button class="btn ghost" id="tolist">목록으로</button></div></div>`;
+ const kind=solvedKind(p.id),r=S.solved[p.id]||{};
+ const note=review?(P.firstFail?'복습 통과! 처음에 막혔으니 곧 다시 복습할게요.':`복습 통과! 다음 복습은 ${nextDue}일 뒤예요.`):(kind==='peek'?'정답을 본 뒤 해결했어요. 며칠 뒤 복습에서 스스로 다시 풀어 보세요.':kind==='ai'?'AI 판정으로 통과했어요. 복습에서 자동 채점으로도 통과해 보세요.':'');
+ const mine=$('#code')?$('#code').value:'';
+ const saved=(S.notes[p.id]||{}).t||'';
+ const feel=r.feel||'';
+ const fb=(k,l)=>`<button class="btn ghost sm" data-f="${k}" aria-pressed="${feel===k}">${l}</button>`;
+ $('#done').innerHTML=`<div class="donebox"><div class="verdict ok">${fresh?'해결했어요!':'이미 해결한 문제예요.'}</div>${note?`<div class="note">${esc(note)}</div>`:''}
+  <div class="cmp"><div><h4>내 코드</h4><pre class="code cmpcode">${esc(mine)}</pre></div><div><h4>모범 코드</h4><pre class="code cmpcode">${esc(p.solution)}</pre></div></div>
+  <div class="note">같은 결과를 내는 코드는 여러 가지일 수 있어요. 다른 부분이 있다면 왜 다른지 생각해 보세요.</div>
+  <div class="exp">${esc(p.why)}</div>${conceptChips(p)}
+  ${review?'':`<div class="reflect"><label for="note">새로 알게 된 점을 한 줄로 남겨 보세요 <span class="note">개념 사전에 내 메모로 저장돼요</span></label><div class="ask"><input id="note" type="text" maxlength="120" value="${esc(saved)}" placeholder="예: Update에서는 deltaTime을 곱해야 한다"><button class="btn ghost" id="savenote">저장</button></div><span class="note" id="notemsg" role="status"></span></div>
+  <div class="feel"><span class="note">풀어 보니 어땠나요?</span>${fb('easy','쉬웠어요')}${fb('ok','보통이에요')}${fb('hard','어려웠어요')}</div>`}
+  <div class="tools">${nx?`<button class="btn" id="next">다음 문제 · ${esc(nx.title)}</button>`:''}${review&&dueList().length?'<button class="btn" id="nextrev">다음 복습</button>':''}<button class="btn ghost" id="tolist">${review?'복습 목록으로':'단계 화면으로'}</button></div></div>`;
  const n=$('#next');if(n)n.onclick=()=>openProblem(nx.id);
  const nr=$('#nextrev');if(nr)nr.onclick=()=>openProblem(dueList()[0],'review');
  $('#tolist').onclick=()=>{V.pid=null;V.mode=null;render();window.scrollTo(0,0)};
+ const sv=$('#savenote');
+ if(sv){
+  const save=()=>{const t=$('#note').value.trim().slice(0,120);if(t)S.notes[p.id]={t,at:Date.now()};else delete S.notes[p.id];persist();$('#notemsg').textContent=t?'저장했어요. 개념 사전에서 볼 수 있어요.':'메모를 지웠어요.'};
+  sv.onclick=save;$('#note').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing){e.preventDefault();save()}});
+ }
+ document.querySelectorAll('.feel [data-f]').forEach(b=>b.onclick=()=>{
+  const rr=S.solved[p.id];if(!rr)return;rr.feel=b.dataset.f;
+  const v=S.review[p.id];if(v&&!v.reps){v.box=rr.feel==='hard'?0:rr.feel==='easy'?Math.max(v.box,2):v.box;v.due=Date.now()+BOX_DAYS[v.box]*DAY}
+  persist();document.querySelectorAll('.feel [data-f]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+ });
  if(fresh)$('#done').scrollIntoView({block:'nearest',behavior:'smooth'});
 }
 function showHint(p){
@@ -551,10 +587,12 @@ function renderDict(){
   <div class="card"><div><b>모르는 개념 정리하기</b><div class="note">문제를 해결하면 그 문제의 개념이 자동으로 쌓입니다. 따로 궁금한 개념은 직접 물어서 사전에 추가하세요.</div></div>
   <div class="ask"><input type="text" id="term" placeholder="${sample?'예: 델리게이트, Raycast, Coroutine':'개념 이름 (예: Raycast)'}" aria-label="개념 이름"><button class="btn" id="addterm">${sample?'AI로 정리':'추가'}</button></div>${sample?'':'<textarea id="termdef" rows="2" placeholder="내 말로 정리한 설명" aria-label="개념 설명" style="width:100%;font:inherit;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)"></textarea>'}<div class="note" id="dmsg"></div></div>
   ${keys.length?`<input type="text" id="filter" placeholder="사전 검색" aria-label="사전 검색"><div id="dlist" style="display:flex;flex-direction:column;gap:8px"></div>`:'<div class="empty">아직 정리된 개념이 없어요.<br>문제를 하나 해결하면 해당 개념이 자동으로 이곳에 쌓입니다.</div>'}</div>`;
+ const noteMap={};
+ Object.entries(S.notes).forEach(([pid,n])=>{const q=byId(pid);if(q&&n&&n.t)(q.concepts||[]).forEach(c=>{(noteMap[c.term]=noteMap[c.term]||[]).push({t:n.t,from:q.title})})});
  const fill=()=>{
   const q=(($('#filter')||{}).value||'').toLowerCase();
   $('#dlist').innerHTML=keys.filter(k=>!q||k.toLowerCase().includes(q)||(S.dict[k].def||'').toLowerCase().includes(q)).map(k=>{const d=S.dict[k],cat=CATS.find(c=>c.id===d.cat);
-   return `<div class="dict-item"><h3>${esc(k)}${cat?`<span class="badge">${cat.name}</span>`:''}</h3><p>${esc(d.def||'')}</p>${d.ex?`<pre class="code" style="padding:8px 12px">${esc(d.ex)}</pre>`:''}${d.pit?`<p class="note">주의: ${esc(d.pit)}</p>`:''}
+   return `<div class="dict-item"><h3>${esc(k)}${cat?`<span class="badge">${cat.name}</span>`:''}</h3><p>${esc(d.def||'')}</p>${d.ex?`<pre class="code" style="padding:8px 12px">${esc(d.ex)}</pre>`:''}${d.pit?`<p class="note">주의: ${esc(d.pit)}</p>`:''}${(noteMap[k]||[]).map(n=>`<p class="mynote"><b>내 메모</b> ${esc(n.t)} <span class="note">${esc(n.from)}</span></p>`).join('')}
    <div class="row"><span class="meta">${d.from?'출처: '+esc(d.from):''}</span><span style="flex:1"></span>${sample&&!d.ex?`<button class="btn ghost sm" data-more="${esc(k)}">AI로 자세히</button>`:''}<button class="btn ghost sm" data-del="${esc(k)}">삭제</button></div></div>`}).join('')||'<div class="note">검색 결과가 없어요.</div>';
   document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{delete S.dict[b.dataset.del];persist();render()});
   document.querySelectorAll('[data-more]').forEach(b=>b.onclick=()=>explain(b.dataset.more,b));
@@ -591,6 +629,8 @@ function mergeState(r){
  for(const [k,x] of Object.entries(o.dict))if(!L.dict[k])L.dict[k]=x;
  for(const [k,x] of Object.entries(o.review)){const y=L.review[k];if(!y||(x.last||0)>(y.last||0))L.review[k]=x}
  for(const [k,x] of Object.entries(o.practice)){const y=L.practice[k]||[];L.practice[k]=x.map((v,i)=>!!(v||y[i]))}
+ for(const [k,x] of Object.entries(o.act))L.act[k]=Math.max(L.act[k]||0,x);
+ for(const [k,x] of Object.entries(o.notes)){const y=L.notes[k];if(!y||(x.at||0)>(y.at||0))L.notes[k]=x}
 }
 async function boot(){
  S=normalize({});loadLocal();
@@ -614,7 +654,7 @@ async function init(){
  try{me=await Store.init()}catch(e){me=null}
  Store.onChange(u=>{
   if(u){me=u;if(window.wantAdmin&&!u.admin){Store.signOut();renderAdminLogin('이 계정은 운영진이 아니에요. 운영진 아이디로 접속해 주세요.');return}boot()}
-  else if(me){me=null;guest=false;window.wantAdmin=false;S=normalize({});V={tab:'train',cat:'csharp',pid:null,mode:null};P=null;renderLogin()}
+  else if(me){me=null;guest=false;window.wantAdmin=false;S=normalize({});V={tab:'home',cat:'csharp',pid:null,mode:null,tier:null,stage:null};P=null;renderLogin()}
  });
  const wantAdmin=location.hash==='#admin';
  if(Store.configured&&!me){wantAdmin?renderAdminLogin():renderLogin();return}

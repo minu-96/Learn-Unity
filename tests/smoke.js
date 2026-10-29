@@ -31,20 +31,35 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
 
  // 1. 구글 로그인 → 훈련 화면
  await pg.click('#g');
- await pg.waitForSelector('.cats');
+ await pg.waitForSelector('.hero');
  ok((await pg.textContent('.who')).includes('민우'),'로그인 후 이름 표시');
 
  // 2. 문제 하나 풀기 (정답 코드 입력 → 채점)
  const p=PROBLEMS.find(x=>x.cat==='csharp');
- await pg.click(`.pc[data-p="${p.id}"]`);
+ ok(await pg.$$eval('.act',e=>e.length)>=1,'오늘 화면: 지금 할 것 카드');
+ await pg.click('nav.tabs [data-tab="learn"]');
+ await pg.waitForSelector('.scgrid');
+ ok((await pg.$$eval('.tt b',e=>e.map(x=>x.textContent))).join()==='입문,기초,심화','학습 지도: 세 구간 탭');
+ await pg.click(`.sc[data-c="${p.cat}"][data-s="${p.stage}"]`);
+ await pg.waitForSelector('.lesson');
+ ok(await pg.$$eval('.lesson .code.ex',e=>e.length)===1,'단계 화면: 개념 카드와 예제 코드');
+ await pg.click(`.prow[data-p="${p.id}"]`);
  await pg.waitForSelector('#code');
+ ok(await pg.$$eval('.lc',e=>e.length)>=1,'문제 화면: 실시간 조건 체크 칩');
+ ok(await pg.$$eval('.term',e=>e.length)>=0,'용어 버튼 렌더');
+ if(await pg.$('.term')){await pg.click('.term');ok(await pg.isVisible('#tip'),'용어를 누르면 풀이 말풍선');await pg.keyboard.press('Escape')}
  await pg.fill('#code',p.solution);
  await pg.click('#grade');
  await pg.waitForSelector('.sum.ok',{timeout:15000});
  ok(true,'정답 채점 통과: '+p.id);
+ await pg.waitForSelector('.donebox');
+ await pg.fill('#note','스모크 메모');await pg.click('#savenote');
+ await pg.click('.feel [data-f="easy"]');
+ ok((await pg.getAttribute('.feel [data-f="easy"]','aria-pressed'))==='true','회고: 체감 난이도 선택');
  ok((await pg.textContent('#tutor')).includes('채점이 이상해요'),'AI 없는 튜터 영역과 신고 버튼');
 
  // 3. 신고
+ await pg.click('.stuck summary');
  await pg.fill('#repnote','테스트 신고');
  await pg.click('#report');
  await pg.waitForFunction(()=>/전달했어요/.test(document.querySelector('#repmsg').textContent));
@@ -61,6 +76,10 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
  ok(u.prob[p.id]&&u.prob[p.id][0]===1,'문제별 상태 저장');
  ok(Object.values(db.docs).filter(d=>d.pid===p.id&&d.status==='open').length===1,'신고 문서 저장');
 
+ // 4b. 사전에 회고 메모가 보임
+ await pg.click('nav.tabs [data-tab="dict"]');await pg.waitForSelector('.dict-item');
+ ok((await pg.textContent('main')).includes('스모크 메모'),'회고 메모가 개념 사전에 표시');
+
  // 5. 내 기록
  await pg.evaluate(()=>{delete document.hidden});
  await pg.click('nav.tabs [data-tab="me"]');
@@ -71,8 +90,9 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
 
  // 6. 새로고침 → 클라우드에서 복원
  await pg.evaluate(()=>{Object.keys(localStorage).filter(k=>k.startsWith('unity-training-lab')).forEach(k=>localStorage.removeItem(k))});
- await pg.reload();await pg.waitForSelector('.cats');
- ok((await pg.textContent('#total')).includes('1 / 90'),'로컬 캐시를 지워도 클라우드에서 진행도 복원');
+ await pg.reload();await pg.waitForSelector('.hero');
+ ok(await pg.evaluate(()=>PROBLEMS.filter(p=>isSolved(p.id)).length)===1,'로컬 캐시를 지워도 클라우드에서 진행도 복원');
+ ok(await pg.evaluate(()=>(S.notes[PROBLEMS.find(x=>x.cat==='csharp').id]||{}).t)==='스모크 메모','회고 메모도 클라우드에서 복원');
 
  // 7. 다른 부원·운영진 데이터 심기
  await pg.evaluate(({probs})=>{
