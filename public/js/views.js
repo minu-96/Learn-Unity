@@ -11,6 +11,7 @@ const meter=(a,b,cls)=>`<span class="meter ${cls||''}" role="img" aria-label="${
 
 /* ---------- 로그인 ---------- */
 function renderLogin(msg){
+ window.wantAdmin=false;
  $('#app').innerHTML=`<div class="login"><h1>유니티 훈련소</h1>
   <p class="sub">Unity 개발 스터디용 코드 작성 연습장. 상황을 읽고 코드를 직접 작성하면 조건별로 채점해 줘요.</p>
   <div class="card" style="gap:12px"><button class="btn" id="g" style="padding:12px">Google 계정으로 시작하기</button>
@@ -27,6 +28,7 @@ function renderLogin(msg){
  $('#toadmin').onclick=()=>setTimeout(()=>renderAdminLogin(),0);
 }
 function renderAdminLogin(msg){
+ window.wantAdmin=true;
  $('#app').innerHTML=`<div class="login"><h1>운영진 로그인</h1><p class="sub">운영진 아이디와 비밀번호로 접속해요.</p>
   <form class="card" id="af" style="gap:10px"><label class="lbl">아이디<input type="text" id="aid" autocomplete="username" autocapitalize="off" required></label>
   <label class="lbl">비밀번호<input type="password" id="apw" autocomplete="current-password" required></label>
@@ -81,7 +83,8 @@ async function renderAdmin(){
 }
 function drawAdmin(){
  const now=Date.now(),us=AD.users,tot=PROBLEMS.length;
- const sm=u=>u.summary||{total:tot,solved:0,self:0,tier:{},retain:null};
+ const empty=summarize(PROBLEMS,{},{});
+ const sm=u=>u.summary||empty;
  const active7=us.filter(u=>u.lastActive&&now-u.lastActive<7*DAYMS).length;
  const idle14=us.filter(u=>!u.lastActive||now-u.lastActive>=14*DAYMS).length;
  const pass=TIERS.map(t=>({t,n:us.filter(u=>((sm(u).tier||{})[t.id]||{}).passed).length}));

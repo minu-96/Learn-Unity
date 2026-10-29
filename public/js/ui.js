@@ -606,15 +606,15 @@ async function boot(){
   }catch(e){setSync('불러오기 실패 · 이 기기 기록만 표시')}
   persist();
  }
- if(location.hash==='#admin'&&me&&me.admin)V.tab='admin';
+ if((location.hash==='#admin'||window.wantAdmin)&&me&&me.admin)V.tab='admin';
  if(!V.pid){render()}else{bindTutor(byId(V.pid))}
  updateTotal();
 }
 async function init(){
  try{me=await Store.init()}catch(e){me=null}
  Store.onChange(u=>{
-  if(u){me=u;if(location.hash==='#admin'&&!u.admin){Store.signOut();return}boot()}
-  else if(me){location.reload()}
+  if(u){me=u;if(window.wantAdmin&&!u.admin){Store.signOut();renderAdminLogin('이 계정은 운영진이 아니에요. 운영진 아이디로 접속해 주세요.');return}boot()}
+  else if(me){me=null;guest=false;window.wantAdmin=false;S=normalize({});V={tab:'train',cat:'csharp',pid:null,mode:null};P=null;renderLogin()}
  });
  const wantAdmin=location.hash==='#admin';
  if(Store.configured&&!me){wantAdmin?renderAdminLogin():renderLogin();return}

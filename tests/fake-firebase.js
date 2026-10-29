@@ -2,8 +2,11 @@
    실제 보안 규칙(firestore.rules)은 검증하지 못한다. */
 (function(){
  const KEY='fakefb';
- const load=()=>{try{return JSON.parse(localStorage.getItem(KEY))||{docs:{},auth:null,seq:0}}catch(e){return {docs:{},auth:null,seq:0}}};
- const save=d=>localStorage.setItem(KEY,JSON.stringify(d));
+ let mem=null;
+ const raw={get(){try{const v=localStorage.getItem(KEY);if(v!=null)return v}catch(e){}return mem},set(v){mem=v;try{localStorage.setItem(KEY,v)}catch(e){}}};
+ window.__fakefb=raw;
+ const load=()=>{try{return JSON.parse(raw.get())||{docs:{},auth:null,seq:0}}catch(e){return {docs:{},auth:null,seq:0}}};
+ const save=d=>raw.set(JSON.stringify(d));
  const clone=x=>x===undefined?undefined:JSON.parse(JSON.stringify(x));
  const snap=(id,v)=>({id,exists:v!==undefined,data:()=>clone(v)});
  const listeners=[];
