@@ -89,13 +89,6 @@ function statsHTML(sl){
     <div class="statrow sm">${st(sb.solved+'<small> / '+sb.total+'</small>','해결')}${st(sb.self,'정답 안 보고')}${st(sb.tries,'채점')}${st(rt(br),'복습 유지')}</div></section>
   </div></div>`;
 }
-function bankLogHTML(){
- const done=BANK.filter(p=>isSolved(p.id)).sort((a,b)=>(S.solved[b.id].at||0)-(S.solved[a.id].at||0));
- const sets=bankSets(),open=sets.filter(x=>bankOpen(x.s.cat.id,x.s.si,x.l)).length;
- if(!done.length)return `<div class="card" style="gap:6px"><div class="row"><b>문제 사전 기록</b><span class="badge bank">문제 사전</span></div><div class="note">열린 세트 ${open} / ${sets.length}. 아직 푼 사전 문제가 없어요. 학습 지도에서 문제를 풀면 비슷한 문제가 열려요.</div></div>`;
- return `<div class="card" id="banklog" style="gap:6px"><div class="row"><b>문제 사전 기록</b><span class="badge bank">문제 사전</span><span class="note">푼 문제 ${done.length} / ${BANK.length} · 열린 세트 ${open} / ${sets.length}</span></div>
-  ${done.map(p=>{const r=S.solved[p.id],st=CATS.find(c=>c.id===p.cat).stages[p.stage-1];return `<button class="pc" data-p="${p.id}"><span class="t">${esc(p.title)}</span><span class="note">${esc(st.title)} · ${esc(LV[p.level])} · 시도 ${r.tries||0}${r.at?' · '+new Date(r.at).toLocaleDateString('ko-KR'):''}</span></button>`}).join('')}</div>`;
-}
 function renderMe(){
  const sm=summarize(PROBLEMS,S.solved,S.review);
  const cards=TIERS.map(t=>{
