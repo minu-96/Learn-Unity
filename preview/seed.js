@@ -7,10 +7,10 @@
   d=d||{docs:{},auth:null,seq:0};
   const now=Date.now(),DAY=864e5;
   let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
-  const order=['intro','basic','adv'];
+  const order=['intro','basic','app','adv'];
   const byTier={};PROBLEMS.forEach(p=>(byTier[tierOf(p)]=byTier[tierOf(p)]||[]).push(p));
   /* [이름, 구간별 해결 비율, 자력 확률, 마지막 접속(일 전), 복습한 문제 수] */
-  const M=[['김서연',[1,.7,.2],.85,0,10],['박준호',[1,.35,0],.7,2,4],['이도윤',[.85,0,0],.55,5,2],['최하은',[.5,0,0],.9,9,0],['정민재',[.25,0,0],.6,21,0],['한지우',[0,0,0],0,0,0]];
+  const M=[['김서연',[1,1,.7,.2],.85,0,10],['박준호',[1,1,.35,0],.7,2,4],['이도윤',[1,.85,0,0],.55,5,2],['최하은',[1,.5,0,0],.9,9,0],['정민재',[.9,.25,0,0],.6,21,0],['한지우',[0,0,0,0],0,0,0]];
   M.forEach((m,i)=>{
    const solved={},review={};
    order.forEach((t,ti)=>{
@@ -28,7 +28,7 @@
   d.docs['reports/seed1']={uid:'demo1',name:'박준호',at:now-DAY,status:'open',pid:p0.id,title:p0.title,note:'Unity에서는 이 코드가 되는데 통과가 안 돼요',code:p0.starter,fails:['예시 항목: 채점 메시지가 여기에 표시돼요']};
   /* 체험 계정(Google 버튼)에도 진행 기록을 넣어 홈·복습·내 기록이 채워진 모습을 보여 준다 */
   (function(){
-   const ti={intro:0,basic:1,adv:2},ci=id=>CATS.findIndex(c=>c.id===id);
+   const ti={intro:0,basic:1,app:2,adv:3},ci=id=>CATS.findIndex(c=>c.id===id);
    const path=PROBLEMS.slice().sort((a,b)=>ti[tierOf(a)]-ti[tierOf(b)]||ci(a.cat)-ci(b.cat)||a.stage-b.stage||a.level-b.level);
    const solved={},review={},dict={},act={},notes={};
    path.slice(0,11).forEach((p,i)=>{

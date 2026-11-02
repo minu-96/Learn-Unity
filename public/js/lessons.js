@@ -2,6 +2,70 @@
    키는 'cat:stage'. 문제를 풀기 전에 읽는 핵심 3줄 + 짧은 예제 코드 + 자주 하는 실수.
    예제는 정답 코드가 아니라 개념을 보여 주는 예시이고, 채점되지 않는다. */
 const LESSONS={
+ 'start:1':{points:['변수는 값을 담는 이름 붙은 상자예요. "형식 이름 = 값;" 으로 만들어요.','정수는 int, 소수는 float(3.5f), 글자는 string("용사"), 참/거짓은 bool이에요.','int끼리 나누면 소수점 아래가 버려져요. 비율은 (float)로 바꿔서 나눠요.'],
+  code:`int hp = 100;
+float speed = 3.5f;
+string name = "용사";
+bool isAlive = true;
+
+hp = hp - 30;                    // 값은 바꿀 수 있어요
+float ratio = (float)hp / 100;   // 0.7 (그냥 hp / 100 이면 0)`,watch:'float 값에는 f를 붙이고, 줄 끝에는 세미콜론 ; 을 붙여요. 둘 다 자주 빠뜨려요.'},
+ 'start:2':{points:['if (조건) { ... } 는 조건이 참일 때만 중괄호 안을 실행해요.','else if로 조건을 이어 붙이고, 어디에도 안 맞으면 else가 실행돼요.','그리고는 &&, 또는은 ||, 같다는 == (= 하나는 값을 넣는 대입이에요).'],
+  code:`if (hp <= 0)
+{
+    state = "죽음";
+}
+else if (hp < 30)
+{
+    state = "위험";
+}
+else
+{
+    state = "생존";
+}
+
+bool canEnter = hasKey && level >= 5;`,watch:'"90점 이상"은 >= 90 이에요. > 90 은 90점을 포함하지 않아요.'},
+ 'start:3':{points:['for (int i = 0; i < 5; i++) { ... } 는 중괄호 안을 5번 되풀이해요.','합계나 개수는 반복문 밖에서 변수를 만들고, 안에서 더해요.','foreach (int x in 배열) 은 배열의 값을 하나씩 꺼내 줘요. 짝수는 x % 2 == 0 이에요.'],
+  code:`int sum = 0;
+for (int i = 1; i <= 10; i++)
+{
+    sum += i;            // sum = sum + i
+}
+// sum은 55
+
+int evens = 0;
+foreach (int x in nums)
+{
+    if (x % 2 == 0) evens++;
+}`,watch:'합계 변수를 반복문 안에서 만들면 매번 0으로 돌아가 버려요. 반드시 밖에서 만드세요.'},
+ 'start:4':{points:['메서드는 이름을 붙인 코드 묶음이에요. "반환형식 이름(매개변수) { ... }" 로 만들어요.','이름(값); 으로 부르면 실행돼요. 만들기만 해서는 아무 일도 일어나지 않아요.','값을 돌려줄 때는 return, 돌려줄 게 없으면 반환형식을 void로 써요.'],
+  code:`int Damage(int attack, int defense)
+{
+    int d = attack - defense;
+    if (d < 0) d = 0;
+    return d;
+}
+
+void Start()
+{
+    int result = Damage(10, 3);   // 7
+}`,watch:'return을 만나면 메서드가 바로 끝나요. 그 아래 코드는 실행되지 않아요.'},
+ 'start:5':{points:['유니티 스크립트는 MonoBehaviour를 이어받은 클래스예요.','Start는 시작할 때 한 번, Update는 매 프레임 불려요.','이동량에는 Time.deltaTime을 곱하고, 한 번만 일어나는 키 입력은 Input.GetKeyDown을 써요.'],
+  code:`public class Walker : MonoBehaviour
+{
+    public float speed = 2f;
+
+    void Start()
+    {
+        Debug.Log("시작!");
+    }
+
+    void Update()
+    {
+        transform.Translate(Vector3.right * speed * Time.deltaTime);
+        if (Input.GetKeyDown(KeyCode.Space)) Debug.Log("점프!");
+    }
+}`,watch:'Update 안의 Debug.Log는 매 프레임 찍혀서 콘솔이 금방 가득 차요. 필요한 조건 안에서만 찍으세요.'},
  'csharp:1':{points:['필드는 클래스 안에 두는 변수예요. public은 어디서나, private은 그 클래스 안에서만 접근해요.','[SerializeField] private 필드는 Inspector에 보이지만 다른 클래스는 값을 바꾸지 못해요.','if / for / switch로 흐름을 나눠요. 비교는 ==, 대입은 = 이에요.'],
   code:`public class Player : MonoBehaviour
 {

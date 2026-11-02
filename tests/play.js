@@ -687,6 +687,89 @@ public class Coin : MonoBehaviour
     }
 }`);
 
+/* ---- 입문(코딩 첫걸음) ---- */
+P('e3','float 곱하기 순서를 바꿔 푼 풀이',`float HpPercent(int hp, int maxHp)
+{
+    float ratio = (float)hp / (float)maxHp;
+    return ratio * 100;
+}`);
+F('e3','캐스팅 순서를 틀려 0이 나오는 풀이',`float HpPercent(int hp, int maxHp)
+{
+    return (float)(hp / maxHp) * 100;
+}`,'절반');
+P('e5','else if 없이 큰 점수부터 return',`string Grade(int score)
+{
+    if (score >= 90) { return "A"; }
+    if (score >= 80) { return "B"; }
+    if (score >= 70) { return "C"; }
+    return "D";
+}`);
+F('e5','경계 점수를 빠뜨린 풀이(> 사용)',`string Grade(int score)
+{
+    if (score > 90) return "A";
+    else if (score > 80) return "B";
+    else if (score > 70) return "C";
+    else return "D";
+}`,'점');
+F('e6','열쇠 또는 레벨로 잘못 묶은 풀이',`bool CanOpen(bool hasKey, int level, bool isAdmin)
+{
+    return hasKey || level >= 5 || isAdmin;
+}`,'레벨');
+F('e7','반복문 없이 복사한 풀이',`void Cheer()
+{
+    Debug.Log("파이팅!");
+    Debug.Log("파이팅!");
+    Debug.Log("파이팅!");
+    Debug.Log("파이팅!");
+    Debug.Log("파이팅!");
+}`,'반복문');
+F('e8','n을 빠뜨린 풀이(i < n)',`int SumTo(int n)
+{
+    int sum = 0;
+    for (int i = 1; i < n; i++) { sum += i; }
+    return sum;
+}`,'10까지');
+P('e9','for와 인덱스로 센 풀이',`int CountEven(int[] nums)
+{
+    int c = 0;
+    for (int i = 0; i < nums.Length; i++)
+    {
+        if (nums[i] % 2 == 0) c++;
+    }
+    return c;
+}`);
+F('e10','Greet를 만들기만 하고 부르지 않은 풀이',`void Start()
+{
+}
+
+void Greet()
+{
+    Debug.Log("안녕하세요!");
+}`,'Start');
+P('e14','position += 으로 이동',`public float speed = 2f;
+void Update()
+{
+    transform.position += new Vector3(speed * Time.deltaTime, 0, 0);
+}`);
+F('e14','Time.deltaTime을 빠뜨린 풀이',`public float speed = 2f;
+void Update()
+{
+    transform.Translate(Vector3.right * speed);
+}`,'Time.deltaTime');
+F('e15','GetKey로 쓰면 여러 번 출력',`void Update()
+{
+    if (Input.GetKey(KeyCode.Space)) { Debug.Log("점프!"); }
+}`,'GetKeyDown');
+P('e15','클래스 전체로 작성한 풀이',`using UnityEngine;
+public class Jumper : MonoBehaviour
+{
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Space))
+            Debug.Log("점프!");
+    }
+}`);
+
 (async()=>{
  let bad=0;
  for(const [id,exp,note,code,hit] of V){

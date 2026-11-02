@@ -1,6 +1,6 @@
 /* ===== 오늘(홈) · 학습 지도 · 단계 화면 =====
    ui.js의 전역(S, V, $, esc, byId, isSolved, openProblem, persist ...)을 호출 시점에 사용한다. */
-const TIER_IDX={intro:0,basic:1,adv:2};
+const TIER_IDX={intro:0,basic:1,app:2,adv:3};
 const catIdx=id=>CATS.findIndex(c=>c.id===id);
 const MIN_BY_LV={1:5,2:8,3:12};
 const DAILY_GOAL=3;
@@ -97,7 +97,7 @@ function renderHome(){
  });
  $('#main').querySelectorAll('[data-tier]').forEach(b=>b.onclick=()=>{V.tier=b.dataset.tier;gotoTab('learn')});
  const ds=$('#diagstart');if(ds)ds.onclick=startDiag;
- const dn=$('#diagno');if(dn)dn.onclick=()=>{S.diag={at:Date.now(),res:[],rec:'intro',skipped:true};persist();renderHome()};
+ const dn=$('#diagno');if(dn)dn.onclick=()=>{S.diag={at:Date.now(),res:[],rec:'intro',skipped:true,v4:1};persist();renderHome()};
  const dk=$('#diagok');if(dk)dk.onclick=()=>{S.diag.seen=true;persist();renderHome()};
 }
 /* 홈에 보여 줄 배지: 아직 못 얻은 것 중 앞쪽 3개 + 최근 얻은 1개 */
@@ -135,7 +135,7 @@ function renderLearn(){
 
 /* ---------- 단계 화면: 개념 카드 → 문제 → 실습 ---------- */
 function renderStage(){
- const {cat:cid,stage:si}=V.stage,cat=CATS.find(c=>c.id===cid),st=cat.stages[si-1],key=cid+':'+si,tid=TIER_OF[key]||'basic';
+ const {cat:cid,stage:si}=V.stage,cat=CATS.find(c=>c.id===cid),st=cat.stages[si-1],key=cid+':'+si,tid=TIER_OF[key]||'app';
  const ps=stageProblems(cid,si),n=ps.filter(p=>isSolved(p.id)).length,ls=LESSONS[key];
  const nx=nextUnsolved(),first=ps.find(p=>!isSolved(p.id));
  const row=p=>{
@@ -169,7 +169,7 @@ function renderStage(){
 /* ---------- 시작 위치 진단 ---------- */
 function diagPicks(){
  const f=(t,lv)=>PROBLEMS.find(p=>tierOf(p)===t&&p.level===lv&&!p.world)||PROBLEMS.find(p=>tierOf(p)===t&&p.level===lv)||PROBLEMS.find(p=>tierOf(p)===t);
- return [f('intro',1),f('basic',2),f('adv',2)].filter(Boolean).map(p=>p.id);
+ return [f('intro',1),f('basic',2),f('app',2),f('adv',2)].filter(Boolean).map(p=>p.id);
 }
 function startDiag(){V.diag={ids:diagPicks(),i:0,res:[]};openProblem(V.diag.ids[0])}
 const diagIdx=p=>V.diag&&V.diag.ids[V.diag.i]===p.id?V.diag.i:-1;
@@ -189,15 +189,15 @@ function advanceDiag(){
  const d=V.diag;d.i++;
  if(d.i<d.ids.length){openProblem(d.ids[d.i]);return}
  const r=d.ids.map((_,i)=>!!d.res[i]);
- const rec=!r[0]?'intro':!r[1]?'basic':'adv';
- S.diag={at:Date.now(),res:r,rec};V.diag=null;V.tier=rec;persist();Fx.sfx('xp');gotoTab('home');
+ const rec=!r[0]?'intro':!r[1]?'basic':!r[2]?'app':'adv';
+ S.diag={at:Date.now(),res:r,rec,v4:1};V.diag=null;V.tier=rec;persist();Fx.sfx('xp');gotoTab('home');
 }
 function diagHTML(){
  const solved=Object.values(S.solved).filter(r=>r&&r.ok).length;
- if(!S.diag&&solved===0)return `<section class="diagcard"><div class="act-t"><span class="kick">처음이신가요?</span><b>3문제로 시작 위치 찾기</b><span class="note">입문·기초·심화에서 한 문제씩 풀어 봐요. 모르면 건너뛰어도 되고, 5분쯤 걸려요.</span></div><div class="row"><button class="btn" id="diagstart">진단 시작</button><button class="btn ghost" id="diagno">입문부터 할래요</button></div></section>`;
+ if(!S.diag&&solved===0)return `<section class="diagcard"><div class="act-t"><span class="kick">처음이신가요?</span><b>4문제로 시작 위치 찾기</b><span class="note">입문·기초·응용·심화에서 한 문제씩 풀어 봐요. 모르면 건너뛰어도 되고, 5분쯤 걸려요.</span></div><div class="row"><button class="btn" id="diagstart">진단 시작</button><button class="btn ghost" id="diagno">입문부터 할래요</button></div></section>`;
  const d=S.diag;
  if(d&&!d.skipped&&!d.seen){
-  const names=['입문','기초','심화'];
+  const names=['입문','기초','응용','심화'];
   return `<section class="diagcard res"><div class="act-t"><span class="kick">진단 결과</span><b>${tierName(d.rec)}부터 시작하길 추천해요</b><span class="note">${names.map((n,i)=>`${n} ${d.res[i]?'통과':'아직'}`).join(' · ')} · 앞 구간도 언제든 풀 수 있어요.</span></div><button class="btn ghost" id="diagok">확인</button></section>`;
  }
  return '';

@@ -1,17 +1,19 @@
-/* ===== 학습 단계(입문·기초·심화) =====
-   분야(cat)의 단계(stage)를 3개 학습 구간으로 묶는다. 키는 'cat:stage'.
+/* ===== 학습 단계(입문·기초·응용·심화) =====
+   분야(cat)의 단계(stage)를 4개 학습 구간으로 묶는다. 키는 'cat:stage'.
    구간별 진행률·자력 해결률은 이 매핑으로 계산한다. */
 const TIERS=[
- {id:'intro',name:'입문',desc:'C# 문법과 Unity의 기본 구조'},
- {id:'basic',name:'기초',desc:'컴포넌트·물리·애니메이션 등 개별 기능 다루기'},
- {id:'adv',name:'심화',desc:'연출·설계·최적화·디버깅처럼 기능을 엮는 종합 과제'}
+ {id:'intro',name:'입문',desc:'개발을 처음 하는 사람을 위한 코딩 첫걸음 (변수·조건·반복·메서드)'},
+ {id:'basic',name:'기초',desc:'C# 문법과 Unity의 기본 구조'},
+ {id:'app',name:'응용',desc:'컴포넌트·물리·애니메이션·이벤트 등 개별 기능 다루기'},
+ {id:'adv',name:'심화',desc:'연출·설계·최적화처럼 기능을 엮는 종합 과제'}
 ];
 const TIER_OF={
- 'csharp:1':'intro','csharp:2':'intro','unity:1':'intro','unity:2':'intro','components:1':'intro','math:1':'intro','debug:1':'intro',
- 'csharp:3':'basic','unity:3':'basic','components:2':'basic','physics:1':'basic','physics:2':'basic','animation:1':'basic','animation:2':'basic','particle:1':'basic','particle:2':'basic','math:2':'basic',
- 'particle:3':'adv','juice:1':'adv','juice:2':'adv','juice:3':'adv','direction:1':'adv','direction:2':'adv','direction:3':'adv','design:1':'adv','design:2':'adv','design:3':'adv','debug:2':'adv','optimization:1':'adv','optimization:2':'adv'
+ 'start:1':'intro','start:2':'intro','start:3':'intro','start:4':'intro','start:5':'intro',
+ 'csharp:1':'basic','csharp:2':'basic','unity:1':'basic','unity:2':'basic','components:1':'basic','math:1':'basic','debug:1':'basic',
+ 'csharp:3':'app','unity:3':'app','components:2':'app','physics:1':'app','physics:2':'app','animation:1':'app','animation:2':'app','particle:1':'app','particle:2':'app','math:2':'app','debug:2':'app','juice:1':'app',
+ 'particle:3':'adv','juice:2':'adv','juice:3':'adv','direction:1':'adv','direction:2':'adv','direction:3':'adv','design:1':'adv','design:2':'adv','design:3':'adv','optimization:1':'adv','optimization:2':'adv'
 };
-const tierOf=p=>TIER_OF[p.cat+':'+p.stage]||'basic';
+const tierOf=p=>TIER_OF[p.cat+':'+p.stage]||'app';
 /* 수료 기준: 구간 문제의 80% 이상을 풀고, 푼 문제 중 60% 이상이 정답을 보지 않은 자력 해결 */
 const PASS_SOLVED=0.8,PASS_SELF=0.6;
 

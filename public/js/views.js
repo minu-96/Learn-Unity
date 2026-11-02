@@ -70,9 +70,9 @@ function renderMe(){
 let AD={users:[],reports:[],q:'',sort:'last',idle:false,wkLeft:false};
 function csvCell(v){v=String(v==null?'':v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
 function adminCsv(rows){
- const head=['이름','이메일','마지막 접속','해결','자력','입문 해결','기초 해결','심화 해결','복습 유지율','이번 주 과제'];
+ const head=['이름','이메일','마지막 접속','해결','자력','입문 해결','기초 해결','응용 해결','심화 해결','복습 유지율','이번 주 과제'];
  const lines=[head].concat(rows.map(u=>{const s=u.summary||{tier:{},solved:0,self:0};const t=s.tier||{};
-  return [u.name,u.email,u.lastActive?new Date(u.lastActive).toLocaleString('ko-KR'):'',s.solved||0,s.self||0,(t.intro||{}).solved||0,(t.basic||{}).solved||0,(t.adv||{}).solved||0,s.retain==null?'':s.retain,WK&&wkProblems(WK).length?wkDone(u)+'/'+wkProblems(WK).length:'']}));
+  return [u.name,u.email,u.lastActive?new Date(u.lastActive).toLocaleString('ko-KR'):'',s.solved||0,s.self||0,(t.intro||{}).solved||0,(t.basic||{}).solved||0,(t.app||{}).solved||0,(t.adv||{}).solved||0,s.retain==null?'':s.retain,WK&&wkProblems(WK).length?wkDone(u)+'/'+wkProblems(WK).length:'']}));
  const blob=new Blob(['﻿'+lines.map(r=>r.map(csvCell).join(',')).join('\n')],{type:'text/csv;charset=utf-8'});
  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='learn-unity-progress.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
 }
@@ -110,7 +110,7 @@ function drawAdmin(){
  rows.sort((a,b)=>{const x=key[AD.sort](a),y=key[AD.sort](b);return x<y?-1:x>y?1:0});
  const tcell=(s,id)=>{const x=(s.tier||{})[id]||{total:0,solved:0,passed:false};return `<td>${meter(x.solved,x.total,x.passed?'good':'')}<span class="note">${x.solved}/${x.total}${x.passed?' 수료':''}</span></td>`};
  const body=rows.map(u=>{const s=sm(u),idle=!u.lastActive||now-u.lastActive>=14*DAYMS;
-  return `<tr><td><b>${esc(u.name||'(이름 없음)')}</b><div class="note">${esc(u.email||'')}</div></td><td class="${idle?'warnc':''}">${ago(u.lastActive)}</td>${tcell(s,'intro')}${tcell(s,'basic')}${tcell(s,'adv')}${WK&&wkProblems(WK).length?(()=>{const n=wkDone(u),t=wkProblems(WK).length;return `<td>${meter(n,t,n>=t?'good':'')}<span class="note">${n}/${t}</span></td>`})():''}<td class="num">${s.solved?pct(s.self,s.solved)+'%':'-'}</td><td class="num">${s.retain==null?'-':s.retain+'%'}</td></tr>`}).join('')||'<tr><td colspan="8" class="note">조건에 맞는 부원이 없어요.</td></tr>';
+  return `<tr><td><b>${esc(u.name||'(이름 없음)')}</b><div class="note">${esc(u.email||'')}</div></td><td class="${idle?'warnc':''}">${ago(u.lastActive)}</td>${tcell(s,'intro')}${tcell(s,'basic')}${tcell(s,'app')}${tcell(s,'adv')}${WK&&wkProblems(WK).length?(()=>{const n=wkDone(u),t=wkProblems(WK).length;return `<td>${meter(n,t,n>=t?'good':'')}<span class="note">${n}/${t}</span></td>`})():''}<td class="num">${s.solved?pct(s.self,s.solved)+'%':'-'}</td><td class="num">${s.retain==null?'-':s.retain+'%'}</td></tr>`}).join('')||'<tr><td colspan="8" class="note">조건에 맞는 부원이 없어요.</td></tr>';
  /* 문제별 집계: prob = {문제id:[상태코드(0시도중 1자력 2참고 3AI), 채점횟수]} */
  const agg={};
  us.forEach(u=>Object.entries(u.prob||{}).forEach(([id,v])=>{const a=agg[id]||(agg[id]={n:0,ok:0,peek:0,tries:0});a.n++;a.tries+=v[1]||0;if(v[0]>0)a.ok++;if(v[0]===2||v[0]===3)a.peek++}));
@@ -123,7 +123,7 @@ function drawAdmin(){
   <div class="statrow"><div class="stat"><b>${us.length}</b><span>가입 부원</span></div><div class="stat"><b>${active7}</b><span>최근 7일 활동</span></div><div class="stat"><b>${idle14}</b><span>14일 이상 미활동</span></div>${pass.map(p=>`<div class="stat"><b>${p.n}</b><span>${p.t.name} 수료</span></div>`).join('')}</div>
   ${wkAdminHTML(rows)}
   <div class="card" style="gap:10px"><div class="row"><b>부원 현황</b><span style="flex:1"></span><input type="text" id="aq" placeholder="이름·이메일 검색" value="${esc(AD.q)}" style="max-width:200px"><select id="as" aria-label="정렬"><option value="last" ${AD.sort==='last'?'selected':''}>최근 접속순</option><option value="solved" ${AD.sort==='solved'?'selected':''}>해결 많은 순</option><option value="name" ${AD.sort==='name'?'selected':''}>이름순</option></select><label class="chk"><input type="checkbox" id="ai" ${AD.idle?'checked':''}> 14일 미활동만</label>${WK&&wkProblems(WK).length?`<label class="chk"><input type="checkbox" id="aw" ${AD.wkLeft?'checked':''}> 과제 미완료만</label>`:''}<button class="btn ghost sm" id="acsv">CSV</button></div>
-  <div class="tblwrap"><table class="tbl"><thead><tr><th>부원</th><th>마지막 접속</th><th>입문</th><th>기초</th><th>심화</th>${WK&&wkProblems(WK).length?'<th>과제</th>':''}<th class="num">자력</th><th class="num">유지율</th></tr></thead><tbody>${body}</tbody></table></div>
+  <div class="tblwrap"><table class="tbl"><thead><tr><th>부원</th><th>마지막 접속</th><th>입문</th><th>기초</th><th>응용</th><th>심화</th>${WK&&wkProblems(WK).length?'<th>과제</th>':''}<th class="num">자력</th><th class="num">유지율</th></tr></thead><tbody>${body}</tbody></table></div>
   <div class="note">자력은 해결한 문제 중 정답을 보지 않고 푼 비율, 유지율은 복습한 문제 중 기억이 이어지는 비율이에요. 수료는 구간 문제의 ${PASS_SOLVED*100}% 해결 + 자력 ${PASS_SELF*100}% 이상.</div></div>
   <div class="card" style="gap:8px"><b>많이 막히는 문제</b>${hardHtml}</div>
   <div class="card" style="gap:8px"><b>채점 오류 신고</b>${rep}</div></div>`;
