@@ -21,11 +21,17 @@ const OLD_LS='unity-training-lab';
 function sanitizeCustom(a){
  return (Array.isArray(a)?a:[]).filter(p=>p&&p.starter&&p.solution&&Array.isArray(p.rules)&&p.cat&&p.stage&&p.level).map(p=>Object.assign({goals:[],limits:[],hints:[],concepts:[]},p,{ai:true}));
 }
+/* 3구간(입문·기초·심화) 때 저장한 진단 결과를 4구간으로 옮긴다: 옛 입문은 지금의 기초, 옛 기초는 응용에 해당한다 */
+function migDiag(g){
+ if(!g||g.v4||!Array.isArray(g.res)||g.res.length!==3)return g||null;
+ const r=g.res,rec={intro:'intro',basic:'app',adv:'adv'}[g.rec]||g.rec;
+ return Object.assign({},g,{v4:1,res:[!!r[0],!!r[0],!!r[1],!!r[2]],rec});
+}
 function normalize(d){
  d=d||{};
  /* 예전 객관식 버전의 진행도는 문제가 달라져서 이어받지 않고, 개념 사전만 가져온다 */
  const fresh=d.v===VER;
- return {v:VER,solved:fresh?(d.solved||{}):{},dict:d.dict||{},custom:fresh?sanitizeCustom(d.custom):[],drafts:fresh?(d.drafts||{}):{},review:fresh?(d.review||{}):{},practice:d.practice||{},act:d.act||{},notes:d.notes||{},diag:d.diag||null};
+ return {v:VER,solved:fresh?(d.solved||{}):{},dict:d.dict||{},custom:fresh?sanitizeCustom(d.custom):[],drafts:fresh?(d.drafts||{}):{},review:fresh?(d.review||{}):{},practice:d.practice||{},act:d.act||{},notes:d.notes||{},diag:migDiag(d.diag)};
 }
 const lsKey=()=>me?LS+'-'+me.uid:LS;
 function loadLocal(){

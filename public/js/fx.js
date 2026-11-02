@@ -107,6 +107,7 @@ const Fx=(()=>{
   {id:'note3',n:'기록하는 사람',d:'메모를 3개 남겼어요',ok:st=>Object.keys(st.notes||{}).length>=3},
   {id:'t-intro',n:'입문 수료',d:'입문 구간 수료 기준을 채웠어요',ok:st=>tierPassed(st,'intro')},
   {id:'t-basic',n:'기초 수료',d:'기초 구간 수료 기준을 채웠어요',ok:st=>tierPassed(st,'basic')},
+  {id:'t-app',n:'응용 수료',d:'응용 구간 수료 기준을 채웠어요',ok:st=>tierPassed(st,'app')},
   {id:'t-adv',n:'심화 수료',d:'심화 구간 수료 기준을 채웠어요',ok:st=>tierPassed(st,'adv')}
  ];
  function tierPassed(st,id){const s=summarize(PROBLEMS,st.solved||{},st.review||{});return !!(s.tier[id]&&s.tier[id].passed)}
