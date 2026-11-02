@@ -178,7 +178,9 @@ details.sol summary{cursor:pointer;font-weight:500}
 .stat{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
 .stat b{font-family:var(--font-display);font-size:24px;line-height:1.2}
 .stat span{font-size:12px;color:var(--muted)}
-.tiergrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.tiergrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:900px){.tiergrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:480px){.tiergrid{grid-template-columns:minmax(0,1fr)}}
 .tier{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:8px;min-width:0}
 .tier h3{margin:0;font-size:18px}
 .tier p{margin:0}
@@ -233,8 +235,9 @@ details.sol summary{cursor:pointer;font-weight:500}
 .act .kick{color:var(--muted)}
 .act .btn{padding:9px 20px;white-space:nowrap}
 @media (max-width:560px){.act{flex-direction:column;align-items:stretch}.act .btn{width:100%}}
-.roads{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-@media (max-width:720px){.roads{grid-template-columns:minmax(0,1fr)}}
+.roads{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:900px){.roads{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:480px){.roads{grid-template-columns:minmax(0,1fr)}}
 .road{background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--tc);border-radius:10px;padding:14px 16px;text-align:left;display:flex;flex-direction:column;gap:6px;min-width:0}
 .road:hover{border-color:var(--tc)}
 .road b{font-size:18px}
