@@ -4,7 +4,9 @@
   "description": "Unity 개발 스터디용 코드 작성 연습장 (유니티 훈련소)",
   "scripts": {
     "test": "node tests/check.js && node tests/play.js && node tests/mut.js && node tests/cstest.js",
-    "smoke": "node tests/smoke.js && node tests/fx.js"
+    "smoke": "node tests/smoke.js && node tests/fx.js && node tests/bank.js && node tests/editor.js"
   },
-  "devDependencies": { "playwright": "*" }
+  "devDependencies": {
+    "playwright": "*"
+  }
 }

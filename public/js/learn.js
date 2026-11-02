@@ -15,7 +15,7 @@ function nextUnsolved(){
  return L.slice(i).find(p=>!isSolved(p.id))||L.find(p=>!isSolved(p.id))||null;
 }
 const inProgressList=()=>Object.entries(S.drafts).filter(([id])=>byId(id)&&!isSolved(id)).sort((a,b)=>(b[1].at||0)-(a[1].at||0)).map(([id])=>byId(id));
-const stageProblems=(cid,si)=>allProblems().filter(p=>p.cat===cid&&p.stage===si).sort((a,b)=>a.level-b.level);
+const stageProblems=(cid,si)=>allProblems().filter(p=>!p.bank&&p.cat===cid&&p.stage===si).sort((a,b)=>a.level-b.level);
 function stagesOfTier(tid){
  const out=[];
  CATS.forEach(c=>c.stages.forEach((st,i)=>{if(TIER_OF[c.id+':'+(i+1)]===tid)out.push({cat:c,si:i+1,st,key:c.id+':'+(i+1)})}));
@@ -70,6 +70,7 @@ function renderHome(){
  if(wip&&(!nx||wip.id!==nx.id))acts.push(act('wip','이어서 하기',wip.title,esc(stageLabel(wip)),'이어서 쓰기','open:'+wip.id));
  if(nx)acts.push(act('next','다음 문제',nx.title,`${esc(stageLabel(nx))} · 약 ${MIN_BY_LV[nx.level]||8}분`,wip&&wip.id===nx.id?'이어서 쓰기':'시작하기','open:'+nx.id));
  if(!nx)acts.push(`<div class="act next"><div class="act-t"><span class="kick">완주</span><b>준비된 문제를 모두 풀었어요</b><span class="note">복습으로 기억을 단단히 하고, 각 단계의 "Unity에서 직접 해보기"를 해 보세요.</span></div><button class="btn" data-go="learn">학습 지도 보기</button></div>`);
+ if(typeof bankHomeCard==='function'){const bc=bankHomeCard();if(bc)acts.push(bc)}
  const road=TIERS.map(t=>{
   const x=sm.tier[t.id];
   return `<button class="road tier-${t.id}" data-tier="${t.id}"><span class="row"><b>${t.name}</b>${x.passed?'<span class="badge done">수료</span>':''}</span><span class="note">${esc(t.desc)}</span>${meterHTML(x.solved,x.total,'t-'+t.id)}<span class="road-n">${x.solved} / ${x.total}</span></button>`;
@@ -109,7 +110,7 @@ function stageLabel(p){
  const c=CATS.find(x=>x.id===p.cat),st=c&&c.stages[p.stage-1];
  return `${c?c.name:''} · ${st?st.title:''} · ${LV[p.level]}`;
 }
-function gotoTab(t){V.tab=t;V.pid=null;V.mode=null;V.stage=null;render();window.scrollTo(0,0)}
+function gotoTab(t){V.tab=t;V.pid=null;V.mode=null;V.stage=null;V.bankStage=null;render();window.scrollTo(0,0)}
 
 /* ---------- 학습 지도 ---------- */
 function renderLearn(){

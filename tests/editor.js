@@ -1,0 +1,48 @@
+/* 코드 편집기 입력 습관 테스트 (실제 IDE와 같은 동작). 실행: node tests/editor.js */
+const http=require('http'),fs=require('fs'),path=require('path');
+const {chromium}=require('playwright');
+const ROOT=path.join(__dirname,'..','public');
+const MIME={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8'};
+const srv=http.createServer((q,r)=>{let u=decodeURIComponent(q.url.split('?')[0]);if(u==='/')u='/index.html';const f=path.join(ROOT,u);if(!f.startsWith(ROOT)||!fs.existsSync(f)){r.writeHead(404);r.end();return}r.writeHead(200,{'content-type':MIME[path.extname(f)]||'application/octet-stream'});r.end(fs.readFileSync(f))});
+let fails=0;const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
+(async()=>{
+ await new Promise(r=>srv.listen(0,r));
+ const base='http://127.0.0.1:'+srv.address().port;
+ const br=await chromium.launch(),ctx=await br.newContext({viewport:{width:1100,height:900}});
+ await ctx.route(/gstatic\.com\/firebasejs\/.*(auth|firestore)-compat/,r=>r.fulfill({body:'',contentType:'text/javascript'}));
+ await ctx.route(/gstatic\.com\/firebasejs\/.*app-compat/,r=>r.fulfill({body:fs.readFileSync(path.join(__dirname,'fake-firebase.js')),contentType:'text/javascript'}));
+ await ctx.route(/fonts\.(googleapis|gstatic)\.com/,r=>r.fulfill({body:'',contentType:'text/css'}));
+ await ctx.route(/firebase-config\.js$/,r=>r.fulfill({body:"window.FIREBASE_CONFIG={apiKey:'k',authDomain:'a',projectId:'p',appId:'x'};",contentType:'text/javascript'}));
+ const pg=await ctx.newPage();const errs=[];pg.on('pageerror',e=>errs.push(String(e)));
+ await pg.goto(base+'/');await pg.waitForSelector('#g');await pg.click('#g');await pg.waitForSelector('.hero');
+ await pg.evaluate(()=>openProblem('e1'));await pg.waitForSelector('#code');
+ const val=()=>pg.$eval('#code',e=>e.value);
+ const reset=async(t,a,b)=>{await pg.$eval('#code',(e,[t,a,b])=>{e.value=t;e.focus();e.setSelectionRange(a===undefined?t.length:a,b===undefined?(a===undefined?t.length:a):b)},[t,a,b])};
+ const key=k=>pg.keyboard.press(k);
+ const sel=()=>pg.$eval('#code',e=>[e.selectionStart,e.selectionEnd]);
+
+ await reset('');await pg.keyboard.type('f(');
+ ok(await val()==='f()','( 입력하면 ) 자동으로 닫힘');
+ await pg.keyboard.type('a)');ok(await val()==='f(a)','닫는 ) 를 치면 덮어씀');
+ await reset('');await pg.keyboard.type('s = "hi"');ok(await val()==='s = "hi"','따옴표도 짝으로 들어가고 덮어씀');
+ await reset('');await pg.keyboard.type('x[');await key('Backspace');ok(await val()==='x','빈 짝은 백스페이스 한 번에 같이 지워짐');
+ await reset('abc',1,2);await pg.keyboard.type('(');ok(await val()==='a(b)c','선택한 글자를 괄호로 감쌈');
+ await reset('don');await pg.keyboard.type("'");ok(await val()==="don'",'단어 뒤 아포스트로피는 짝을 만들지 않음');
+ await reset('');await pg.keyboard.type('if (a)');await key('Enter');
+ await reset('void A() {}',10);await key('Enter');
+ ok(await val()==='void A() {\n    \n}'&&(await sel())[0]===15,'{} 사이에서 엔터: 가운데 줄 들여쓰기, 커서 위치');
+ await reset('{\n    x;\n}',0,10);await key('Tab');ok(await val()==='    {\n        x;\n    }','여러 줄 선택 후 Tab: 모두 들여쓰기');
+ await key('Shift+Tab');ok(await val()==='{\n    x;\n}','Shift+Tab: 모두 내어쓰기');
+ await reset('a;\nb;',0,5);await key('Control+/');ok(await val()==='// a;\n// b;','Ctrl+/: 주석 처리');
+ await key('Control+/');ok(await val()==='a;\nb;','Ctrl+/: 주석 해제');
+ await reset('a\nb\nc',3);await key('Alt+ArrowUp');ok(await val()==='b\na\nc','Alt+↑: 줄 위로 이동');
+ await key('Alt+ArrowDown');await key('Alt+ArrowDown');ok(await val()==='a\nc\nb','Alt+↓: 줄 아래로 이동');
+ await reset('a\nb',0);await key('Control+d');ok(await val()==='a\na\nb','Ctrl+D: 줄 복제');
+ await reset('a\nb\nc',3);await key('Control+Shift+K');ok(await val()==='a\nc','Ctrl+Shift+K: 줄 삭제');
+ await reset('    foo',7);await key('Home');ok((await sel())[0]===4,'Home: 들여쓰기 뒤 첫 글자로');
+ await key('Home');ok((await sel())[0]===0,'Home 한 번 더: 줄 맨 앞으로');
+ await reset('x');await pg.keyboard.type('Ab');await pg.keyboard.press('Control+z');
+ ok((await val()).length<3,'Ctrl+Z 실행 취소가 동작');
+ ok(errs.length===0,'페이지 오류 없음'+(errs.length?errs[0]:''));
+ await br.close();srv.close();console.log(fails?'FAIL '+fails:'ALL PASS');process.exit(fails?1:0);
+})().catch(e=>{console.error(e);process.exit(1)});

@@ -86,7 +86,7 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
 
  // 내 기록: 배지·레벨
  await pg.click('nav.tabs [data-tab="me"]');await pg.waitForSelector('.badges');
- ok(await pg.$$eval('.bdg',e=>e.length)===12,'내 기록: 배지 12개');
+ ok(await pg.$$eval('.bdg',e=>e.length)===13,'내 기록: 배지 13개');
  ok(await pg.$$eval('.bdg:not(.lock)',e=>e.length)>=1,'획득한 배지 표시');
 
  // 진단 저장 → 새로고침 유지

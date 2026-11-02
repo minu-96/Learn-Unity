@@ -5,7 +5,7 @@ const root=path.join(__dirname,'..'),pub=path.join(root,'public');
 const r=f=>fs.readFileSync(f,'utf8');
 const order=['cs','core','cats','tiers','practice','head',...fs.readdirSync(path.join(pub,'js')).filter(f=>/^p_.*\.js$/.test(f)).map(f=>f.slice(0,-3)).sort(),'store','views','ui'];
 const logic=['cs','core','cats','tiers','practice','head',...order.filter(x=>x.startsWith('p_'))].map(n=>r(path.join(pub,'js',n+'.js'))).join('\n');
-const app=['lessons','glossary','fx','store','views','learn'].map(n=>r(path.join(pub,'js',n+'.js'))).join('\n');
+const app=['lessons','glossary','fx','store','views','learn','bank'].map(n=>r(path.join(pub,'js',n+'.js'))).join('\n');
 const cfg="window.FIREBASE_CONFIG={apiKey:'preview',authDomain:'preview',projectId:'preview',appId:'preview'};window.ADMIN_EMAIL_DOMAIN='admin.learn-unity.example';";
 const parts={fake:r(path.join(root,'tests','fake-firebase.js')),cfg,logic,seed:r(path.join(__dirname,'seed.js')),app,ui:r(path.join(pub,'js','ui.js'))};
 for(const [k,v] of Object.entries(parts)){ if(/<\/script/i.test(v)||/<!--/.test(v)) throw new Error(k+' contains </script or <!--'); new Function(v); }

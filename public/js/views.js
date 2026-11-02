@@ -43,6 +43,52 @@ function renderAdminLogin(msg){
 }
 
 /* ---------- 내 기록 ---------- */
+function statsHTML(sl){
+ const sb=summarize(BANK,S.solved,S.review),sa=summarize(PROBLEMS.concat(BANK),S.solved,S.review);
+ const rb=Object.fromEntries(Object.entries(S.review||{}).filter(([k])=>byId(k)&&byId(k).bank));
+ const rl=Object.fromEntries(Object.entries(S.review||{}).filter(([k])=>!(byId(k)&&byId(k).bank)));
+ const rt=x=>x==null?'-':x+'%';
+ const lr=summarize(PROBLEMS,S.solved,rl).retain,br=summarize(BANK,S.solved,rb).retain;
+ const bar=(a,b)=>{const t=(a+b)||1;return `<div class="splitbar" role="img" aria-label="학습 ${a}문제, 문제 사전 ${b}문제"><i class="sl" style="width:${a/t*100}%"></i><i class="sb" style="width:${b/t*100}%"></i></div>`};
+ const st=(v,l,c)=>`<div class="stat ${c||''}"><b>${v}</b><span>${l}</span></div>`;
+ return `<div class="statsys">
+  <section class="sgroup all"><div class="row"><h3>종합</h3><span class="note">학습 + 문제 사전</span></div>
+   <div class="statrow big">${st(sa.solved+'<small> / '+sa.total+'</small>','해결')}${st(sa.self,'정답 안 보고 해결')}${st(sa.tries,'채점 횟수')}${st(rt(sa.retain),'복습 유지율')}</div>
+   ${bar(sl.solved,sb.solved)}<div class="legend"><span><i class="sl"></i>학습 ${sl.solved}</span><span><i class="sb"></i>문제 사전 ${sb.solved}</span></div></section>
+  <div class="sgroup2">
+   <section class="sgroup learn"><div class="row"><h3>학습</h3><span class="note">학습 지도 ${sl.total}문제</span></div>
+    <div class="statrow mid">${st(sl.solved+'<small> / '+sl.total+'</small>','해결')}${st(sl.self,'정답 안 보고')}${st(sl.tries,'채점')}${st(rt(lr),'복습 유지')}</div></section>
+   <section class="sgroup bank"><div class="row"><h3>문제 사전</h3><span class="note">비슷한 문제 ${sb.total}개</span></div>
+    <div class="statrow sm">${st(sb.solved+'<small> / '+sb.total+'</small>','해결')}${st(sb.self,'정답 안 보고')}${st(sb.tries,'채점')}${st(rt(br),'복습 유지')}</div></section>
+  </div></div>`;
+}
+function bankLogHTML(){
+ const sets=bankSets(),open=sets.filter(x=>bankOpen(x.s.cat.id,x.s.si,x.l)).length;
+ const rows=bankAllStages().map(s=>{
+  const ps=bankProblems(s.cat.id,s.si),n=ps.filter(p=>isSolved(p.id)),self=n.filter(p=>{const r=S.solved[p.id];return r.via==='auto'&&r.clean}).length;
+  return `<tr><td>${esc(s.cat.name)} · ${esc(s.st.title)}</td><td>${meter(n.length,ps.length)}</td><td class="num">${n.length} / ${ps.length}</td><td class="num">${self}</td></tr>`}).join('');
+ return `<div class="card" id="banklog" style="gap:6px"><div class="row"><b>문제 사전 현황</b><span class="badge bank">문제 사전</span><span class="note">열린 세트 ${open} / ${sets.length}</span></div>
+  <table class="tbl"><thead><tr><th>단계</th><th></th><th>해결</th><th>자력</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function statsHTML(sl){
+ const sb=summarize(BANK,S.solved,S.review),sa=summarize(PROBLEMS.concat(BANK),S.solved,S.review);
+ const rb=Object.fromEntries(Object.entries(S.review||{}).filter(([k])=>byId(k)&&byId(k).bank));
+ const rl=Object.fromEntries(Object.entries(S.review||{}).filter(([k])=>!(byId(k)&&byId(k).bank)));
+ const rt=x=>x==null?'-':x+'%';
+ const lr=summarize(PROBLEMS,S.solved,rl).retain,br=summarize(BANK,S.solved,rb).retain;
+ const bar=(a,b)=>{const t=(a+b)||1;return `<div class="splitbar" role="img" aria-label="학습 ${a}문제, 문제 사전 ${b}문제"><i class="sl" style="width:${a/t*100}%"></i><i class="sb" style="width:${b/t*100}%"></i></div>`};
+ const st=(v,l,c)=>`<div class="stat ${c||''}"><b>${v}</b><span>${l}</span></div>`;
+ return `<div class="statsys">
+  <section class="sgroup all"><div class="row"><h3>종합</h3><span class="note">학습 + 문제 사전</span></div>
+   <div class="statrow big">${st(sa.solved+'<small> / '+sa.total+'</small>','해결')}${st(sa.self,'정답 안 보고 해결')}${st(sa.tries,'채점 횟수')}${st(rt(sa.retain),'복습 유지율')}</div>
+   ${bar(sl.solved,sb.solved)}<div class="legend"><span><i class="sl"></i>학습 ${sl.solved}</span><span><i class="sb"></i>문제 사전 ${sb.solved}</span></div></section>
+  <div class="sgroup2">
+   <section class="sgroup learn"><div class="row"><h3>학습</h3><span class="note">학습 지도 ${sl.total}문제</span></div>
+    <div class="statrow mid">${st(sl.solved+'<small> / '+sl.total+'</small>','해결')}${st(sl.self,'정답 안 보고')}${st(sl.tries,'채점')}${st(rt(lr),'복습 유지')}</div></section>
+   <section class="sgroup bank"><div class="row"><h3>문제 사전</h3><span class="note">비슷한 문제 ${sb.total}개</span></div>
+    <div class="statrow sm">${st(sb.solved+'<small> / '+sb.total+'</small>','해결')}${st(sb.self,'정답 안 보고')}${st(sb.tries,'채점')}${st(rt(br),'복습 유지')}</div></section>
+  </div></div>`;
+}
 function renderMe(){
  const sm=summarize(PROBLEMS,S.solved,S.review);
  const cards=TIERS.map(t=>{
@@ -55,13 +101,14 @@ function renderMe(){
    <div class="note">${todo}</div></section>`}).join('');
  const cats=CATS.map(c=>{const x=sm.cat[c.id]||{total:0,solved:0,self:0};
   return `<tr><td>${c.name}</td><td>${meter(x.solved,x.total)}</td><td class="num">${x.solved} / ${x.total}</td><td class="num">${x.self}</td></tr>`}).join('');
- const redo=PROBLEMS.map(p=>({p,r:S.solved[p.id]})).filter(o=>o.r&&((!o.r.ok&&(o.r.tries||0)>=2)||(o.r.ok&&o.r.via==='auto'&&!o.r.clean)||(o.r.ok&&o.r.via==='ai'))).sort((a,b)=>(b.r.tries||0)-(a.r.tries||0)).slice(0,6);
+ const redo=PROBLEMS.concat(BANK).map(p=>({p,r:S.solved[p.id]})).filter(o=>o.r&&((!o.r.ok&&(o.r.tries||0)>=2)||(o.r.ok&&o.r.via==='auto'&&!o.r.clean)||(o.r.ok&&o.r.via==='ai'))).sort((a,b)=>(b.r.tries||0)-(a.r.tries||0)).slice(0,6);
  $('#main').innerHTML=`<div style="display:flex;flex-direction:column;gap:20px">
-  <div class="statrow"><div class="stat"><b>${sm.solved}</b><span>해결 / ${sm.total}</span></div><div class="stat"><b>${sm.self}</b><span>정답 안 보고 해결</span></div><div class="stat"><b>${sm.tries}</b><span>채점 횟수</span></div><div class="stat"><b>${sm.retain==null?'-':sm.retain+'%'}</b><span>복습 유지율</span></div></div>
+  ${statsHTML(sm)}
   <div class="card" style="gap:10px"><div class="row"><b>레벨</b><span class="note">풀이·복습·메모로 경험치가 쌓여요</span></div>${(()=>{const li=Fx.levelInfo(S);return `<div class="lvstrip"><span class="big">Lv.${li.lv}</span><span class="tt2">${li.title}</span><span class="lvbar"><i style="width:${li.pct}%"></i></span><span class="note">${li.xp} XP · 다음 레벨까지 ${li.need}</span></div>`})()}<b>배지 ${Fx.earned(S).length} / ${Fx.BADGES.length}</b>${badgesHTML(Fx.BADGES)}</div>
   <div class="tiergrid">${cards}</div>
   <div class="note">수료 기준: 구간 문제의 ${PASS_SOLVED*100}% 이상을 해결하고, 푼 문제 중 ${PASS_SELF*100}% 이상은 정답을 보지 않고 풀기. 복습 유지율은 복습한 문제 중 기억이 이어지고 있는 비율이에요.</div>
   <div class="card" style="gap:6px"><b>분야별 현황</b><table class="tbl"><thead><tr><th>분야</th><th></th><th>해결</th><th>자력</th></tr></thead><tbody>${cats}</tbody></table></div>
+  ${bankLogHTML()}
   ${redo.length?`<div class="card" style="gap:6px"><b>다시 보면 좋은 문제</b><div class="note">여러 번 막혔거나 정답을 참고해서 푼 문제예요.</div>${redo.map(o=>`<button class="pc" data-p="${o.p.id}"><span class="t">${esc(o.p.title)}</span><span class="note">${esc(CATS.find(c=>c.id===o.p.cat).name)} · 시도 ${o.r.tries||0}</span></button>`).join('')}</div>`:''}</div>`;
  document.querySelectorAll('#main .pc').forEach(b=>b.onclick=()=>openProblem(b.dataset.p));
 }

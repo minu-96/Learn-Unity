@@ -1,4 +1,5 @@
-const {PROBLEMS,gradeAll,engine}=require('./load.js');
+const {PROBLEMS:P0,BANK,gradeAll,engine}=require('./load.js');
+const PROBLEMS=P0.concat(BANK);
 const run=o=>Promise.resolve(engine(o));
 const M={
  'K&R 중괄호':s=>s.replace(/\)\s*\n\s*\{/g,') {'),

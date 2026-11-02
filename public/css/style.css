@@ -4,7 +4,7 @@
   --accent:#0E7C86; --accent-ink:#FFFFFF; --accent-soft:#DDEFF0;
   --good:#2B7A4B; --good-soft:#DDF0E3; --bad:#B8431A; --bad-soft:#F8E3DA; --warn:#8A5F00; --warn-soft:#F6ECD2;
   --code-bg:#101A22; --code-ink:#DDE7EC; --code-dim:#7E919E;
-  --t-intro:#0E7C86; --t-intro-soft:#DDEFF0; --t-basic:#4A5FC1; --t-basic-soft:#E3E7F8; --t-app:#2F8F5B; --t-app-soft:#DFF1E7; --t-adv:#8A3FA0; --t-adv-soft:#F0E4F4;
+  --t-intro:#0E7C86; --t-intro-soft:#DDEFF0; --t-basic:#4A5FC1; --t-basic-soft:#E3E7F8; --t-app:#2F8F5B; --t-app-soft:#DFF1E7; --t-adv:#8A3FA0; --t-adv-soft:#F0E4F4; --bank:#A8650F; --bank-soft:#FBEBD0;
   --font-display:'Black Han Sans','Noto Sans KR',sans-serif;
   --font-body:'Noto Sans KR',system-ui,-apple-system,'Segoe UI',sans-serif;
   --font-mono:'JetBrains Mono',ui-monospace,'SF Mono',Consolas,monospace;
@@ -15,7 +15,7 @@
     --accent:#4CC2CC; --accent-ink:#06262A; --accent-soft:#143338;
     --good:#5CC98A; --good-soft:#15301F; --bad:#F08A5F; --bad-soft:#3A2018; --warn:#E0B04A; --warn-soft:#352A10;
     --code-bg:#0A1116; color-scheme:dark;
-    --t-intro:#4CC2CC; --t-intro-soft:#143338; --t-basic:#8FA3F2; --t-basic-soft:#1C2347; --t-app:#6CCB95; --t-app-soft:#14301F; --t-adv:#D69BE8; --t-adv-soft:#331B3B;
+    --t-intro:#4CC2CC; --t-intro-soft:#143338; --t-basic:#8FA3F2; --t-basic-soft:#1C2347; --t-app:#6CCB95; --t-app-soft:#14301F; --t-adv:#D69BE8; --t-adv-soft:#331B3B; --bank:#F0B558; --bank-soft:#3A2A10;
   }
 }
 :root[data-theme="dark"]{
@@ -23,7 +23,7 @@
   --accent:#4CC2CC; --accent-ink:#06262A; --accent-soft:#143338;
   --good:#5CC98A; --good-soft:#15301F; --bad:#F08A5F; --bad-soft:#3A2018; --warn:#E0B04A; --warn-soft:#352A10;
   --code-bg:#0A1116; color-scheme:dark;
-  --t-intro:#4CC2CC; --t-intro-soft:#143338; --t-basic:#8FA3F2; --t-basic-soft:#1C2347; --t-app:#6CCB95; --t-app-soft:#14301F; --t-adv:#D69BE8; --t-adv-soft:#331B3B;
+  --t-intro:#4CC2CC; --t-intro-soft:#143338; --t-basic:#8FA3F2; --t-basic-soft:#1C2347; --t-app:#6CCB95; --t-app-soft:#14301F; --t-adv:#D69BE8; --t-adv-soft:#331B3B; --bank:#F0B558; --bank-soft:#3A2A10;
 }
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.6;word-break:keep-all;overflow-wrap:break-word;
@@ -407,3 +407,94 @@ pre.ex{padding:12px 16px;margin-top:6px;white-space:pre;overflow-x:auto;tab-size
 .wkform legend{font-size:12px;font-weight:700;color:var(--muted);padding:0 6px}
 .wkform label.chk{display:flex;gap:6px;align-items:flex-start;font-size:13.5px}
 .warnc{color:var(--bad)}
+
+/* ===== 문제 사전 ===== */
+.badge.bank{background:var(--bank-soft);color:var(--bank)}
+.bankmk{color:var(--bank);font-weight:700}
+.badge.bnew{margin-left:4px}
+.bank{display:flex;flex-direction:column;gap:20px}
+.bhero{display:flex;gap:24px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--bank-soft);border:1px solid var(--line);border-left:4px solid var(--bank);border-radius:12px;padding:20px 22px}
+.bhero>div:first-child{flex:1 1 320px;min-width:0}
+.bhero h2{margin:2px 0 6px;font-size:22px}
+.bhero p{margin:0;color:var(--muted);font-size:14px;max-width:60ch}
+.bhero .kick{color:var(--bank)}
+.bstat{display:flex;gap:10px}
+.bstat div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 16px;display:flex;flex-direction:column;min-width:96px}
+.bstat b{font-size:20px;font-variant-numeric:tabular-nums}
+.bstat span{font-size:12px;color:var(--muted)}
+.chiprow{display:flex;gap:6px;flex-wrap:wrap}
+.chipbtn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:5px 14px;font-size:13px;font-weight:500}
+.chipbtn[aria-pressed="true"]{background:var(--bank);border-color:var(--bank);color:var(--surface)}
+.chipbtn:focus-visible,.bcard:focus-visible{outline:2px solid var(--bank);outline-offset:2px}
+.bsec{display:flex;flex-direction:column;gap:10px}
+.bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.bcard{background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--tc);border-radius:10px;padding:14px 16px;text-align:left;display:flex;flex-direction:column;gap:8px;min-width:0;font:inherit;color:inherit}
+button.bcard{cursor:pointer;transition:transform .15s,box-shadow .15s,border-color .15s}
+button.bcard:hover{transform:translateY(-2px);box-shadow:var(--lift);border-color:var(--tc)}
+.bcard b{font-size:16px}
+.bcard.fresh{background:linear-gradient(110deg,var(--surface) 40%,var(--bank-soft) 50%,var(--surface) 60%);background-size:250% 100%;animation:bshine 3.2s ease-in-out 2}
+.bcard.lock{background:transparent;border-style:dashed;border-top-style:solid;opacity:.78}
+.bcard.lock .btn{align-self:flex-start}
+@keyframes bshine{from{background-position:120% 0}to{background-position:-20% 0}}
+.toast.bank{background:var(--bank);color:var(--bg)}
+.act.bankcard{border-left-color:var(--bank);background:var(--bank-soft)}
+.bankbtn{background:var(--bank);border-color:var(--bank);color:var(--surface)}
+.stagepage.bank{gap:14px}
+.stagepage.bank .prows{display:flex;flex-direction:column;gap:8px}
+@media (max-width:560px){.bstat{width:100%}.bstat div{flex:1}}
+
+/* 문제 사전: 레벨 세트 */
+.lvsets{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.lvset{display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:2px 6px;border:1px solid var(--line,#ddd);border-radius:999px}
+.lvset.lock{opacity:.5}
+.lvset.fresh .lvs{color:var(--bank);font-weight:700}
+.lvset.done .lvs{color:var(--ok,#2a8)}
+.bset{margin-top:14px;padding:12px;border:1px solid var(--line,#ddd);border-radius:12px}
+.bset.fresh{border-color:var(--bank);background:var(--bank-soft)}
+.bset.lock{opacity:.8;border-style:dashed}
+
+/* 내 기록: 종합 > 학습 > 문제 사전 */
+.statsys{display:flex;flex-direction:column;gap:12px}
+.sgroup{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.sgroup h3{margin:0;font-family:var(--font-display)}
+.sgroup .stat{background:transparent;border:0;padding:0}
+.sgroup .stat small{font-size:.55em;color:var(--muted);font-weight:400}
+.sgroup.all{padding:18px 20px;border-width:2px;gap:12px}
+.sgroup.all h3{font-size:20px}
+.statrow.big{grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px}
+.statrow.big .stat b{font-size:40px}
+.statrow.big .stat span{font-size:13px}
+.sgroup2{display:grid;grid-template-columns:3fr 2fr;gap:12px}
+.sgroup.learn h3{font-size:16px}
+.statrow.mid{grid-template-columns:repeat(2,1fr);gap:10px}
+.statrow.mid .stat b{font-size:26px}
+.sgroup.bank{background:var(--bank-soft);border-color:transparent;padding:12px 14px;gap:8px}
+.sgroup.bank h3{font-size:14px;color:var(--bank)}
+.statrow.sm{grid-template-columns:repeat(2,1fr);gap:8px}
+.statrow.sm .stat b{font-size:18px}
+.statrow.sm .stat span{font-size:11px}
+.splitbar{display:flex;height:8px;border-radius:99px;overflow:hidden;background:var(--line)}
+.splitbar i.sl,.legend i.sl{background:var(--accent,#3b6ef5)}
+.splitbar i.sb,.legend i.sb{background:var(--bank)}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
+@media(max-width:640px){.sgroup2{grid-template-columns:1fr}.statrow.big .stat b{font-size:32px}}
+
+/* 굵기: Black Han Sans는 이미 굵은 글꼴이라 bold를 겹치면 뭉개진다. 큰 숫자·제목은 400, 본문 속 강조는 일반 굵기로 */
+.stat b,.sgroup h3,.bstat b,.bhero h2,.lvstrip .big{font-weight:400}
+.bset.lock{opacity:1}
+.lvset.lock{opacity:1;border-style:dashed}
+.lvset.lock .lv,.lvset.lock .lvs{color:var(--muted)}
+.lvset .lv,.bset .lv{font-weight:400}
+.note b,.bset b,.bankmk,.bcard b,.bhero b{font-weight:400;color:var(--ink)}
+.bankmk{color:var(--bank)}
+
+/* 편집기 단축키 안내 */
+.edkeys{margin:6px 2px 0;line-height:1.9}
+kbd{font-family:var(--font-mono);font-size:11px;padding:1px 6px;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;background:var(--surface);color:var(--ink)}
+
+/* 좁은 화면: 로고와 레벨·계정 줄이 겹치지 않게 줄을 나눈다 */
+@media (max-width:560px){
+ .top{grid-template-columns:minmax(0,1fr)}
+ .top .brand{order:1}.top .topr{order:2;justify-content:flex-start;gap:8px}.top nav.tabs{order:3}
+}

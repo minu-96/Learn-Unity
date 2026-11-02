@@ -55,7 +55,7 @@ function persist(){
 /* 문제별 상태 요약: [0 시도 중 / 1 자력 / 2 정답 참고 / 3 AI 판정, 채점 횟수] - 운영진 화면의 '막히는 문제' 집계용 */
 function probMap(){
  const o={};
- for(const p of PROBLEMS){const r=S.solved[p.id];if(!r||!(r.tries||r.ok))continue;o[p.id]=[r.ok?(r.via==='auto'?(r.clean?1:2):3):0,r.tries||0]}
+ for(const p of PROBLEMS.concat(BANK)){const r=S.solved[p.id];if(!r||!(r.tries||r.ok))continue;o[p.id]=[r.ok?(r.via==='auto'?(r.clean?1:2):3):0,r.tries||0]}
  return o;
 }
 function setSync(t){const e=$('#sync');if(e)e.textContent=t}
@@ -69,7 +69,7 @@ async function flush(){
  saving=false;if(dirty&&!saveTimer)saveTimer=setTimeout(flush,4000);
 }
 document.addEventListener('visibilitychange',()=>{if(document.hidden){clearTimeout(saveTimer);flush()}});
-const allProblems=()=>PROBLEMS.concat(S.custom);
+const allProblems=()=>PROBLEMS.concat(BANK,S.custom);
 const byId=id=>allProblems().find(p=>p.id===id);
 const isSolved=id=>!!(S.solved[id]&&S.solved[id].ok);
 const solvedKind=id=>{const r=S.solved[id];if(!r||!r.ok)return null;if(r.via==='auto'&&r.clean)return 'self';if(r.via==='auto')return 'peek';return 'ai'};
@@ -121,10 +121,10 @@ function updateTotal(){
 function render(){
  if(V.diag&&V.pid!==V.diag.ids[V.diag.i])V.diag=null;
  cancelAnimationFrame(raf);if(aiCtl){aiCtl.abort();aiCtl=null}
- const tabs=[['home','오늘'],['learn','학습'],['review','복습'],['dict','개념 사전'],['me','내 기록']].concat(me&&me.admin?[['admin','운영']]:[]);
+ const tabs=[['home','오늘'],['learn','학습'],['bank','문제 사전'],['review','복습'],['dict','개념 사전'],['me','내 기록']].concat(me&&me.admin?[['admin','운영']]:[]);
  $('#app').innerHTML=`
  <header class="top"><div class="brand"><b>유니티 훈련소</b></div>
- <nav class="tabs" role="tablist" aria-label="메뉴">${tabs.map(([k,l])=>`<button role="tab" data-tab="${k}" aria-selected="${V.tab===k}">${l}${k==='review'?' <span class="badge new" id="revcount" hidden></span>':''}</button>`).join('')}</nav><div class="topr">${lvHTML()}${whoHTML()}</div></header>
+ <nav class="tabs" role="tablist" aria-label="메뉴">${tabs.map(([k,l])=>`<button role="tab" data-tab="${k}" aria-selected="${V.tab===k}">${l}${k==='review'?' <span class="badge new" id="revcount" hidden></span>':''}${k==='bank'&&bankNew()?' <span class="badge new bnew">'+bankNew()+'</span>':''}</button>`).join('')}</nav><div class="topr">${lvHTML()}${whoHTML()}</div></header>
  <main id="main"></main>`;
  document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>gotoTab(b.dataset.tab));
  updateTotal();
@@ -134,6 +134,7 @@ function render(){
  else if(V.tab==='me')renderMe();
  else if(V.tab==='admin'&&me&&me.admin)renderAdmin();
  else if(V.tab==='learn')V.stage?renderStage():renderLearn();
+ else if(V.tab==='bank')V.bankStage?renderBankStage():renderBank();
  else renderHome();
  const lo=$('#logout');if(lo)lo.onclick=()=>Store.signOut();
  const sn=$('#snd');if(sn)sn.onclick=()=>{Fx.setOn(!Fx.isOn());sn.setAttribute('aria-pressed',String(Fx.isOn()));sn.textContent=Fx.isOn()?'♪ 켬':'♪ 끔'};
@@ -154,7 +155,7 @@ function whoHTML(){
  if(Store.configured)return `<div class="who"><span class="note">게스트 · 이 브라우저에만 저장</span><button class="btn ghost sm" id="login">로그인</button></div>`;
  return `<div class="who"><span class="note">이 브라우저에만 저장돼요</span></div>`;
 }
-const openProblem=(id,mode)=>{const p=byId(id);V.pid=id;V.mode=mode||null;if(p&&mode==='review')V.tab='review';else if(p){V.tab='learn';V.stage={cat:p.cat,stage:p.stage}}render();window.scrollTo(0,0)};
+const openProblem=(id,mode)=>{const p=byId(id);V.pid=id;V.mode=mode||null;if(p&&mode==='review')V.tab='review';else if(p&&p.bank){V.tab='bank';V.bankStage={cat:p.cat,stage:p.stage}}else if(p){V.tab='learn';V.stage={cat:p.cat,stage:p.stage}}render();window.scrollTo(0,0)};
 
 /* ---------- 훈련 목록 ---------- */
 function stageInfo(p){
@@ -285,18 +286,19 @@ function renderProblem(p){
  P={p,tries:0,hint:0,peeked:false,last:null,code:d?d.code:p.starter,firstFail:false};
  const sim=!!p.world,seen=new Set();
  const cat=CATS.find(c=>c.id===p.cat),stt=cat.stages[p.stage-1],tid=tierOf(p);
- const sibs=stageProblems(p.cat,p.stage),si=sibs.findIndex(x=>x.id===p.id);
+ const sibs=p.bank?bankProblems(p.cat,p.stage,p.level):stageProblems(p.cat,p.stage),si=sibs.findIndex(x=>x.id===p.id);
  const T=t=>linkTerms(t,seen);
  const editor=`<div class="tools top-tools"><button class="btn" id="grade">채점하기</button><button class="btn ghost sm" id="reset">처음 코드로</button><button class="btn ghost sm" id="sol">정답 보기</button><span class="note">Ctrl/⌘ + Enter로도 채점해요</span></div>
   <div class="edwrap"><pre class="gut" id="gut" aria-hidden="true"></pre><div class="edbox"><pre class="hlpre" id="hlpre" aria-hidden="true"></pre><textarea class="ed" id="code" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="코드 편집기"></textarea></div></div>
+  <div class="edkeys note" aria-label="편집기 단축키"><kbd>Tab</kbd> 들여쓰기 · <kbd>Shift</kbd>+<kbd>Tab</kbd> 내어쓰기 · <kbd>Ctrl</kbd>+<kbd>/</kbd> 주석 · <kbd>Alt</kbd>+<kbd>↑↓</kbd> 줄 이동 · <kbd>Ctrl</kbd>+<kbd>D</kbd> 줄 복제 · 괄호와 따옴표는 자동으로 닫혀요</div>
   <div class="live" id="live" aria-live="polite"></div>`;
  $('#main').innerHTML=`<div class="pscreen">
-  <div class="crumbs"><button class="btn ghost sm" id="back">← ${review?'복습 목록':'단계 화면'}</button><span class="note">${esc(tierName(tid))} › ${esc(cat.name)} › ${esc(stt.title)} · ${esc(LV[p.level])}</span><span style="flex:1"></span>
+  <div class="crumbs"><button class="btn ghost sm" id="back">← ${review?'복습 목록':p.bank?'문제 사전':'단계 화면'}</button><span class="note">${p.bank?'<b class="bankmk">문제 사전</b> › ':''}${esc(tierName(tid))} › ${esc(cat.name)} › ${esc(stt.title)} · ${esc(LV[p.level])}</span><span style="flex:1"></span>
    ${!review&&sibs.length>1?`<span class="pnav"><button class="btn ghost sm" id="prevp" aria-label="이전 문제" ${si<=0?'disabled':''}>◀</button><span class="note">${si+1} / ${sibs.length}</span><button class="btn ghost sm" id="nextp" aria-label="다음 문제" ${si>=sibs.length-1?'disabled':''}>▶</button></span>`:''}</div>
   <div class="pgrid">
    <section class="pleft card">
     ${diagBar(p)}
-    <div class="row">${review?'<span class="badge new">복습</span>':''}${sim?'<span class="badge sim">시뮬레이션</span>':'<span class="badge">코드 작성</span>'}${p.ai?'<span class="badge ai">AI 생성</span>':''}${review?'':statusBadge(p.id)}<span class="note">약 ${MIN_BY_LV[p.level]||8}분</span></div>
+    <div class="row">${review?'<span class="badge new">복습</span>':''}${p.bank?'<span class="badge bank">문제 사전</span>':''}${sim?'<span class="badge sim">시뮬레이션</span>':'<span class="badge">코드 작성</span>'}${p.ai?'<span class="badge ai">AI 생성</span>':''}${review?'':statusBadge(p.id)}<span class="note">약 ${MIN_BY_LV[p.level]||8}분</span></div>
     <h2 class="pt">${esc(p.title)}</h2>
     ${review?'<div class="msg info">복습이에요. 예전에 쓴 코드 없이 시작 코드부터 다시 풀어 보세요. 첫 채점에 통과하면 다음 복습 간격이 길어져요.</div>':''}
     <div class="story">${T(p.story)}</div>
@@ -350,28 +352,82 @@ function setupEditor(p){
   },700);
  });
  const ins=t=>{ta.focus();let ok=false;try{ok=document.execCommand&&document.execCommand('insertText',false,t)}catch(e){}if(!ok){ta.setRangeText(t,ta.selectionStart,ta.selectionEnd,'end');ta.dispatchEvent(new Event('input'))}};
+ /* 실제 IDE(Visual Studio·Rider·VS Code)와 같은 입력 습관: 괄호·따옴표 자동 닫기, 닫는 글자 덮어쓰기,
+    짝 지우기, 여러 줄 들여쓰기, 주석 전환, 줄 이동, 스마트 Home */
+ const set=(a,b)=>{ta.selectionStart=a;ta.selectionEnd=b===undefined?a:b};
+ const rep=(a,b,t,sa,sb)=>{ta.focus();set(a,b);ins(t);if(sa!==undefined)set(sa,sb)};
+ const PAIR={'(':')','[':']','{':'}','"':'"',"'":"'"},CLOSE=')]}"\'';
+ const lineRange=()=>{const v=ta.value,a=ta.selectionStart;let b=ta.selectionEnd;if(b>a&&v[b-1]==='\n')b--;const ls=v.lastIndexOf('\n',a-1)+1;let le=v.indexOf('\n',b);if(le<0)le=v.length;return [ls,le]};
+ const wordCh=c=>!!c&&/[\w가-힣]/.test(c);
  ta.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();grade(p);return}
-  if(e.isComposing)return;
-  const s=ta.selectionStart,v=ta.value;
-  if(e.key==='Tab'&&!e.shiftKey){e.preventDefault();ins('    ');return}
-  if(e.key==='Tab'&&e.shiftKey){
+  if(e.isComposing||e.keyCode===229)return;
+  const s=ta.selectionStart,en=ta.selectionEnd,v=ta.value,k=e.key,mod=e.ctrlKey||e.metaKey;
+  const prev=v[s-1],next=v[en];
+  /* 탭: 여러 줄이면 모두 들여쓰기 / 내어쓰기 */
+  if(k==='Tab'){
    e.preventDefault();
-   const ls=v.lastIndexOf('\n',s-1)+1,m=v.slice(ls).match(/^ {1,4}/);
-   if(m){ta.setRangeText('',ls,ls+m[0].length,'preserve');ta.selectionStart=ta.selectionEnd=Math.max(ls,s-m[0].length);ta.dispatchEvent(new Event('input'))}
+   const multi=v.slice(s,en).includes('\n');
+   if(!e.shiftKey&&!multi){ins('    ');return}
+   const [ls,le]=lineRange(),lines=v.slice(ls,le).split('\n');
+   if(!e.shiftKey){const t=lines.map(l=>'    '+l).join('\n');rep(ls,le,t,s+4,en+4*lines.length);return}
+   let first=0,total=0;
+   const t=lines.map((l,i)=>{const m=l.match(/^ {1,4}|^\t/),n=m?m[0].length:0;if(i===0)first=n;total+=n;return l.slice(n)}).join('\n');
+   if(!total)return;
+   rep(ls,le,t,Math.max(ls,s-first),Math.max(ls,en-total));return;
+  }
+  /* Ctrl+/ 주석 전환 */
+  if(mod&&(k==='/'||e.code==='Slash')){
+   e.preventDefault();
+   const [ls,le]=lineRange(),lines=v.slice(ls,le).split('\n'),all=lines.filter(l=>l.trim()).every(l=>/^\s*\/\//.test(l));
+   const t=lines.map(l=>!l.trim()?l:all?l.replace(/^(\s*)\/\/ ?/,'$1'):l.replace(/^(\s*)/,'$1// ')).join('\n');
+   rep(ls,le,t,ls,ls+t.length);return;
+  }
+  /* Alt+↑/↓ 줄 이동 */
+  if(e.altKey&&(k==='ArrowUp'||k==='ArrowDown')){
+   e.preventDefault();
+   const [ls,le]=lineRange();
+   if(k==='ArrowUp'){if(!ls)return;const ps=v.lastIndexOf('\n',ls-2)+1,pl=v.slice(ps,ls-1),blk=v.slice(ls,le);rep(ps,le,blk+'\n'+pl,s-(pl.length+1),en-(pl.length+1))}
+   else{if(le>=v.length)return;let ne=v.indexOf('\n',le+1);if(ne<0)ne=v.length;const nl=v.slice(le+1,ne),blk=v.slice(ls,le);rep(ls,ne,nl+'\n'+blk,s+nl.length+1,en+nl.length+1)}
    return;
   }
-  if(e.key==='Enter'&&!e.shiftKey&&!e.ctrlKey&&!e.metaKey&&s===ta.selectionEnd){
+  /* Ctrl+Shift+K 줄 지우기, Ctrl+D 줄 복제 */
+  if(mod&&e.shiftKey&&(k==='K'||k==='k')){e.preventDefault();const [ls,le]=lineRange();rep(ls,Math.min(v.length,le+1),'',ls);return}
+  if(mod&&!e.shiftKey&&(k==='d'||k==='D')){e.preventDefault();const [ls,le]=lineRange(),blk=v.slice(ls,le);rep(le,le,'\n'+blk,s+blk.length+1,en+blk.length+1);return}
+  /* 스마트 Home: 들여쓰기 뒤 첫 글자 ↔ 줄 맨 앞 */
+  if(k==='Home'&&!mod&&!e.altKey){
+   const ls=v.lastIndexOf('\n',s-1)+1,fi=ls+(v.slice(ls).match(/^ */)[0].length),to=s===fi?ls:fi;
+   e.preventDefault();
+   if(e.shiftKey){const anc=ta.selectionDirection==='backward'?en:s;ta.setSelectionRange(Math.min(to,anc),Math.max(to,anc),to<anc?'backward':'forward')}
+   else set(to);
+   return;
+  }
+  /* 지우기: 비어 있는 짝은 함께 지움 */
+  if(k==='Backspace'&&s===en&&!mod&&PAIR[prev]&&PAIR[prev]===next){e.preventDefault();rep(s-1,s+1,'',s-1);return}
+  /* 엔터: 들여쓰기 유지, 중괄호 안이면 한 칸 더 */
+  if(k==='Enter'&&!e.shiftKey&&!mod&&s===en){
    const ls=v.lastIndexOf('\n',s-1)+1,line=v.slice(ls,s),ind=line.match(/^\s*/)[0];
    const open=/\{\s*$/.test(line),extra=open?'    ':'';
    e.preventDefault();
-   if(open&&v[s]==='}'){ins('\n'+ind+extra+'\n'+ind);ta.selectionStart=ta.selectionEnd=s+1+ind.length+extra.length}
+   if(open&&next==='}'){ins('\n'+ind+extra+'\n'+ind);set(s+1+ind.length+extra.length)}
    else ins('\n'+ind+extra);
    return;
   }
-  if(e.key==='}'&&s===ta.selectionEnd){
+  if(mod||e.altKey)return;
+  /* 닫는 글자를 직접 치면 이미 있는 것을 덮어씀 */
+  if(CLOSE.includes(k)&&s===en&&next===k&&k!=='"'&&k!=="'"||(k==='"'||k==="'")&&s===en&&next===k){e.preventDefault();set(s+1);return}
+  /* } 는 들여쓰기만 있는 줄이면 한 칸 내어쓰기 */
+  if(k==='}'&&s===en){
    const ls=v.lastIndexOf('\n',s-1)+1,line=v.slice(ls,s);
-   if(/^ {4,}$/.test(line)){e.preventDefault();ta.setRangeText('}',s-4,s,'end');ta.dispatchEvent(new Event('input'))}
+   if(/^ {4,}$/.test(line)){e.preventDefault();rep(s-4,s,'}',s-3);return}
+  }
+  /* 여는 괄호·따옴표는 짝을 함께 넣고, 선택한 글자는 감싼다 */
+  if(PAIR[k]){
+   if(s!==en){e.preventDefault();rep(s,en,k+v.slice(s,en)+PAIR[k],s+1,en+1);return}
+   const isQ=k==='"'||k==="'";
+   if(isQ&&wordCh(prev))return;
+   if(next&&!/[\s)\]};,.]/.test(next))return;
+   e.preventDefault();rep(s,s,k+PAIR[k],s+1);
   }
  });
 }
@@ -431,7 +487,7 @@ function resultHTML(p,out){
 }
 async function grade(p){
  const btn=$('#grade');if(!btn||btn.disabled)return;
- btn.disabled=true;btn.textContent='채점 중...';
+ btn.disabled=true;btn.textContent='채점 중...';Fx.sfx('run');
  const code=$('#code').value;
  let out;
  try{out=await gradeAll(p,code,run)}catch(e){out={items:[{sec:'req',ok:false,label:'채점 오류',msg:'채점 중 문제가 생겼어요: '+(e&&e.message)}],pass:false,logs:[]}}
@@ -448,18 +504,18 @@ async function grade(p){
  markLine(firstLine?+/^(\d+)/.exec(firstLine)[1]:null);
  if(p.world&&out.show){playSim($('#cv'),p.world,out.show)}
  const lg=$('#logs');if(lg&&p.world)lg.textContent=(out.logs&&out.logs.length)?out.logs.join('\n'):'(Debug.Log 출력 없음)';
- const was=isSolved(p.id),before=Fx.snap(S);
+ const was=isSolved(p.id),before=Fx.snap(S),wasOpen=bankOpen(p.cat,p.stage,p.level);
  record(p,passed,passed?{via:'auto'}:null);
  if(passed){schedule(p,true,firstTry);if(!was)delete S.drafts[p.id];persist()}
  else if(V.mode==='review'&&P.tries===1){/* 복습 첫 시도 실패는 통과 시 상자를 0으로 */}
- if(passed){showDone(p,!was||V.mode==='review');if(!was||V.mode==='review'){Fx.reward(before,S);paintLevel()}else Fx.sfx('tap')}
+ if(passed){showDone(p,!was||V.mode==='review');if(!was||V.mode==='review'){Fx.reward(before,S);paintLevel();bankUnlockHook(p,wasOpen)}else Fx.sfx('tap')}
  else Fx.sfx('fail');
  $('#result').scrollIntoView({block:'nearest',behavior:'smooth'});
 }
 function showDone(p,fresh){
  const review=V.mode==='review';
- const sibs=stageProblems(p.cat,p.stage),i=sibs.findIndex(x=>x.id===p.id);
- const nx=review?null:(sibs.slice(i+1).find(x=>!isSolved(x.id))||nextUnsolved());
+ const sibs=p.bank?bankProblems(p.cat,p.stage,p.level):stageProblems(p.cat,p.stage),i=sibs.findIndex(x=>x.id===p.id);
+ const nx=review?null:p.bank?(sibs.slice(i+1).concat(sibs.slice(0,Math.max(0,i))).find(x=>!isSolved(x.id))||null):(sibs.slice(i+1).find(x=>!isSolved(x.id))||nextUnsolved());
  const rv=S.review[p.id],nextDue=rv?Math.max(1,Math.round((rv.due-Date.now())/DAY)):null;
  const kind=solvedKind(p.id),r=S.solved[p.id]||{};
  const note=review?(P.firstFail?'복습 통과! 처음에 막혔으니 곧 다시 복습할게요.':`복습 통과! 다음 복습은 ${nextDue}일 뒤예요.`):(kind==='peek'?'정답을 본 뒤 해결했어요. 며칠 뒤 복습에서 스스로 다시 풀어 보세요.':kind==='ai'?'AI 판정으로 통과했어요. 복습에서 자동 채점으로도 통과해 보세요.':'');
@@ -473,7 +529,7 @@ function showDone(p,fresh){
   <div class="exp">${esc(p.why)}</div>${conceptChips(p)}
   ${review?'':`<div class="reflect"><label for="note">새로 알게 된 점을 한 줄로 남겨 보세요 <span class="note">개념 사전에 내 메모로 저장돼요</span></label><div class="ask"><input id="note" type="text" maxlength="120" value="${esc(saved)}" placeholder="예: Update에서는 deltaTime을 곱해야 한다"><button class="btn ghost" id="savenote">저장</button></div><span class="note" id="notemsg" role="status"></span></div>
   <div class="feel"><span class="note">풀어 보니 어땠나요?</span>${fb('easy','쉬웠어요')}${fb('ok','보통이에요')}${fb('hard','어려웠어요')}</div>`}
-  <div class="tools">${nx?`<button class="btn" id="next">다음 문제 · ${esc(nx.title)}</button>`:''}${review&&dueList().length?'<button class="btn" id="nextrev">다음 복습</button>':''}<button class="btn ghost" id="tolist">${review?'복습 목록으로':'단계 화면으로'}</button></div></div>`;
+  <div class="tools">${nx?`<button class="btn" id="next">다음 문제 · ${esc(nx.title)}</button>`:''}${review&&dueList().length?'<button class="btn" id="nextrev">다음 복습</button>':''}<button class="btn ghost" id="tolist">${review?'복습 목록으로':p.bank?'문제 사전으로':'단계 화면으로'}</button></div></div>`;
  const n=$('#next');if(n)n.onclick=()=>openProblem(nx.id);
  const nr=$('#nextrev');if(nr)nr.onclick=()=>openProblem(dueList()[0],'review');
  $('#tolist').onclick=()=>{V.pid=null;V.mode=null;render();window.scrollTo(0,0)};
@@ -688,3 +744,11 @@ async function init(){
  await boot();
 }
 init();
+
+/* 소리: 버튼을 누를 때마다 가볍게 (채점은 별도 소리). 소리를 끄면 아무 소리도 나지 않는다 */
+document.addEventListener('click',e=>{
+ const t=e.target.closest&&e.target.closest('button,.sc,.pc,.prow,.bcard');
+ if(!t||t.disabled||t.closest('#toasts'))return;
+ if(t.id==='grade'||t.id==='sol')return;
+ Fx.sfx(t.id==='back'||t.id==='tolist'||t.classList.contains('ghost')?'back':'tap');
+},true);
