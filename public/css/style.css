@@ -452,3 +452,30 @@ button.bcard:hover{transform:translateY(-2px);box-shadow:var(--lift);border-colo
 .bset{margin-top:14px;padding:12px;border:1px solid var(--line,#ddd);border-radius:12px}
 .bset.fresh{border-color:var(--bank);background:var(--bank-soft)}
 .bset.lock{opacity:.8;border-style:dashed}
+
+/* 내 기록: 종합 > 학습 > 문제 사전 */
+.statsys{display:flex;flex-direction:column;gap:12px}
+.sgroup{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.sgroup h3{margin:0;font-family:var(--font-display)}
+.sgroup .stat{background:transparent;border:0;padding:0}
+.sgroup .stat small{font-size:.55em;color:var(--muted);font-weight:400}
+.sgroup.all{padding:18px 20px;border-width:2px;gap:12px}
+.sgroup.all h3{font-size:20px}
+.statrow.big{grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px}
+.statrow.big .stat b{font-size:40px}
+.statrow.big .stat span{font-size:13px}
+.sgroup2{display:grid;grid-template-columns:3fr 2fr;gap:12px}
+.sgroup.learn h3{font-size:16px}
+.statrow.mid{grid-template-columns:repeat(2,1fr);gap:10px}
+.statrow.mid .stat b{font-size:26px}
+.sgroup.bank{background:var(--bank-soft);border-color:transparent;padding:12px 14px;gap:8px}
+.sgroup.bank h3{font-size:14px;color:var(--bank)}
+.statrow.sm{grid-template-columns:repeat(2,1fr);gap:8px}
+.statrow.sm .stat b{font-size:18px}
+.statrow.sm .stat span{font-size:11px}
+.splitbar{display:flex;height:8px;border-radius:99px;overflow:hidden;background:var(--line)}
+.splitbar i.sl,.legend i.sl{background:var(--accent,#3b6ef5)}
+.splitbar i.sb,.legend i.sb{background:var(--bank)}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
+@media(max-width:640px){.sgroup2{grid-template-columns:1fr}.statrow.big .stat b{font-size:32px}}
