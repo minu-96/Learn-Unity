@@ -33,7 +33,7 @@ public/                 Firebase Hosting이 그대로 서비스하는 정적 사
 firestore.rules         보안 규칙
 firebase.json           호스팅 + 규칙 설정
 tests/                  채점 검증 · 통합 테스트
-docs/                   배포 가이드 · 운영 가이드 · 베타 체크리스트 · 작업 기록
+docs/                   운영 가이드 · 베타 체크리스트 · 작업 기록
 ```
 
 ## 실행·테스트
@@ -44,10 +44,6 @@ npm test               # 90문제 정답/오답 검증 + 학생 풀이 59개 + �
 npm run smoke          # 가짜 Firebase로 로그인·저장·운영진 화면 통합 테스트
 npx serve public       # 로컬에서 열기 (firebase-config.js가 비어 있으면 게스트 모드)
 ```
-
-## 배포
-
-[docs/배포-가이드.md](docs/배포-가이드.md) 참고. 요약: Firebase 프로젝트(Spark 무료 요금제)를 만들고 `firebase-config.js`를 채운 뒤 `firebase deploy`.
 
 ## 새 문제 추가
 
