@@ -58,6 +58,7 @@ function renderMe(){
  const redo=PROBLEMS.map(p=>({p,r:S.solved[p.id]})).filter(o=>o.r&&((!o.r.ok&&(o.r.tries||0)>=2)||(o.r.ok&&o.r.via==='auto'&&!o.r.clean)||(o.r.ok&&o.r.via==='ai'))).sort((a,b)=>(b.r.tries||0)-(a.r.tries||0)).slice(0,6);
  $('#main').innerHTML=`<div style="display:flex;flex-direction:column;gap:20px">
   <div class="statrow"><div class="stat"><b>${sm.solved}</b><span>해결 / ${sm.total}</span></div><div class="stat"><b>${sm.self}</b><span>정답 안 보고 해결</span></div><div class="stat"><b>${sm.tries}</b><span>채점 횟수</span></div><div class="stat"><b>${sm.retain==null?'-':sm.retain+'%'}</b><span>복습 유지율</span></div></div>
+  <div class="card" style="gap:10px"><div class="row"><b>레벨</b><span class="note">풀이·복습·메모로 경험치가 쌓여요</span></div>${(()=>{const li=Fx.levelInfo(S);return `<div class="lvstrip"><span class="big">Lv.${li.lv}</span><span class="tt2">${li.title}</span><span class="lvbar"><i style="width:${li.pct}%"></i></span><span class="note">${li.xp} XP · 다음 레벨까지 ${li.need}</span></div>`})()}<b>배지 ${Fx.earned(S).length} / ${Fx.BADGES.length}</b>${badgesHTML(Fx.BADGES)}</div>
   <div class="tiergrid">${cards}</div>
   <div class="note">수료 기준: 구간 문제의 ${PASS_SOLVED*100}% 이상을 해결하고, 푼 문제 중 ${PASS_SELF*100}% 이상은 정답을 보지 않고 풀기. 복습 유지율은 복습한 문제 중 기억이 이어지고 있는 비율이에요.</div>
   <div class="card" style="gap:6px"><b>분야별 현황</b><table class="tbl"><thead><tr><th>분야</th><th></th><th>해결</th><th>자력</th></tr></thead><tbody>${cats}</tbody></table></div>
@@ -66,20 +67,36 @@ function renderMe(){
 }
 
 /* ---------- 운영진 ---------- */
-let AD={users:[],reports:[],q:'',sort:'last',idle:false};
+let AD={users:[],reports:[],q:'',sort:'last',idle:false,wkLeft:false};
 function csvCell(v){v=String(v==null?'':v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
 function adminCsv(rows){
- const head=['이름','이메일','마지막 접속','해결','자력','입문 해결','기초 해결','심화 해결','복습 유지율'];
+ const head=['이름','이메일','마지막 접속','해결','자력','입문 해결','기초 해결','심화 해결','복습 유지율','이번 주 과제'];
  const lines=[head].concat(rows.map(u=>{const s=u.summary||{tier:{},solved:0,self:0};const t=s.tier||{};
-  return [u.name,u.email,u.lastActive?new Date(u.lastActive).toLocaleString('ko-KR'):'',s.solved||0,s.self||0,(t.intro||{}).solved||0,(t.basic||{}).solved||0,(t.adv||{}).solved||0,s.retain==null?'':s.retain]}));
+  return [u.name,u.email,u.lastActive?new Date(u.lastActive).toLocaleString('ko-KR'):'',s.solved||0,s.self||0,(t.intro||{}).solved||0,(t.basic||{}).solved||0,(t.adv||{}).solved||0,s.retain==null?'':s.retain,WK&&wkProblems(WK).length?wkDone(u)+'/'+wkProblems(WK).length:'']}));
  const blob=new Blob(['﻿'+lines.map(r=>r.map(csvCell).join(',')).join('\n')],{type:'text/csv;charset=utf-8'});
  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='learn-unity-progress.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
 }
 async function renderAdmin(){
  $('#main').innerHTML='<div class="note">불러오는 중…</div>';
- try{const [u,r]=await Promise.all([Store.listUsers(),Store.listReports()]);AD.users=u;AD.reports=r}
+ try{const [u,r]=await Promise.all([Store.listUsers(),Store.listReports(),loadWeekly()]);AD.users=u;AD.reports=r}
  catch(e){$('#main').innerHTML=`<div class="msg no">운영 데이터를 불러오지 못했어요. 운영진 권한(admins 문서)이 등록됐는지 확인해 주세요. (${esc((e&&e.code)||'오류')})</div>`;return}
  drawAdmin();
+}
+/* 부원이 이번 주 과제 문제를 몇 개 풀었는지: users 문서의 prob(문제별 상태)로 계산 */
+function wkDone(u){return wkProblems(WK).filter(p=>{const v=(u.prob||{})[p.id];return v&&v[0]>0}).length}
+function wkAdminHTML(rows){
+ const ps=wkProblems(WK),tot=ps.length,all=AD.users;
+ const cur=WK&&tot?`<div class="row"><b>${esc(WK.title||'이번 주 과제')}</b><span class="note">${WK.due?'마감 '+new Date(WK.due).toLocaleDateString('ko-KR'):'마감 없음'} · 문제 ${tot}개 · 완료 ${all.filter(u=>wkDone(u)>=tot).length} / ${all.length}명</span></div>`:'<div class="note">지정된 과제가 없어요. 아래에서 단계를 골라 이번 주 과제를 만들 수 있어요.</div>';
+ const have=new Set((WK&&WK.stages)||[]);
+ const groups=TIERS.map(t=>`<fieldset><legend>${esc(t.name)}</legend><div class="stg">${stagesOfTier(t.id).map(s=>`<label class="chk"><input type="checkbox" data-wk="${s.key}" ${have.has(s.key)?'checked':''}> <span>${esc(s.cat.name)} · ${esc(s.st.title)}</span></label>`).join('')}</div></fieldset>`).join('');
+ const due=WK&&WK.due?dayKey(WK.due):'';
+ return `<div class="card" style="gap:10px"><b>주차 과제</b>${cur}
+  <details><summary class="note" style="cursor:pointer">과제 만들기 · 바꾸기</summary><div class="wkform" style="margin-top:10px">
+   <label class="lbl">제목<input type="text" id="wkt" maxlength="60" value="${esc((WK&&WK.title)||'')}" placeholder="예: 3주차 · 변수와 이벤트 함수"></label>
+   <label class="lbl">안내(선택)<input type="text" id="wkn" maxlength="200" value="${esc((WK&&WK.note)||'')}" placeholder="예: 정답은 마지막에만 보세요"></label>
+   <label class="lbl">마감일(선택)<input type="date" id="wkd" value="${due}"></label>
+   ${groups}
+   <div class="row"><button class="btn" id="wksave">과제 저장</button><button class="btn ghost" id="wkclear">과제 내리기</button><span class="note" id="wkmsg" role="status"></span></div></div></details></div>`;
 }
 function drawAdmin(){
  const now=Date.now(),us=AD.users,tot=PROBLEMS.length;
@@ -88,12 +105,12 @@ function drawAdmin(){
  const active7=us.filter(u=>u.lastActive&&now-u.lastActive<7*DAYMS).length;
  const idle14=us.filter(u=>!u.lastActive||now-u.lastActive>=14*DAYMS).length;
  const pass=TIERS.map(t=>({t,n:us.filter(u=>((sm(u).tier||{})[t.id]||{}).passed).length}));
- let rows=us.filter(u=>!AD.q||((u.name||'')+(u.email||'')).toLowerCase().includes(AD.q.toLowerCase())).filter(u=>!AD.idle||!u.lastActive||now-u.lastActive>=14*DAYMS);
+ let rows=us.filter(u=>!AD.q||((u.name||'')+(u.email||'')).toLowerCase().includes(AD.q.toLowerCase())).filter(u=>!AD.idle||!u.lastActive||now-u.lastActive>=14*DAYMS).filter(u=>!AD.wkLeft||!(WK&&wkProblems(WK).length)||wkDone(u)<wkProblems(WK).length);
  const key={last:u=>-(u.lastActive||0),solved:u=>-(sm(u).solved||0),name:u=>(u.name||'')};
  rows.sort((a,b)=>{const x=key[AD.sort](a),y=key[AD.sort](b);return x<y?-1:x>y?1:0});
  const tcell=(s,id)=>{const x=(s.tier||{})[id]||{total:0,solved:0,passed:false};return `<td>${meter(x.solved,x.total,x.passed?'good':'')}<span class="note">${x.solved}/${x.total}${x.passed?' 수료':''}</span></td>`};
  const body=rows.map(u=>{const s=sm(u),idle=!u.lastActive||now-u.lastActive>=14*DAYMS;
-  return `<tr><td><b>${esc(u.name||'(이름 없음)')}</b><div class="note">${esc(u.email||'')}</div></td><td class="${idle?'warnc':''}">${ago(u.lastActive)}</td>${tcell(s,'intro')}${tcell(s,'basic')}${tcell(s,'adv')}<td class="num">${s.solved?pct(s.self,s.solved)+'%':'-'}</td><td class="num">${s.retain==null?'-':s.retain+'%'}</td></tr>`}).join('')||'<tr><td colspan="7" class="note">조건에 맞는 부원이 없어요.</td></tr>';
+  return `<tr><td><b>${esc(u.name||'(이름 없음)')}</b><div class="note">${esc(u.email||'')}</div></td><td class="${idle?'warnc':''}">${ago(u.lastActive)}</td>${tcell(s,'intro')}${tcell(s,'basic')}${tcell(s,'adv')}${WK&&wkProblems(WK).length?(()=>{const n=wkDone(u),t=wkProblems(WK).length;return `<td>${meter(n,t,n>=t?'good':'')}<span class="note">${n}/${t}</span></td>`})():''}<td class="num">${s.solved?pct(s.self,s.solved)+'%':'-'}</td><td class="num">${s.retain==null?'-':s.retain+'%'}</td></tr>`}).join('')||'<tr><td colspan="8" class="note">조건에 맞는 부원이 없어요.</td></tr>';
  /* 문제별 집계: prob = {문제id:[상태코드(0시도중 1자력 2참고 3AI), 채점횟수]} */
  const agg={};
  us.forEach(u=>Object.entries(u.prob||{}).forEach(([id,v])=>{const a=agg[id]||(agg[id]={n:0,ok:0,peek:0,tries:0});a.n++;a.tries+=v[1]||0;if(v[0]>0)a.ok++;if(v[0]===2||v[0]===3)a.peek++}));
@@ -104,8 +121,9 @@ function drawAdmin(){
   <button class="btn ghost sm" data-rs="${esc(r.id)}" data-to="${r.status==='done'?'open':'done'}">${r.status==='done'?'다시 열기':'처리됨으로 표시'}</button></details>`).join('')||'<div class="note">접수된 신고가 없어요.</div>';
  $('#main').innerHTML=`<div style="display:flex;flex-direction:column;gap:20px">
   <div class="statrow"><div class="stat"><b>${us.length}</b><span>가입 부원</span></div><div class="stat"><b>${active7}</b><span>최근 7일 활동</span></div><div class="stat"><b>${idle14}</b><span>14일 이상 미활동</span></div>${pass.map(p=>`<div class="stat"><b>${p.n}</b><span>${p.t.name} 수료</span></div>`).join('')}</div>
-  <div class="card" style="gap:10px"><div class="row"><b>부원 현황</b><span style="flex:1"></span><input type="text" id="aq" placeholder="이름·이메일 검색" value="${esc(AD.q)}" style="max-width:200px"><select id="as" aria-label="정렬"><option value="last" ${AD.sort==='last'?'selected':''}>최근 접속순</option><option value="solved" ${AD.sort==='solved'?'selected':''}>해결 많은 순</option><option value="name" ${AD.sort==='name'?'selected':''}>이름순</option></select><label class="chk"><input type="checkbox" id="ai" ${AD.idle?'checked':''}> 14일 미활동만</label><button class="btn ghost sm" id="acsv">CSV</button></div>
-  <div class="tblwrap"><table class="tbl"><thead><tr><th>부원</th><th>마지막 접속</th><th>입문</th><th>기초</th><th>심화</th><th class="num">자력</th><th class="num">유지율</th></tr></thead><tbody>${body}</tbody></table></div>
+  ${wkAdminHTML(rows)}
+  <div class="card" style="gap:10px"><div class="row"><b>부원 현황</b><span style="flex:1"></span><input type="text" id="aq" placeholder="이름·이메일 검색" value="${esc(AD.q)}" style="max-width:200px"><select id="as" aria-label="정렬"><option value="last" ${AD.sort==='last'?'selected':''}>최근 접속순</option><option value="solved" ${AD.sort==='solved'?'selected':''}>해결 많은 순</option><option value="name" ${AD.sort==='name'?'selected':''}>이름순</option></select><label class="chk"><input type="checkbox" id="ai" ${AD.idle?'checked':''}> 14일 미활동만</label>${WK&&wkProblems(WK).length?`<label class="chk"><input type="checkbox" id="aw" ${AD.wkLeft?'checked':''}> 과제 미완료만</label>`:''}<button class="btn ghost sm" id="acsv">CSV</button></div>
+  <div class="tblwrap"><table class="tbl"><thead><tr><th>부원</th><th>마지막 접속</th><th>입문</th><th>기초</th><th>심화</th>${WK&&wkProblems(WK).length?'<th>과제</th>':''}<th class="num">자력</th><th class="num">유지율</th></tr></thead><tbody>${body}</tbody></table></div>
   <div class="note">자력은 해결한 문제 중 정답을 보지 않고 푼 비율, 유지율은 복습한 문제 중 기억이 이어지는 비율이에요. 수료는 구간 문제의 ${PASS_SOLVED*100}% 해결 + 자력 ${PASS_SELF*100}% 이상.</div></div>
   <div class="card" style="gap:8px"><b>많이 막히는 문제</b>${hardHtml}</div>
   <div class="card" style="gap:8px"><b>채점 오류 신고</b>${rep}</div></div>`;
@@ -113,5 +131,18 @@ function drawAdmin(){
  $('#as').onchange=e=>{AD.sort=e.target.value;drawAdmin()};
  $('#ai').onchange=e=>{AD.idle=e.target.checked;drawAdmin()};
  $('#acsv').onclick=()=>adminCsv(rows);
+ const aw=$('#aw');if(aw)aw.onchange=e=>{AD.wkLeft=e.target.checked;drawAdmin()};
+ const ws=$('#wksave');
+ if(ws){
+  const msg=t=>{$('#wkmsg').textContent=t};
+  ws.onclick=async()=>{
+   const stages=[...document.querySelectorAll('[data-wk]:checked')].map(x=>x.dataset.wk);
+   if(!stages.length){msg('단계를 하나 이상 골라 주세요.');return}
+   const d=$('#wkd').value,o={title:$('#wkt').value.trim().slice(0,60)||'이번 주 과제',note:$('#wkn').value.trim().slice(0,200),stages,due:d?new Date(d+'T23:59:59').getTime():0,at:Date.now()};
+   ws.disabled=true;
+   try{await Store.setWeekly(o);WK=o;drawAdmin()}catch(e){ws.disabled=false;msg('저장하지 못했어요. 운영진 권한과 규칙 배포를 확인해 주세요.')}
+  };
+  $('#wkclear').onclick=async()=>{try{await Store.setWeekly({title:'',note:'',stages:[],due:0,at:Date.now()});WK=null;drawAdmin()}catch(e){msg('저장하지 못했어요.')}};
+ }
  document.querySelectorAll('[data-rs]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await Store.setReportStatus(b.dataset.rs,b.dataset.to);const r=AD.reports.find(x=>x.id===b.dataset.rs);if(r)r.status=b.dataset.to;drawAdmin()}catch(e){b.disabled=false}});
 }

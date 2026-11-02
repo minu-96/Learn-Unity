@@ -25,7 +25,7 @@ function normalize(d){
  d=d||{};
  /* 예전 객관식 버전의 진행도는 문제가 달라져서 이어받지 않고, 개념 사전만 가져온다 */
  const fresh=d.v===VER;
- return {v:VER,solved:fresh?(d.solved||{}):{},dict:d.dict||{},custom:fresh?sanitizeCustom(d.custom):[],drafts:fresh?(d.drafts||{}):{},review:fresh?(d.review||{}):{},practice:d.practice||{},act:d.act||{},notes:d.notes||{}};
+ return {v:VER,solved:fresh?(d.solved||{}):{},dict:d.dict||{},custom:fresh?sanitizeCustom(d.custom):[],drafts:fresh?(d.drafts||{}):{},review:fresh?(d.review||{}):{},practice:d.practice||{},act:d.act||{},notes:d.notes||{},diag:d.diag||null};
 }
 const lsKey=()=>me?LS+'-'+me.uid:LS;
 function loadLocal(){
@@ -57,7 +57,7 @@ async function flush(){
  if(!me||saving||!dirty)return;
  saving=true;dirty=false;
  try{
-  await Store.save({v:VER,solved:S.solved,dict:S.dict,review:S.review,practice:S.practice,act:S.act,notes:S.notes},{custom:S.custom,drafts:S.drafts},summarize(PROBLEMS,S.solved,S.review),probMap());
+  await Store.save({v:VER,solved:S.solved,dict:S.dict,review:S.review,practice:S.practice,act:S.act,notes:S.notes,diag:S.diag},{custom:S.custom,drafts:S.drafts},summarize(PROBLEMS,S.solved,S.review),probMap());
   setSync('저장됨');
  }catch(e){dirty=true;setSync('저장 실패 · 다시 시도 중');clearTimeout(saveTimer);saveTimer=setTimeout(flush,15000)}
  saving=false;if(dirty&&!saveTimer)saveTimer=setTimeout(flush,4000);
@@ -113,11 +113,12 @@ function updateTotal(){
  const rb=$('#revcount');if(rb){const d=dueList().length;rb.textContent=d?String(d):'';rb.hidden=!d}
 }
 function render(){
+ if(V.diag&&V.pid!==V.diag.ids[V.diag.i])V.diag=null;
  cancelAnimationFrame(raf);if(aiCtl){aiCtl.abort();aiCtl=null}
  const tabs=[['home','오늘'],['learn','학습'],['review','복습'],['dict','개념 사전'],['me','내 기록']].concat(me&&me.admin?[['admin','운영']]:[]);
  $('#app').innerHTML=`
  <header class="top"><div class="brand"><b>유니티 훈련소</b></div>
- <nav class="tabs" role="tablist" aria-label="메뉴">${tabs.map(([k,l])=>`<button role="tab" data-tab="${k}" aria-selected="${V.tab===k}">${l}${k==='review'?' <span class="badge new" id="revcount" hidden></span>':''}</button>`).join('')}</nav>${whoHTML()}</header>
+ <nav class="tabs" role="tablist" aria-label="메뉴">${tabs.map(([k,l])=>`<button role="tab" data-tab="${k}" aria-selected="${V.tab===k}">${l}${k==='review'?' <span class="badge new" id="revcount" hidden></span>':''}</button>`).join('')}</nav><div class="topr">${lvHTML()}${whoHTML()}</div></header>
  <main id="main"></main>`;
  document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>gotoTab(b.dataset.tab));
  updateTotal();
@@ -129,7 +130,18 @@ function render(){
  else if(V.tab==='learn')V.stage?renderStage():renderLearn();
  else renderHome();
  const lo=$('#logout');if(lo)lo.onclick=()=>Store.signOut();
+ const sn=$('#snd');if(sn)sn.onclick=()=>{Fx.setOn(!Fx.isOn());sn.setAttribute('aria-pressed',String(Fx.isOn()));sn.textContent=Fx.isOn()?'♪ 켬':'♪ 끔'};
  const li=$('#login');if(li)li.onclick=()=>{guest=false;S=normalize({});renderLogin()};
+}
+function lvHTML(){
+ const li=Fx.levelInfo(S);
+ return `<div class="lvchip" id="lvchip" title="${li.xp} XP · 다음 레벨까지 ${li.need} XP"><span class="lvn">Lv.${li.lv}</span><span class="lvt">${li.title}</span><span class="lvbar"><i style="width:${li.pct}%"></i></span></div><button class="btn ghost sm sndbtn" id="snd" aria-pressed="${Fx.isOn()}" aria-label="효과음" title="효과음">${Fx.isOn()?'♪ 켬':'♪ 끔'}</button>`;
+}
+function paintLevel(){
+ const c=$('#lvchip');if(!c)return;
+ const li=Fx.levelInfo(S);
+ c.title=`${li.xp} XP · 다음 레벨까지 ${li.need} XP`;
+ c.innerHTML=`<span class="lvn">Lv.${li.lv}</span><span class="lvt">${li.title}</span><span class="lvbar"><i style="width:${li.pct}%"></i></span>`;
 }
 function whoHTML(){
  if(me)return `<div class="who"><span>${esc(me.name)}${me.admin?' · 운영진':''}</span><span class="note" id="sync"></span><button class="btn ghost sm" id="logout">로그아웃</button></div>`;
@@ -270,13 +282,14 @@ function renderProblem(p){
  const sibs=stageProblems(p.cat,p.stage),si=sibs.findIndex(x=>x.id===p.id);
  const T=t=>linkTerms(t,seen);
  const editor=`<div class="tools top-tools"><button class="btn" id="grade">채점하기</button><button class="btn ghost sm" id="reset">처음 코드로</button><button class="btn ghost sm" id="sol">정답 보기</button><span class="note">Ctrl/⌘ + Enter로도 채점해요</span></div>
-  <div class="edwrap"><pre class="gut" id="gut" aria-hidden="true"></pre><textarea class="ed" id="code" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="코드 편집기"></textarea></div>
+  <div class="edwrap"><pre class="gut" id="gut" aria-hidden="true"></pre><div class="edbox"><pre class="hlpre" id="hlpre" aria-hidden="true"></pre><textarea class="ed" id="code" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="코드 편집기"></textarea></div></div>
   <div class="live" id="live" aria-live="polite"></div>`;
  $('#main').innerHTML=`<div class="pscreen">
   <div class="crumbs"><button class="btn ghost sm" id="back">← ${review?'복습 목록':'단계 화면'}</button><span class="note">${esc(tierName(tid))} › ${esc(cat.name)} › ${esc(stt.title)} · ${esc(LV[p.level])}</span><span style="flex:1"></span>
    ${!review&&sibs.length>1?`<span class="pnav"><button class="btn ghost sm" id="prevp" aria-label="이전 문제" ${si<=0?'disabled':''}>◀</button><span class="note">${si+1} / ${sibs.length}</span><button class="btn ghost sm" id="nextp" aria-label="다음 문제" ${si>=sibs.length-1?'disabled':''}>▶</button></span>`:''}</div>
   <div class="pgrid">
    <section class="pleft card">
+    ${diagBar(p)}
     <div class="row">${review?'<span class="badge new">복습</span>':''}${sim?'<span class="badge sim">시뮬레이션</span>':'<span class="badge">코드 작성</span>'}${p.ai?'<span class="badge ai">AI 생성</span>':''}${review?'':statusBadge(p.id)}<span class="note">약 ${MIN_BY_LV[p.level]||8}분</span></div>
     <h2 class="pt">${esc(p.title)}</h2>
     ${review?'<div class="msg info">복습이에요. 예전에 쓴 코드 없이 시작 코드부터 다시 풀어 보세요. 첫 채점에 통과하면 다음 복습 간격이 길어져요.</div>':''}
@@ -304,6 +317,7 @@ function renderProblem(p){
  $('#hintbtn').onclick=()=>showHint(p);
  $('#reset').onclick=()=>{const ta=$('#code');ta.value=p.starter;ta.dispatchEvent(new Event('input'))};
  $('#sol').onclick=()=>showSolution(p);
+ const dsk=$('#diagskip');if(dsk)dsk.onclick=()=>{V.diag.res[V.diag.i]=false;advanceDiag()};
  if(isSolved(p.id)&&!review)showDone(p,false);
  bindTutor(p);
  bindTerms($('#main'));
@@ -311,12 +325,14 @@ function renderProblem(p){
 function setupEditor(p){
  const ta=$('#code'),gut=$('#gut');
  ta.value=P.code;
- const fit=()=>{const n=ta.value.split('\n').length;gut.textContent=Array.from({length:n},(_,i)=>i+1).join('\n');gut.scrollTop=ta.scrollTop};
+ const hlp=$('#hlpre');
+ const paint=()=>{hlp.innerHTML=Fx.cshl(ta.value)+'\n ';hlp.scrollTop=ta.scrollTop;hlp.scrollLeft=ta.scrollLeft};
+ const fit=()=>{const n=ta.value.split('\n').length;gut.textContent=Array.from({length:n},(_,i)=>i+1).join('\n');gut.scrollTop=ta.scrollTop;paint()};
  const h=Math.max(240,Math.min(560,P.code.split('\n').length*20.8+36));
  ta.style.height=h+'px';gut.style.height=h+'px';
  fit();
  try{new ResizeObserver(()=>{gut.style.height=ta.clientHeight+'px'}).observe(ta)}catch(e){}
- ta.addEventListener('scroll',()=>{gut.scrollTop=ta.scrollTop});
+ ta.addEventListener('scroll',()=>{gut.scrollTop=ta.scrollTop;hlp.scrollTop=ta.scrollTop;hlp.scrollLeft=ta.scrollLeft});
  ta.addEventListener('input',()=>{
   fit();P.code=ta.value;markLine(null);clearTimeout(liveTimer);liveTimer=setTimeout(paintLive,180);
   if(V.mode==='review')return;
@@ -426,11 +442,12 @@ async function grade(p){
  markLine(firstLine?+/^(\d+)/.exec(firstLine)[1]:null);
  if(p.world&&out.show){playSim($('#cv'),p.world,out.show)}
  const lg=$('#logs');if(lg&&p.world)lg.textContent=(out.logs&&out.logs.length)?out.logs.join('\n'):'(Debug.Log 출력 없음)';
- const was=isSolved(p.id);
+ const was=isSolved(p.id),before=Fx.snap(S);
  record(p,passed,passed?{via:'auto'}:null);
  if(passed){schedule(p,true,firstTry);if(!was)delete S.drafts[p.id];persist()}
  else if(V.mode==='review'&&P.tries===1){/* 복습 첫 시도 실패는 통과 시 상자를 0으로 */}
- if(passed)showDone(p,!was||V.mode==='review');
+ if(passed){showDone(p,!was||V.mode==='review');if(!was||V.mode==='review'){Fx.reward(before,S);paintLevel()}else Fx.sfx('tap')}
+ else Fx.sfx('fail');
  $('#result').scrollIntoView({block:'nearest',behavior:'smooth'});
 }
 function showDone(p,fresh){
@@ -445,7 +462,7 @@ function showDone(p,fresh){
  const feel=r.feel||'';
  const fb=(k,l)=>`<button class="btn ghost sm" data-f="${k}" aria-pressed="${feel===k}">${l}</button>`;
  $('#done').innerHTML=`<div class="donebox"><div class="verdict ok">${fresh?'해결했어요!':'이미 해결한 문제예요.'}</div>${note?`<div class="note">${esc(note)}</div>`:''}
-  <div class="cmp"><div><h4>내 코드</h4><pre class="code cmpcode">${esc(mine)}</pre></div><div><h4>모범 코드</h4><pre class="code cmpcode">${esc(p.solution)}</pre></div></div>
+  <div class="cmp"><div><h4>내 코드</h4><pre class="code cmpcode">${Fx.cshl(mine)}</pre></div><div><h4>모범 코드</h4><pre class="code cmpcode">${Fx.cshl(p.solution)}</pre></div></div>
   <div class="note">같은 결과를 내는 코드는 여러 가지일 수 있어요. 다른 부분이 있다면 왜 다른지 생각해 보세요.</div>
   <div class="exp">${esc(p.why)}</div>${conceptChips(p)}
   ${review?'':`<div class="reflect"><label for="note">새로 알게 된 점을 한 줄로 남겨 보세요 <span class="note">개념 사전에 내 메모로 저장돼요</span></label><div class="ask"><input id="note" type="text" maxlength="120" value="${esc(saved)}" placeholder="예: Update에서는 deltaTime을 곱해야 한다"><button class="btn ghost" id="savenote">저장</button></div><span class="note" id="notemsg" role="status"></span></div>
@@ -464,11 +481,12 @@ function showDone(p,fresh){
   const v=S.review[p.id];if(v&&!v.reps){v.box=rr.feel==='hard'?0:rr.feel==='easy'?Math.max(v.box,2):v.box;v.due=Date.now()+BOX_DAYS[v.box]*DAY}
   persist();document.querySelectorAll('.feel [data-f]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
  });
+ diagHook(p);
  if(fresh)$('#done').scrollIntoView({block:'nearest',behavior:'smooth'});
 }
 function showHint(p){
  if(P.hint>=p.hints.length)return;
- P.hint++;
+ P.hint++;Fx.sfx('hint');
  const b=$('#hintbtn');b.textContent=`힌트 (${P.hint}/${p.hints.length})`;if(P.hint>=p.hints.length)b.disabled=true;
  $('#hints').innerHTML=p.hints.slice(0,P.hint).map((h,i)=>`<div class="hint"><b>힌트 ${i+1}</b>${esc(h)}</div>`).join('');
  if(V.mode!=='review'){const r=S.solved[p.id]||{ok:false,tries:0};r.hint=Math.max(r.hint||0,P.hint);S.solved[p.id]=r;persist()}
@@ -486,7 +504,7 @@ function showSolution(p){
  P.peeked=true;b.dataset.armed='';b.textContent='정답 보기';
  if(!isSolved(p.id)){const r=S.solved[p.id]||{ok:false,tries:0};r.peek=true;S.solved[p.id]=r;persist()}
  if(V.mode==='review')P.firstFail=true;
- $('#solbox').innerHTML=`<div class="aibox"><h4>모범 코드</h4><pre class="code" style="padding:10px 14px">${esc(p.solution)}</pre><div class="note">내 코드와 비교해 보고, 왜 이렇게 쓰는지 아래 AI 튜터에게 물어보세요. 정답을 보고 푼 문제는 복습에서 스스로 다시 풀어 보게 돼요.</div>${p.why?`<div class="exp">${esc(p.why)}</div>`:''}</div>`;
+ $('#solbox').innerHTML=`<div class="aibox"><h4>모범 코드</h4><pre class="code" style="padding:10px 14px">${Fx.cshl(p.solution)}</pre><div class="note">내 코드와 비교해 보고, 왜 이렇게 쓰는지 아래 AI 튜터에게 물어보세요. 정답을 보고 푼 문제는 복습에서 스스로 다시 풀어 보게 돼요.</div>${p.why?`<div class="exp">${esc(p.why)}</div>`:''}</div>`;
 }
 
 /* ---------- AI 튜터 / 리뷰 / 판정 ---------- */
@@ -630,6 +648,7 @@ function mergeState(r){
  for(const [k,x] of Object.entries(o.review)){const y=L.review[k];if(!y||(x.last||0)>(y.last||0))L.review[k]=x}
  for(const [k,x] of Object.entries(o.practice)){const y=L.practice[k]||[];L.practice[k]=x.map((v,i)=>!!(v||y[i]))}
  for(const [k,x] of Object.entries(o.act))L.act[k]=Math.max(L.act[k]||0,x);
+ if(o.diag&&(!L.diag||(o.diag.at||0)>(L.diag.at||0)))L.diag=o.diag;
  for(const [k,x] of Object.entries(o.notes)){const y=L.notes[k];if(!y||(x.at||0)>(y.at||0))L.notes[k]=x}
 }
 async function boot(){
@@ -644,6 +663,7 @@ async function boot(){
    }
    setSync('저장됨');
   }catch(e){setSync('불러오기 실패 · 이 기기 기록만 표시')}
+  await loadWeekly();
   persist();
  }
  if((location.hash==='#admin'||window.wantAdmin)&&me&&me.admin)V.tab='admin';

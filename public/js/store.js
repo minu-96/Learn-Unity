@@ -5,7 +5,8 @@
      users/{uid}/data/state    풀이 기록·개념 사전·복습·연습 체크
      users/{uid}/data/work     작성 중인 코드(드래프트)·AI 생성 문제  ← 본인만 읽는다
      admins/{uid}              운영진 표시(콘솔에서만 생성)
-     reports/{id}              채점 오류 신고 */
+     reports/{id}              채점 오류 신고
+     config/weekly             이번 주 과제(운영진이 지정) */
 const Store=(()=>{
  const cfg=window.FIREBASE_CONFIG||{};
  const configured=!!(cfg.apiKey&&cfg.projectId&&window.firebase);
@@ -74,5 +75,12 @@ const Store=(()=>{
   return q.docs.map(d=>Object.assign({id:d.id},d.data()));
  }
  async function setReportStatus(id,status){await fdb.doc('reports/'+id).update({status})}
- return {configured,init,onChange,signInGoogle,signInAdmin,signOut,load,save,touch,listUsers,report,listReports,setReportStatus,get user(){return user},get admin(){return admin}};
+ /* 이번 주 과제: config/weekly 한 문서. 읽기는 로그인한 누구나, 쓰기는 운영진만 */
+ async function getWeekly(){
+  if(!fdb||!user)return null;
+  const d=await fdb.doc('config/weekly').get();
+  return d.exists?d.data():null;
+ }
+ async function setWeekly(o){if(!fdb||!user)throw new Error('로그인이 필요해요');await fdb.doc('config/weekly').set(o)}
+ return {configured,getWeekly,setWeekly,init,onChange,signInGoogle,signInAdmin,signOut,load,save,touch,listUsers,report,listReports,setReportStatus,get user(){return user},get admin(){return admin}};
 })();
