@@ -33,7 +33,7 @@ const src=files.map(f=>fs.readFileSync(dir+'/'+f,'utf8')).join('\n')+`
  }
  if(!${JSON.stringify(only||'')}){
   const st=new Set(BANK.map(p=>p.cat+':'+p.stage));
-  for(const k of st){const [c,s]=k.split(':');const ls=BANK.filter(p=>p.cat===c&&p.stage===+s).map(p=>p.level).sort().join('');if(ls!=='123'){console.log('✗ bank',k,'레벨 구성',ls);bad++}}
+  for(const k of st){const [c,s]=k.split(':');for(const l of [1,2,3]){const g=BANK.filter(p=>p.cat===c&&p.stage===+s&&p.level===l).length;if(g!==3){console.log('✗ bank',k,'Lv.'+l,'문제 수',g,'(3개여야 함)');bad++}if(!PROBLEMS.some(p=>p.cat===c&&p.stage===+s&&p.level===l)){console.log('✗ bank',k,'Lv.'+l,'열어 줄 학습 지도 문제가 없음');bad++}}}
   const ts=new Set(PROBLEMS.map(p=>p.title));for(const p of BANK)if(ts.has(p.title)){console.log('✗ bank',p.id,'학습 지도와 제목이 같음');bad++}
   console.log('BANK',BANK.length,'문제 /',st.size,'단계');
  }

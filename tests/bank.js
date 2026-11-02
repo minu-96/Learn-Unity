@@ -34,7 +34,8 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
  await pg.click('nav.tabs [data-tab="bank"]');await pg.waitForSelector('.bhero');
  ok(await pg.$$eval('.bcard',e=>e.length)===5,'입문 5단계 카드가 보임');
  ok(await pg.$$eval('.bcard.lock',e=>e.length)===5,'처음에는 5개 모두 잠김');
- ok(/0 \/ 5/.test(await pg.textContent('.bstat')),'열린 단계 0 / 5');
+ ok(/0 \/ 15/.test(await pg.textContent('.bstat')),'열린 세트 0 / 15');
+ ok(await pg.$$eval('.lvset.lock',e=>e.length)===15,'레벨 세트 15개가 모두 잠김');
 
  // 학습 지도 문제를 하나 풀면 열린다
  await pg.click('nav.tabs [data-tab="learn"]');await pg.waitForSelector('.scgrid');
@@ -42,14 +43,13 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
  await pg.click('.prow >> nth=0');await pg.waitForSelector('#code');
  await solve();
  await pg.waitForSelector('.toast.bank',{timeout:6000});
- ok(/문제 사전이 열렸어요/.test(await pg.textContent('#toasts')),'열림 알림창');
- ok(await pg.$('#tobank')!==null,'풀이 직후 문제 사전 바로가기 버튼');
+ ok(/비슷한 문제 3개가 열렸어요/.test(await pg.textContent('#toasts')),'열림 알림창');
+ ok(/비슷한 문제 3개 풀어보기/.test(await pg.textContent('#tobank')),'풀이 직후 비슷한 문제 버튼');
  ok(/1/.test(await pg.textContent('nav.tabs [data-tab="bank"] .bnew')),'탭에 NEW 개수');
 
  // 문제 사전에서 풀기
- await pg.click('#tobank');await pg.waitForSelector('.stagepage.bank');
- ok(await pg.$$eval('.stagepage.bank .prow',e=>e.length)===3,'문제 사전 단계: 3문제');
- await pg.click('.stagepage.bank .prow >> nth=0');await pg.waitForSelector('#code');
+ await pg.click('#tobank');await pg.waitForSelector('#code');
+ ok(await pg.evaluate(()=>{const p=byId(V.pid);return p.bank&&p.cat==='start'&&p.stage===1&&p.level===1}),'버튼이 같은 단계·같은 레벨의 사전 문제를 열어 줌');
  ok(/문제 사전/.test(await pg.textContent('.crumbs')),'문제 화면에 문제 사전 표시');
  ok(await pg.$('.badge.bank')!==null,'문제 사전 배지');
  const bid=await pg.evaluate(()=>V.pid);
@@ -63,12 +63,22 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
  const sm=await pg.evaluate(()=>{const s=summarize(PROBLEMS,S.solved,S.review);return [s.solved,s.total,s.tier.intro.total,s.tier.intro.solved]});
  ok(sm[0]===1&&sm[1]===105&&sm[2]===15&&sm[3]===1,'진도와 수료 기준에는 문제 사전이 들어가지 않음');
  await pg.click('#tolist');await pg.waitForSelector('.stagepage.bank');
- ok(/1 \/ 3/.test(await pg.textContent('.stagepage.bank .card')),'단계 화면에 1 / 3 해결');
+ ok(await pg.$$eval('.stagepage.bank .bset:not(.lock) .prow',e=>e.length)===3,'열린 세트는 3문제');
+ ok(await pg.$$eval('.stagepage.bank .bset.lock',e=>e.length)===2,'나머지 두 레벨은 잠김');
+ ok(/1 \/ 9/.test(await pg.textContent('.stagepage.bank .card')),'단계 화면에 1 / 9 해결');
  await pg.click('#back');await pg.waitForSelector('.bhero');
  ok(await pg.$$eval('.bcard.lock',e=>e.length)===4,'나머지 4단계는 잠긴 채로');
- ok(/1 \/ 5/.test(await pg.textContent('.bstat')),'열린 단계 1 / 5');
+ ok(/1 \/ 15/.test(await pg.textContent('.bstat')),'열린 세트 1 / 15');
  await pg.click('[data-bt="intro"]');
  ok(await pg.$$eval('.bsec',e=>e.length)===1,'단계 거르기');
+
+
+ // 같은 레벨의 학습 지도 문제만 해당 세트를 연다 (Lv.2는 아직 잠김)
+ ok(await pg.evaluate(()=>bankOpen('start',1,1)&&!bankOpen('start',1,2)&&!bankOpen('start',1,3)),'Lv.1만 열리고 Lv.2·3은 잠김');
+ ok(await pg.evaluate(()=>bankProblems('start',1,1).every(p=>p.level===1)&&bankProblems('start',1,1).length===3),'세트 하나는 같은 레벨 3문제');
+ await pg.evaluate(()=>{const p=PROBLEMS.find(x=>x.cat==='start'&&x.stage===1&&x.level===2);S.solved[p.id]={ok:true,tries:1};});
+ ok(await pg.evaluate(()=>bankOpen('start',1,2)),'Lv.2 학습 지도 문제를 하나 풀면 Lv.2 세트가 열림');
+ await pg.evaluate(()=>{const p=PROBLEMS.find(x=>x.cat==='start'&&x.stage===1&&x.level===2);delete S.solved[p.id];});
 
  // 홈 카드, 복습, 저장 유지
  await pg.click('nav.tabs [data-tab="home"]');await pg.waitForSelector('.hero');

@@ -442,3 +442,13 @@ button.bcard:hover{transform:translateY(-2px);box-shadow:var(--lift);border-colo
 .stagepage.bank{gap:14px}
 .stagepage.bank .prows{display:flex;flex-direction:column;gap:8px}
 @media (max-width:560px){.bstat{width:100%}.bstat div{flex:1}}
+
+/* 문제 사전: 레벨 세트 */
+.lvsets{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.lvset{display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:2px 6px;border:1px solid var(--line,#ddd);border-radius:999px}
+.lvset.lock{opacity:.5}
+.lvset.fresh .lvs{color:var(--bank);font-weight:700}
+.lvset.done .lvs{color:var(--ok,#2a8)}
+.bset{margin-top:14px;padding:12px;border:1px solid var(--line,#ddd);border-radius:12px}
+.bset.fresh{border-color:var(--bank);background:var(--bank-soft)}
+.bset.lock{opacity:.8;border-style:dashed}

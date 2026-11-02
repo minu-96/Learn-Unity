@@ -286,7 +286,7 @@ function renderProblem(p){
  P={p,tries:0,hint:0,peeked:false,last:null,code:d?d.code:p.starter,firstFail:false};
  const sim=!!p.world,seen=new Set();
  const cat=CATS.find(c=>c.id===p.cat),stt=cat.stages[p.stage-1],tid=tierOf(p);
- const sibs=p.bank?bankProblems(p.cat,p.stage):stageProblems(p.cat,p.stage),si=sibs.findIndex(x=>x.id===p.id);
+ const sibs=p.bank?bankProblems(p.cat,p.stage,p.level):stageProblems(p.cat,p.stage),si=sibs.findIndex(x=>x.id===p.id);
  const T=t=>linkTerms(t,seen);
  const editor=`<div class="tools top-tools"><button class="btn" id="grade">채점하기</button><button class="btn ghost sm" id="reset">처음 코드로</button><button class="btn ghost sm" id="sol">정답 보기</button><span class="note">Ctrl/⌘ + Enter로도 채점해요</span></div>
   <div class="edwrap"><pre class="gut" id="gut" aria-hidden="true"></pre><div class="edbox"><pre class="hlpre" id="hlpre" aria-hidden="true"></pre><textarea class="ed" id="code" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="코드 편집기"></textarea></div></div>
@@ -449,7 +449,7 @@ async function grade(p){
  markLine(firstLine?+/^(\d+)/.exec(firstLine)[1]:null);
  if(p.world&&out.show){playSim($('#cv'),p.world,out.show)}
  const lg=$('#logs');if(lg&&p.world)lg.textContent=(out.logs&&out.logs.length)?out.logs.join('\n'):'(Debug.Log 출력 없음)';
- const was=isSolved(p.id),before=Fx.snap(S),wasOpen=bankOpen(p.cat,p.stage);
+ const was=isSolved(p.id),before=Fx.snap(S),wasOpen=bankOpen(p.cat,p.stage,p.level);
  record(p,passed,passed?{via:'auto'}:null);
  if(passed){schedule(p,true,firstTry);if(!was)delete S.drafts[p.id];persist()}
  else if(V.mode==='review'&&P.tries===1){/* 복습 첫 시도 실패는 통과 시 상자를 0으로 */}
@@ -459,7 +459,7 @@ async function grade(p){
 }
 function showDone(p,fresh){
  const review=V.mode==='review';
- const sibs=p.bank?bankProblems(p.cat,p.stage):stageProblems(p.cat,p.stage),i=sibs.findIndex(x=>x.id===p.id);
+ const sibs=p.bank?bankProblems(p.cat,p.stage,p.level):stageProblems(p.cat,p.stage),i=sibs.findIndex(x=>x.id===p.id);
  const nx=review?null:p.bank?(sibs.slice(i+1).concat(sibs.slice(0,Math.max(0,i))).find(x=>!isSolved(x.id))||null):(sibs.slice(i+1).find(x=>!isSolved(x.id))||nextUnsolved());
  const rv=S.review[p.id],nextDue=rv?Math.max(1,Math.round((rv.due-Date.now())/DAY)):null;
  const kind=solvedKind(p.id),r=S.solved[p.id]||{};
