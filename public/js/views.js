@@ -63,6 +63,33 @@ function statsHTML(sl){
   </div></div>`;
 }
 function bankLogHTML(){
+ const sets=bankSets(),open=sets.filter(x=>bankOpen(x.s.cat.id,x.s.si,x.l)).length;
+ const rows=bankAllStages().map(s=>{
+  const ps=bankProblems(s.cat.id,s.si),n=ps.filter(p=>isSolved(p.id)),self=n.filter(p=>{const r=S.solved[p.id];return r.via==='auto'&&r.clean}).length;
+  return `<tr><td>${esc(s.cat.name)} · ${esc(s.st.title)}</td><td>${meter(n.length,ps.length)}</td><td class="num">${n.length} / ${ps.length}</td><td class="num">${self}</td></tr>`}).join('');
+ return `<div class="card" id="banklog" style="gap:6px"><div class="row"><b>문제 사전 현황</b><span class="badge bank">문제 사전</span><span class="note">열린 세트 ${open} / ${sets.length}</span></div>
+  <table class="tbl"><thead><tr><th>단계</th><th></th><th>해결</th><th>자력</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function statsHTML(sl){
+ const sb=summarize(BANK,S.solved,S.review),sa=summarize(PROBLEMS.concat(BANK),S.solved,S.review);
+ const rb=Object.fromEntries(Object.entries(S.review||{}).filter(([k])=>byId(k)&&byId(k).bank));
+ const rl=Object.fromEntries(Object.entries(S.review||{}).filter(([k])=>!(byId(k)&&byId(k).bank)));
+ const rt=x=>x==null?'-':x+'%';
+ const lr=summarize(PROBLEMS,S.solved,rl).retain,br=summarize(BANK,S.solved,rb).retain;
+ const bar=(a,b)=>{const t=(a+b)||1;return `<div class="splitbar" role="img" aria-label="학습 ${a}문제, 문제 사전 ${b}문제"><i class="sl" style="width:${a/t*100}%"></i><i class="sb" style="width:${b/t*100}%"></i></div>`};
+ const st=(v,l,c)=>`<div class="stat ${c||''}"><b>${v}</b><span>${l}</span></div>`;
+ return `<div class="statsys">
+  <section class="sgroup all"><div class="row"><h3>종합</h3><span class="note">학습 + 문제 사전</span></div>
+   <div class="statrow big">${st(sa.solved+'<small> / '+sa.total+'</small>','해결')}${st(sa.self,'정답 안 보고 해결')}${st(sa.tries,'채점 횟수')}${st(rt(sa.retain),'복습 유지율')}</div>
+   ${bar(sl.solved,sb.solved)}<div class="legend"><span><i class="sl"></i>학습 ${sl.solved}</span><span><i class="sb"></i>문제 사전 ${sb.solved}</span></div></section>
+  <div class="sgroup2">
+   <section class="sgroup learn"><div class="row"><h3>학습</h3><span class="note">학습 지도 ${sl.total}문제</span></div>
+    <div class="statrow mid">${st(sl.solved+'<small> / '+sl.total+'</small>','해결')}${st(sl.self,'정답 안 보고')}${st(sl.tries,'채점')}${st(rt(lr),'복습 유지')}</div></section>
+   <section class="sgroup bank"><div class="row"><h3>문제 사전</h3><span class="note">비슷한 문제 ${sb.total}개</span></div>
+    <div class="statrow sm">${st(sb.solved+'<small> / '+sb.total+'</small>','해결')}${st(sb.self,'정답 안 보고')}${st(sb.tries,'채점')}${st(rt(br),'복습 유지')}</div></section>
+  </div></div>`;
+}
+function bankLogHTML(){
  const done=BANK.filter(p=>isSolved(p.id)).sort((a,b)=>(S.solved[b.id].at||0)-(S.solved[a.id].at||0));
  const sets=bankSets(),open=sets.filter(x=>bankOpen(x.s.cat.id,x.s.si,x.l)).length;
  if(!done.length)return `<div class="card" style="gap:6px"><div class="row"><b>문제 사전 기록</b><span class="badge bank">문제 사전</span></div><div class="note">열린 세트 ${open} / ${sets.length}. 아직 푼 사전 문제가 없어요. 학습 지도에서 문제를 풀면 비슷한 문제가 열려요.</div></div>`;

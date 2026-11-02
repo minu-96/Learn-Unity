@@ -81,9 +81,9 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
  await pg.evaluate(()=>{const p=PROBLEMS.find(x=>x.cat==='start'&&x.stage===1&&x.level===2);delete S.solved[p.id];});
 
  await pg.click('nav.tabs [data-tab="me"]');await pg.waitForSelector('.statrow');
- ok(await pg.$$eval('#banklog .pc',e=>e.length)===1,'내 기록에 푼 문제 사전 문제가 보임');
- await pg.click('#banklog .pc');await pg.waitForSelector('#code');
- ok(await pg.evaluate(()=>byId(V.pid).bank),'기록에서 누르면 그 문제가 열림');
+ ok(await pg.$$eval('#banklog tbody tr',e=>e.length)===5,'내 기록에 단계별 문제 사전 현황(5줄)이 표로 보임');
+ ok(/1 \/ 9/.test(await pg.textContent('#banklog')),'푼 개수가 단계별로 집계됨');
+ ok(await pg.$$eval('#banklog .pc',e=>e.length)===0,'문제를 하나씩 늘어놓지 않음');
  // 홈 카드, 복습, 저장 유지
  await pg.click('nav.tabs [data-tab="home"]');await pg.waitForSelector('.hero');
  ok(await pg.$('.bankcard')!==null,'홈에 문제 사전 카드');
