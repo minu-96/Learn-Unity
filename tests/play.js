@@ -1,6 +1,6 @@
 // 플레이테스트: 학생이 실제로 쓸 법한 다양한 풀이(맞는 것/틀린 것)를 채점해 본다
 const fs=require('fs');
-const {PROBLEMS,gradeAll,engine,CS}=require('./load.js');
+const {PROBLEMS,BANK,gradeAll,engine,CS}=require('./load.js');
 
 const run=o=>Promise.resolve(engine(o));
 const V=[]; // [id, expect 'pass'|'fail', 설명, code, (fail일 때 메시지에 포함되어야 할 문구)]
@@ -770,11 +770,65 @@ public class Jumper : MonoBehaviour
     }
 }`);
 
+/* ---- 문제 사전(입문) ---- */
+F('x9','최댓값을 0으로 시작하면 음수 배열에서 틀림',`int MaxOf(int[] nums)
+{
+    int max = 0;
+    foreach (int x in nums) { if (x > max) max = x; }
+    return max;
+}`,'모두 음수');
+P('x9','for 인덱스로 찾은 풀이',`int MaxOf(int[] nums)
+{
+    int best = nums[0];
+    for (int i = 1; i < nums.Length; i++)
+    {
+        if (nums[i] > best) { best = nums[i]; }
+    }
+    return best;
+}`);
+F('x6','4의 배수만 확인한 풀이',`bool IsLeap(int year)
+{
+    return year % 4 == 0;
+}`,'1900');
+P('x3','나머지를 먼저 구한 풀이',`string FormatTime(int seconds)
+{
+    int s = seconds % 60;
+    int m = (seconds - s) / 60;
+    return m + "분 " + s + "초";
+}`);
+F('x13','체력을 글자에 통째로 쓴 풀이',`public int hp = 100;
+void Start()
+{
+    Debug.Log("HP: 100");
+}`,'hp가 바뀌면');
+F('x11','한도를 넘겨도 그대로 돌려주는 풀이',`int Heal(int hp, int amount, int maxHp)
+{
+    return hp + amount;
+}`,'한도 초과');
+P('x14','Vector3.forward로 회전',`public float speed = 90f;
+void Update()
+{
+    transform.Rotate(Vector3.forward * speed * Time.deltaTime);
+}`);
+F('x14','Time.deltaTime 없이 회전',`public float speed = 90f;
+void Update()
+{
+    transform.Rotate(0f, 0f, speed);
+}`,'Time.deltaTime');
+F('x15','다른 키에도 반응하는 풀이',`void Update()
+{
+    if (Input.GetKeyDown(KeyCode.Return)) { transform.position = Vector3.zero; }
+}`,'R키');
+F('x8','구구단을 8번만 출력',`void Times(int n)
+{
+    for (int i = 1; i < 9; i++) { Debug.Log(n + " x " + i + " = " + (n * i)); }
+}`,'9줄');
+
 (async()=>{
  let bad=0;
  for(const [id,exp,note,code,hit] of V){
   if(!code)continue;
-  const p=PROBLEMS.find(x=>x.id===(id==='_'?'s1':id));
+  const p=PROBLEMS.concat(BANK).find(x=>x.id===(id==='_'?'s1':id));
   const g=await gradeAll(p,code,run);
   const failed=g.items.filter(i=>!i.ok);
   const msgs=failed.map(i=>i.label+': '+i.msg).join(' | ');

@@ -7,7 +7,7 @@ const src=files.map(f=>fs.readFileSync(dir+'/'+f,'utf8')).join('\n')+`
  const run=o=>Promise.resolve(engine(o));
  let bad=0;const ids=new Set();
  const fail=(p,m)=>{console.log('✗',p.id,m);bad++};
- for(const p of PROBLEMS){
+ for(const p of PROBLEMS.concat(BANK)){
   if(${JSON.stringify(only||'')}&&!p.id.startsWith(${JSON.stringify(only||'')}))continue;
   if(ids.has(p.id))fail(p,'dup id');ids.add(p.id);
   const c=CATS.find(c=>c.id===p.cat);
@@ -30,6 +30,12 @@ const src=files.map(f=>fs.readFileSync(dir+'/'+f,'utf8')).join('\n')+`
  }
  if(!${JSON.stringify(only||'')}){
   for(const c of CATS){const row=c.stages.map((s,i)=>[1,2,3].map(l=>PROBLEMS.filter(p=>p.cat===c.id&&p.stage===i+1&&p.level===l).length).join(''));console.log(c.id.padEnd(13),row.join(' | '))}
+ }
+ if(!${JSON.stringify(only||'')}){
+  const st=new Set(BANK.map(p=>p.cat+':'+p.stage));
+  for(const k of st){const [c,s]=k.split(':');const ls=BANK.filter(p=>p.cat===c&&p.stage===+s).map(p=>p.level).sort().join('');if(ls!=='123'){console.log('✗ bank',k,'레벨 구성',ls);bad++}}
+  const ts=new Set(PROBLEMS.map(p=>p.title));for(const p of BANK)if(ts.has(p.title)){console.log('✗ bank',p.id,'학습 지도와 제목이 같음');bad++}
+  console.log('BANK',BANK.length,'문제 /',st.size,'단계');
  }
  console.log('TOTAL',PROBLEMS.length,'bad',bad);
 })();

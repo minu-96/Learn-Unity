@@ -55,7 +55,7 @@ function persist(){
 /* 문제별 상태 요약: [0 시도 중 / 1 자력 / 2 정답 참고 / 3 AI 판정, 채점 횟수] - 운영진 화면의 '막히는 문제' 집계용 */
 function probMap(){
  const o={};
- for(const p of PROBLEMS){const r=S.solved[p.id];if(!r||!(r.tries||r.ok))continue;o[p.id]=[r.ok?(r.via==='auto'?(r.clean?1:2):3):0,r.tries||0]}
+ for(const p of PROBLEMS.concat(BANK)){const r=S.solved[p.id];if(!r||!(r.tries||r.ok))continue;o[p.id]=[r.ok?(r.via==='auto'?(r.clean?1:2):3):0,r.tries||0]}
  return o;
 }
 function setSync(t){const e=$('#sync');if(e)e.textContent=t}
@@ -69,7 +69,7 @@ async function flush(){
  saving=false;if(dirty&&!saveTimer)saveTimer=setTimeout(flush,4000);
 }
 document.addEventListener('visibilitychange',()=>{if(document.hidden){clearTimeout(saveTimer);flush()}});
-const allProblems=()=>PROBLEMS.concat(S.custom);
+const allProblems=()=>PROBLEMS.concat(BANK,S.custom);
 const byId=id=>allProblems().find(p=>p.id===id);
 const isSolved=id=>!!(S.solved[id]&&S.solved[id].ok);
 const solvedKind=id=>{const r=S.solved[id];if(!r||!r.ok)return null;if(r.via==='auto'&&r.clean)return 'self';if(r.via==='auto')return 'peek';return 'ai'};
@@ -121,10 +121,10 @@ function updateTotal(){
 function render(){
  if(V.diag&&V.pid!==V.diag.ids[V.diag.i])V.diag=null;
  cancelAnimationFrame(raf);if(aiCtl){aiCtl.abort();aiCtl=null}
- const tabs=[['home','오늘'],['learn','학습'],['review','복습'],['dict','개념 사전'],['me','내 기록']].concat(me&&me.admin?[['admin','운영']]:[]);
+ const tabs=[['home','오늘'],['learn','학습'],['bank','문제 사전'],['review','복습'],['dict','개념 사전'],['me','내 기록']].concat(me&&me.admin?[['admin','운영']]:[]);
  $('#app').innerHTML=`
  <header class="top"><div class="brand"><b>유니티 훈련소</b></div>
- <nav class="tabs" role="tablist" aria-label="메뉴">${tabs.map(([k,l])=>`<button role="tab" data-tab="${k}" aria-selected="${V.tab===k}">${l}${k==='review'?' <span class="badge new" id="revcount" hidden></span>':''}</button>`).join('')}</nav><div class="topr">${lvHTML()}${whoHTML()}</div></header>
+ <nav class="tabs" role="tablist" aria-label="메뉴">${tabs.map(([k,l])=>`<button role="tab" data-tab="${k}" aria-selected="${V.tab===k}">${l}${k==='review'?' <span class="badge new" id="revcount" hidden></span>':''}${k==='bank'&&bankNew()?' <span class="badge new bnew">'+bankNew()+'</span>':''}</button>`).join('')}</nav><div class="topr">${lvHTML()}${whoHTML()}</div></header>
  <main id="main"></main>`;
  document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>gotoTab(b.dataset.tab));
  updateTotal();
@@ -134,6 +134,7 @@ function render(){
  else if(V.tab==='me')renderMe();
  else if(V.tab==='admin'&&me&&me.admin)renderAdmin();
  else if(V.tab==='learn')V.stage?renderStage():renderLearn();
+ else if(V.tab==='bank')V.bankStage?renderBankStage():renderBank();
  else renderHome();
  const lo=$('#logout');if(lo)lo.onclick=()=>Store.signOut();
  const sn=$('#snd');if(sn)sn.onclick=()=>{Fx.setOn(!Fx.isOn());sn.setAttribute('aria-pressed',String(Fx.isOn()));sn.textContent=Fx.isOn()?'♪ 켬':'♪ 끔'};
@@ -154,7 +155,7 @@ function whoHTML(){
  if(Store.configured)return `<div class="who"><span class="note">게스트 · 이 브라우저에만 저장</span><button class="btn ghost sm" id="login">로그인</button></div>`;
  return `<div class="who"><span class="note">이 브라우저에만 저장돼요</span></div>`;
 }
-const openProblem=(id,mode)=>{const p=byId(id);V.pid=id;V.mode=mode||null;if(p&&mode==='review')V.tab='review';else if(p){V.tab='learn';V.stage={cat:p.cat,stage:p.stage}}render();window.scrollTo(0,0)};
+const openProblem=(id,mode)=>{const p=byId(id);V.pid=id;V.mode=mode||null;if(p&&mode==='review')V.tab='review';else if(p&&p.bank){V.tab='bank';V.bankStage={cat:p.cat,stage:p.stage}}else if(p){V.tab='learn';V.stage={cat:p.cat,stage:p.stage}}render();window.scrollTo(0,0)};
 
 /* ---------- 훈련 목록 ---------- */
 function stageInfo(p){
@@ -285,18 +286,18 @@ function renderProblem(p){
  P={p,tries:0,hint:0,peeked:false,last:null,code:d?d.code:p.starter,firstFail:false};
  const sim=!!p.world,seen=new Set();
  const cat=CATS.find(c=>c.id===p.cat),stt=cat.stages[p.stage-1],tid=tierOf(p);
- const sibs=stageProblems(p.cat,p.stage),si=sibs.findIndex(x=>x.id===p.id);
+ const sibs=p.bank?bankProblems(p.cat,p.stage):stageProblems(p.cat,p.stage),si=sibs.findIndex(x=>x.id===p.id);
  const T=t=>linkTerms(t,seen);
  const editor=`<div class="tools top-tools"><button class="btn" id="grade">채점하기</button><button class="btn ghost sm" id="reset">처음 코드로</button><button class="btn ghost sm" id="sol">정답 보기</button><span class="note">Ctrl/⌘ + Enter로도 채점해요</span></div>
   <div class="edwrap"><pre class="gut" id="gut" aria-hidden="true"></pre><div class="edbox"><pre class="hlpre" id="hlpre" aria-hidden="true"></pre><textarea class="ed" id="code" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="코드 편집기"></textarea></div></div>
   <div class="live" id="live" aria-live="polite"></div>`;
  $('#main').innerHTML=`<div class="pscreen">
-  <div class="crumbs"><button class="btn ghost sm" id="back">← ${review?'복습 목록':'단계 화면'}</button><span class="note">${esc(tierName(tid))} › ${esc(cat.name)} › ${esc(stt.title)} · ${esc(LV[p.level])}</span><span style="flex:1"></span>
+  <div class="crumbs"><button class="btn ghost sm" id="back">← ${review?'복습 목록':p.bank?'문제 사전':'단계 화면'}</button><span class="note">${p.bank?'<b class="bankmk">문제 사전</b> › ':''}${esc(tierName(tid))} › ${esc(cat.name)} › ${esc(stt.title)} · ${esc(LV[p.level])}</span><span style="flex:1"></span>
    ${!review&&sibs.length>1?`<span class="pnav"><button class="btn ghost sm" id="prevp" aria-label="이전 문제" ${si<=0?'disabled':''}>◀</button><span class="note">${si+1} / ${sibs.length}</span><button class="btn ghost sm" id="nextp" aria-label="다음 문제" ${si>=sibs.length-1?'disabled':''}>▶</button></span>`:''}</div>
   <div class="pgrid">
    <section class="pleft card">
     ${diagBar(p)}
-    <div class="row">${review?'<span class="badge new">복습</span>':''}${sim?'<span class="badge sim">시뮬레이션</span>':'<span class="badge">코드 작성</span>'}${p.ai?'<span class="badge ai">AI 생성</span>':''}${review?'':statusBadge(p.id)}<span class="note">약 ${MIN_BY_LV[p.level]||8}분</span></div>
+    <div class="row">${review?'<span class="badge new">복습</span>':''}${p.bank?'<span class="badge bank">문제 사전</span>':''}${sim?'<span class="badge sim">시뮬레이션</span>':'<span class="badge">코드 작성</span>'}${p.ai?'<span class="badge ai">AI 생성</span>':''}${review?'':statusBadge(p.id)}<span class="note">약 ${MIN_BY_LV[p.level]||8}분</span></div>
     <h2 class="pt">${esc(p.title)}</h2>
     ${review?'<div class="msg info">복습이에요. 예전에 쓴 코드 없이 시작 코드부터 다시 풀어 보세요. 첫 채점에 통과하면 다음 복습 간격이 길어져요.</div>':''}
     <div class="story">${T(p.story)}</div>
@@ -448,18 +449,18 @@ async function grade(p){
  markLine(firstLine?+/^(\d+)/.exec(firstLine)[1]:null);
  if(p.world&&out.show){playSim($('#cv'),p.world,out.show)}
  const lg=$('#logs');if(lg&&p.world)lg.textContent=(out.logs&&out.logs.length)?out.logs.join('\n'):'(Debug.Log 출력 없음)';
- const was=isSolved(p.id),before=Fx.snap(S);
+ const was=isSolved(p.id),before=Fx.snap(S),wasOpen=bankOpen(p.cat,p.stage);
  record(p,passed,passed?{via:'auto'}:null);
  if(passed){schedule(p,true,firstTry);if(!was)delete S.drafts[p.id];persist()}
  else if(V.mode==='review'&&P.tries===1){/* 복습 첫 시도 실패는 통과 시 상자를 0으로 */}
- if(passed){showDone(p,!was||V.mode==='review');if(!was||V.mode==='review'){Fx.reward(before,S);paintLevel()}else Fx.sfx('tap')}
+ if(passed){showDone(p,!was||V.mode==='review');if(!was||V.mode==='review'){Fx.reward(before,S);paintLevel();bankUnlockHook(p,wasOpen)}else Fx.sfx('tap')}
  else Fx.sfx('fail');
  $('#result').scrollIntoView({block:'nearest',behavior:'smooth'});
 }
 function showDone(p,fresh){
  const review=V.mode==='review';
- const sibs=stageProblems(p.cat,p.stage),i=sibs.findIndex(x=>x.id===p.id);
- const nx=review?null:(sibs.slice(i+1).find(x=>!isSolved(x.id))||nextUnsolved());
+ const sibs=p.bank?bankProblems(p.cat,p.stage):stageProblems(p.cat,p.stage),i=sibs.findIndex(x=>x.id===p.id);
+ const nx=review?null:p.bank?(sibs.slice(i+1).concat(sibs.slice(0,Math.max(0,i))).find(x=>!isSolved(x.id))||null):(sibs.slice(i+1).find(x=>!isSolved(x.id))||nextUnsolved());
  const rv=S.review[p.id],nextDue=rv?Math.max(1,Math.round((rv.due-Date.now())/DAY)):null;
  const kind=solvedKind(p.id),r=S.solved[p.id]||{};
  const note=review?(P.firstFail?'복습 통과! 처음에 막혔으니 곧 다시 복습할게요.':`복습 통과! 다음 복습은 ${nextDue}일 뒤예요.`):(kind==='peek'?'정답을 본 뒤 해결했어요. 며칠 뒤 복습에서 스스로 다시 풀어 보세요.':kind==='ai'?'AI 판정으로 통과했어요. 복습에서 자동 채점으로도 통과해 보세요.':'');
@@ -473,7 +474,7 @@ function showDone(p,fresh){
   <div class="exp">${esc(p.why)}</div>${conceptChips(p)}
   ${review?'':`<div class="reflect"><label for="note">새로 알게 된 점을 한 줄로 남겨 보세요 <span class="note">개념 사전에 내 메모로 저장돼요</span></label><div class="ask"><input id="note" type="text" maxlength="120" value="${esc(saved)}" placeholder="예: Update에서는 deltaTime을 곱해야 한다"><button class="btn ghost" id="savenote">저장</button></div><span class="note" id="notemsg" role="status"></span></div>
   <div class="feel"><span class="note">풀어 보니 어땠나요?</span>${fb('easy','쉬웠어요')}${fb('ok','보통이에요')}${fb('hard','어려웠어요')}</div>`}
-  <div class="tools">${nx?`<button class="btn" id="next">다음 문제 · ${esc(nx.title)}</button>`:''}${review&&dueList().length?'<button class="btn" id="nextrev">다음 복습</button>':''}<button class="btn ghost" id="tolist">${review?'복습 목록으로':'단계 화면으로'}</button></div></div>`;
+  <div class="tools">${nx?`<button class="btn" id="next">다음 문제 · ${esc(nx.title)}</button>`:''}${review&&dueList().length?'<button class="btn" id="nextrev">다음 복습</button>':''}<button class="btn ghost" id="tolist">${review?'복습 목록으로':p.bank?'문제 사전으로':'단계 화면으로'}</button></div></div>`;
  const n=$('#next');if(n)n.onclick=()=>openProblem(nx.id);
  const nr=$('#nextrev');if(nr)nr.onclick=()=>openProblem(dueList()[0],'review');
  $('#tolist').onclick=()=>{V.pid=null;V.mode=null;render();window.scrollTo(0,0)};

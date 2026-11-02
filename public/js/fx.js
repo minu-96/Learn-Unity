@@ -30,6 +30,7 @@ const Fx=(()=>{
   pass:[[523,0,.12,'triangle',.07],[659,.09,.12,'triangle',.07],[784,.18,.14,'triangle',.07],[1047,.28,.34,'triangle',.08]],
   xp:[[880,0,.06,'sine',.05],[1320,.05,.12,'sine',.04]],
   badge:[[784,0,.1,'triangle',.07],[988,.1,.1,'triangle',.07],[1319,.2,.3,'triangle',.08]],
+  unlock:[[659,0,.08,'sine',.05],[880,.08,.08,'sine',.05],[1175,.16,.08,'sine',.05],[1568,.26,.3,'triangle',.06]],
   level:[[392,0,.1,'square',.04],[523,.1,.1,'square',.04],[659,.2,.1,'square',.04],[784,.3,.1,'square',.04],[1047,.4,.4,'triangle',.08]]
  };
  function sfx(name){
@@ -95,7 +96,8 @@ const Fx=(()=>{
  }
 
  /* ----- 배지 ----- */
- const nOk=st=>Object.values(st.solved||{}).filter(r=>r&&r.ok).length;
+ const nOk=st=>Object.entries(st.solved||{}).filter(([id,r])=>r&&r.ok&&!BANK.some(b=>b.id===id)).length;
+ const bankSolved=st=>BANK.filter(b=>st.solved&&st.solved[b.id]&&st.solved[b.id].ok).length;
  const BADGES=[
   {id:'first',n:'첫 걸음',d:'첫 문제를 해결했어요',ok:st=>nOk(st)>=1},
   {id:'ten',n:'열 문제',d:'10문제를 해결했어요',ok:st=>nOk(st)>=10},
@@ -105,6 +107,7 @@ const Fx=(()=>{
   {id:'str7',n:'일주일 연속',d:'7일 연속으로 공부했어요',ok:st=>maxStreak(st)>=7},
   {id:'rev5',n:'복습의 힘',d:'복습 문제를 5번 풀었어요',ok:st=>Object.values(st.review||{}).reduce((a,v)=>a+(v.reps||0),0)>=5},
   {id:'note3',n:'기록하는 사람',d:'메모를 3개 남겼어요',ok:st=>Object.keys(st.notes||{}).length>=3},
+  {id:'bank5',n:'사전 탐험가',d:'문제 사전에서 5문제를 해결했어요',ok:st=>bankSolved(st)>=5},
   {id:'t-intro',n:'입문 수료',d:'입문 구간 수료 기준을 채웠어요',ok:st=>tierPassed(st,'intro')},
   {id:'t-basic',n:'기초 수료',d:'기초 구간 수료 기준을 채웠어요',ok:st=>tierPassed(st,'basic')},
   {id:'t-app',n:'응용 수료',d:'응용 구간 수료 기준을 채웠어요',ok:st=>tierPassed(st,'app')},

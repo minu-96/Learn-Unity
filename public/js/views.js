@@ -55,7 +55,7 @@ function renderMe(){
    <div class="note">${todo}</div></section>`}).join('');
  const cats=CATS.map(c=>{const x=sm.cat[c.id]||{total:0,solved:0,self:0};
   return `<tr><td>${c.name}</td><td>${meter(x.solved,x.total)}</td><td class="num">${x.solved} / ${x.total}</td><td class="num">${x.self}</td></tr>`}).join('');
- const redo=PROBLEMS.map(p=>({p,r:S.solved[p.id]})).filter(o=>o.r&&((!o.r.ok&&(o.r.tries||0)>=2)||(o.r.ok&&o.r.via==='auto'&&!o.r.clean)||(o.r.ok&&o.r.via==='ai'))).sort((a,b)=>(b.r.tries||0)-(a.r.tries||0)).slice(0,6);
+ const redo=PROBLEMS.concat(BANK).map(p=>({p,r:S.solved[p.id]})).filter(o=>o.r&&((!o.r.ok&&(o.r.tries||0)>=2)||(o.r.ok&&o.r.via==='auto'&&!o.r.clean)||(o.r.ok&&o.r.via==='ai'))).sort((a,b)=>(b.r.tries||0)-(a.r.tries||0)).slice(0,6);
  $('#main').innerHTML=`<div style="display:flex;flex-direction:column;gap:20px">
   <div class="statrow"><div class="stat"><b>${sm.solved}</b><span>해결 / ${sm.total}</span></div><div class="stat"><b>${sm.self}</b><span>정답 안 보고 해결</span></div><div class="stat"><b>${sm.tries}</b><span>채점 횟수</span></div><div class="stat"><b>${sm.retain==null?'-':sm.retain+'%'}</b><span>복습 유지율</span></div></div>
   <div class="card" style="gap:10px"><div class="row"><b>레벨</b><span class="note">풀이·복습·메모로 경험치가 쌓여요</span></div>${(()=>{const li=Fx.levelInfo(S);return `<div class="lvstrip"><span class="big">Lv.${li.lv}</span><span class="tt2">${li.title}</span><span class="lvbar"><i style="width:${li.pct}%"></i></span><span class="note">${li.xp} XP · 다음 레벨까지 ${li.need}</span></div>`})()}<b>배지 ${Fx.earned(S).length} / ${Fx.BADGES.length}</b>${badgesHTML(Fx.BADGES)}</div>
