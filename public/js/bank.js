@@ -55,8 +55,8 @@ function renderBank(){
   ${sections||'<div class="msg info">아직 문제 사전이 없어요.</div>'}
   <p class="note">문제 사전은 단계를 하나씩 늘려 가는 중이에요. 지금은 입문 단계부터 열려 있어요.</p>
  </div>`;
- $('#main').querySelectorAll('[data-bt]').forEach(b=>b.onclick=()=>{V.bankTier=b.dataset.bt;Fx.sfx('tap');renderBank()});
- $('#main').querySelectorAll('[data-bs]').forEach(b=>b.onclick=()=>{const [c,s]=b.dataset.bs.split(':');V.bankStage={cat:c,stage:+s};Fx.sfx('tap');render();window.scrollTo(0,0)});
+ $('#main').querySelectorAll('[data-bt]').forEach(b=>b.onclick=()=>{V.bankTier=b.dataset.bt;renderBank()});
+ $('#main').querySelectorAll('[data-bs]').forEach(b=>b.onclick=()=>{const [c,s]=b.dataset.bs.split(':');V.bankStage={cat:c,stage:+s};render();window.scrollTo(0,0)});
 }
 
 function renderBankStage(){

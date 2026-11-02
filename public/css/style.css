@@ -488,3 +488,13 @@ button.bcard:hover{transform:translateY(-2px);box-shadow:var(--lift);border-colo
 .lvset .lv,.bset .lv{font-weight:400}
 .note b,.bset b,.bankmk,.bcard b,.bhero b{font-weight:400;color:var(--ink)}
 .bankmk{color:var(--bank)}
+
+/* 편집기 단축키 안내 */
+.edkeys{margin:6px 2px 0;line-height:1.9}
+kbd{font-family:var(--font-mono);font-size:11px;padding:1px 6px;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;background:var(--surface);color:var(--ink)}
+
+/* 좁은 화면: 로고와 레벨·계정 줄이 겹치지 않게 줄을 나눈다 */
+@media (max-width:560px){
+ .top{grid-template-columns:minmax(0,1fr)}
+ .top .brand{order:1}.top .topr{order:2;justify-content:flex-start;gap:8px}.top nav.tabs{order:3}
+}
