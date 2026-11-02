@@ -480,12 +480,11 @@ button.bcard:hover{transform:translateY(-2px);box-shadow:var(--lift);border-colo
 .legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
 @media(max-width:640px){.sgroup2{grid-template-columns:1fr}.statrow.big .stat b{font-size:32px}}
 
-/* 가독성: 흐린 배경·불투명도 때문에 굵은 글씨가 묻히지 않게 */
+/* 굵기: Black Han Sans는 이미 굵은 글꼴이라 bold를 겹치면 뭉개진다. 큰 숫자·제목은 400, 본문 속 강조는 일반 굵기로 */
+.stat b,.sgroup h3,.bstat b,.bhero h2,.lvstrip .big{font-weight:400}
 .bset.lock{opacity:1}
 .lvset.lock{opacity:1;border-style:dashed}
 .lvset.lock .lv,.lvset.lock .lvs{color:var(--muted)}
-.lvset .lv{font-weight:600}
-.note b,.bset b{color:var(--ink);font-weight:600}
-.bset .lv{font-weight:600}
-.statrow .stat b,.sgroup .stat b{font-weight:600}
-.statrow.big .stat b{font-weight:700}
+.lvset .lv,.bset .lv{font-weight:400}
+.note b,.bset b,.bankmk,.bcard b,.bhero b{font-weight:400;color:var(--ink)}
+.bankmk{color:var(--bank)}
