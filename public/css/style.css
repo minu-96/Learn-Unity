@@ -479,3 +479,13 @@ button.bcard:hover{transform:translateY(-2px);box-shadow:var(--lift);border-colo
 .legend{display:flex;gap:14px;font-size:12px;color:var(--muted)}
 .legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
 @media(max-width:640px){.sgroup2{grid-template-columns:1fr}.statrow.big .stat b{font-size:32px}}
+
+/* 가독성: 흐린 배경·불투명도 때문에 굵은 글씨가 묻히지 않게 */
+.bset.lock{opacity:1}
+.lvset.lock{opacity:1;border-style:dashed}
+.lvset.lock .lv,.lvset.lock .lvs{color:var(--muted)}
+.lvset .lv{font-weight:600}
+.note b,.bset b{color:var(--ink);font-weight:600}
+.bset .lv{font-weight:600}
+.statrow .stat b,.sgroup .stat b{font-weight:600}
+.statrow.big .stat b{font-weight:700}
