@@ -80,6 +80,10 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
  ok(await pg.evaluate(()=>bankOpen('start',1,2)),'Lv.2 학습 지도 문제를 하나 풀면 Lv.2 세트가 열림');
  await pg.evaluate(()=>{const p=PROBLEMS.find(x=>x.cat==='start'&&x.stage===1&&x.level===2);delete S.solved[p.id];});
 
+ await pg.click('nav.tabs [data-tab="me"]');await pg.waitForSelector('.statrow');
+ ok(await pg.$$eval('#banklog .pc',e=>e.length)===1,'내 기록에 푼 문제 사전 문제가 보임');
+ await pg.click('#banklog .pc');await pg.waitForSelector('#code');
+ ok(await pg.evaluate(()=>byId(V.pid).bank),'기록에서 누르면 그 문제가 열림');
  // 홈 카드, 복습, 저장 유지
  await pg.click('nav.tabs [data-tab="home"]');await pg.waitForSelector('.hero');
  ok(await pg.$('.bankcard')!==null,'홈에 문제 사전 카드');
