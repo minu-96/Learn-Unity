@@ -25,6 +25,7 @@ public/                 Firebase Hosting이 그대로 서비스하는 정적 사
   js/store.js           Firebase 어댑터 (설정이 없으면 게스트 모드)
   js/lessons.js         단계별 짧은 개념 설명(핵심 3줄 + 예제 코드)
   js/glossary.js        문제 속 용어를 누르면 뜻이 뜨는 용어 풀이
+  js/fx.js              효과음 · 색종이 · 경험치/레벨 · 배지 · C# 구문 색
   js/views.js           로그인 · 내 기록 · 운영진 화면
   js/learn.js           오늘(홈) · 학습 지도 · 단계 화면
   js/ui.js              상태·저장·복습·문제 화면
@@ -32,7 +33,7 @@ public/                 Firebase Hosting이 그대로 서비스하는 정적 사
 firestore.rules         보안 규칙
 firebase.json           호스팅 + 규칙 설정
 tests/                  채점 검증 · 통합 테스트
-docs/                   배포 가이드 · 운영 가이드 · 작업 기록
+docs/                   배포 가이드 · 운영 가이드 · 베타 체크리스트 · 작업 기록
 ```
 
 ## 실행·테스트

@@ -46,6 +46,7 @@
    d.docs['users/g-minu/data/work']={json:JSON.stringify({custom:[],drafts})};
   })();
   d.docs['admins/adm1']={ok:true};
+  d.docs['config/weekly']={title:'3주차 · 변수와 이벤트 함수',note:'정답은 마지막에만 보세요',stages:['csharp:1','csharp:2','unity:1'],due:now+3*DAY,at:now};
   d.accounts={'admin@admin.learn-unity.example':{uid:'adm1',pw:'pw1234'}};
   d.seeded=true;
   raw.set(JSON.stringify(d));
