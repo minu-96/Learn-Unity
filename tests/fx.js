@@ -66,6 +66,7 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
  ok(/첫 걸음/.test(await pg.textContent('#toasts')),'첫 걸음 배지 알림');
  await pg.click('#diagnext');await pg.waitForSelector('#diagskip');
  await pg.click('#diagskip');await pg.waitForSelector('#diagskip');
+ await pg.click('#diagskip');await pg.waitForSelector('#diagskip');
  await pg.click('#diagskip');
  await pg.waitForSelector('.diagcard.res');
  ok(/기초부터/.test(await pg.textContent('.diagcard.res')),'진단 결과: 입문 통과·기초 미통과 → 기초부터 추천');
@@ -85,7 +86,7 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
 
  // 내 기록: 배지·레벨
  await pg.click('nav.tabs [data-tab="me"]');await pg.waitForSelector('.badges');
- ok(await pg.$$eval('.bdg',e=>e.length)===11,'내 기록: 배지 11개');
+ ok(await pg.$$eval('.bdg',e=>e.length)===12,'내 기록: 배지 12개');
  ok(await pg.$$eval('.bdg:not(.lock)',e=>e.length)>=1,'획득한 배지 표시');
 
  // 진단 저장 → 새로고침 유지
@@ -101,6 +102,12 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
  await pg.waitForSelector('.statrow');
  ok((await pg.$$eval('.tbl th',e=>e.map(x=>x.textContent))).includes('과제'),'운영진 표: 과제 열');
  ok(await pg.$('#aw')!==null,'운영진: 과제 미완료만 필터');
+
+ // 3구간 시절 진단 결과를 4구간으로 옮기기
+ const mg=await pg.evaluate(()=>[migDiag({at:1,res:[true,false,false],rec:'basic'}),migDiag({at:1,res:[false,false,false],rec:'intro'}),migDiag({at:1,res:[true,true,true],rec:'adv'}),migDiag({at:1,res:[true,true,false,false],rec:'app',v4:1})]);
+ ok(mg[0].rec==='app'&&mg[0].res.join()==='true,true,false,false','옛 진단(기초 추천) → 응용 추천으로 이동');
+ ok(mg[1].rec==='intro'&&mg[2].rec==='adv'&&mg[2].res.length===4,'옛 진단 입문·심화 추천 유지');
+ ok(mg[3].rec==='app'&&mg[3].res.length===4,'이미 새 형식이면 그대로');
 
  // 모바일 가로 스크롤
  await pg.setViewportSize({width:390,height:844});

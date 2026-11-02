@@ -39,7 +39,8 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
  ok(await pg.$$eval('.act',e=>e.length)>=1,'오늘 화면: 지금 할 것 카드');
  await pg.click('nav.tabs [data-tab="learn"]');
  await pg.waitForSelector('.scgrid');
- ok((await pg.$$eval('.tt b',e=>e.map(x=>x.textContent))).join()==='입문,기초,심화','학습 지도: 세 구간 탭');
+ ok((await pg.$$eval('.tt b',e=>e.map(x=>x.textContent))).join()==='입문,기초,응용,심화','학습 지도: 네 구간 탭');
+ await pg.click(`.tt[data-tier="basic"]`);
  await pg.click(`.sc[data-c="${p.cat}"][data-s="${p.stage}"]`);
  await pg.waitForSelector('.lesson');
  ok(await pg.$$eval('.lesson .code.ex',e=>e.length)===1,'단계 화면: 개념 카드와 예제 코드');
@@ -85,7 +86,7 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
  await pg.click('nav.tabs [data-tab="me"]');
  await pg.waitForSelector('.tiergrid');
  const tiers=await pg.$$eval('.tier h3',e=>e.map(x=>x.textContent));
- ok(tiers.join()==='입문,기초,심화','내 기록: 세 단계 카드');
+ ok(tiers.join()==='입문,기초,응용,심화','내 기록: 네 단계 카드');
  ok((await pg.textContent('.statrow')).includes('1'),'내 기록: 요약 수치');
 
  // 6. 새로고침 → 클라우드에서 복원
@@ -98,7 +99,7 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
  await pg.evaluate(({probs})=>{
   const d=JSON.parse(localStorage.getItem('fakefb'));
   const mk=(name,solved,self,last,tier)=>({name,email:name+'@x.com',lastActive:last,summary:{total:90,solved,self,tier,retain:60,tries:solved*2},prob:Object.fromEntries(probs.slice(0,solved).map((id,i)=>[id,[i%3===0?2:1,3]]))});
-  const T=(a,b,c)=>({intro:{total:21,solved:a,self:a,passed:a>=17},basic:{total:30,solved:b,self:b,passed:false},adv:{total:39,solved:c,self:c,passed:false}});
+  const T=(a,b,c)=>({intro:{total:15,solved:a,self:a,passed:a>=12},basic:{total:21,solved:b,self:b,passed:false},app:{total:36,solved:0,self:0,passed:false},adv:{total:33,solved:c,self:c,passed:false}});
   d.docs['users/u2']=mk('김가나',20,15,Date.now()-2*864e5,T(18,2,0));
   d.docs['users/u3']=mk('이다라',5,5,Date.now()-30*864e5,T(5,0,0));
   d.docs['users/u4']=mk('<b>해커</b>',3,3,Date.now()-864e5,T(3,0,0));
