@@ -2266,3 +2266,1026 @@ int TurnDir(float current, float target)
  hints:['단순 비교는 0도를 넘는 경우에 틀려요.','최단 차이는 Mathf.Repeat(b − a + 180, 360) − 180 이에요.','그 차이의 부호로 방향을 정하세요.'],
  why:'방향 결정에도 "최단 각도 차이"가 기준이 돼요. 부호만 필요하다면 그 값을 한 번 구해서 양수·음수·0으로 나누면 끝입니다.',
  concepts:[['각도의 순환성','차이를 −180 ~ 180으로 감싸야 최단 회전 방향을 알 수 있다.'],['Mathf.Repeat','값을 0 이상 길이 미만으로 순환시킨다.']]});
+
+/* ---- 유니티 1단계 ---- */
+QB({id:'x91',cat:'unity',stage:1,level:1,title:'프레임이 달라도 같은 속도로 위로 오르기',
+ story:'엘리베이터가 초당 60 유닛의 속도로 위로 올라가야 해요. 지금 코드는 프레임마다 고정값(1)만큼 움직여서 30fps 기기와 144fps 기기에서 도착 시간이 크게 달라요. 어떤 기기에서도 3초 뒤 같은 높이에 도착하게 만들어 주세요.',
+ goals:['30fps와 144fps 모두 3초 뒤 노란 목표 지점(y≈210)에 도착한다','속도는 speed 필드(초당 60)로 조절할 수 있다'],
+ limits:['프레임당 이동량(1 같은 숫자)을 직접 쓰지 않는다','transform.position.y 에 직접 대입하지 않는다 (CS1612) — 지역 변수로 복사 후 다시 대입'],
+ api:'transform.position(Vector3), Time.deltaTime',
+ starter:C`
+public float speed = 60f;
+
+void Update()
+{
+    // 프레임마다 1씩 움직이는 중입니다. 초당 속도로 바꿔 보세요.
+    Vector3 pos = transform.position;
+    pos.y += 1f;
+    transform.position = pos;
+}`,
+ solution:C`
+public float speed = 60f;
+
+void Update()
+{
+    Vector3 pos = transform.position;
+    pos.y += speed * Time.deltaTime;
+    transform.position = pos;
+}`,
+ world:{start:{x:150,y:30},goal:{x:150,y:210,r:10}},runs:[{fps:30,seconds:3},{fps:144,seconds:3}],show:3,
+ rules:[has('Time.deltaTime 사용',/Time\.deltaTime/,'이동량에 Time.deltaTime을 곱했어요.','이동량에 Time.deltaTime(직전 프레임과의 시간 간격)을 곱해야 프레임레이트와 무관해져요.'),
+  inFn('speed 필드 사용','Update',/\bspeed\b/,'speed 값을 사용해요.','하드코딩한 숫자 대신 speed 필드를 쓰세요.')],
+ check:rs=>{const a=last(rs[0]),b=last(rs[1]);const same=Math.abs(a[2]-b[2])<4,hit=Math.abs(b[2]-210)<12;
+  return {items:[
+   it(same,'프레임레이트 무관',`30fps y=${a[2].toFixed(1)}, 144fps y=${b[2].toFixed(1)} 로 거의 같아요.`,`30fps y=${a[2].toFixed(1)}, 144fps y=${b[2].toFixed(1)} 로 달라요. 프레임당 이동량이 아니라 속도 × 프레임 시간(Time.deltaTime)으로 움직이세요.`),
+   it(hit,'목표 도착',`3초 뒤 목표 높이(y≈210)에 도착했어요 (y=${b[2].toFixed(1)}).`,`3초 뒤 y=${b[2].toFixed(1)} 로 목표(210)에 도착하지 못했어요. 속도가 초당 60 유닛인지 확인하세요.`)]}},
+ hints:['Update는 프레임마다 호출돼서 144fps와 30fps의 호출 횟수가 달라요.','Time.deltaTime은 직전 프레임에서 지금까지 걸린 시간(초)이에요.','이동량 = speed × Time.deltaTime 으로 만드세요.'],
+ why:'초당 속도에 Time.deltaTime을 곱하면 "이번 프레임에 흐른 시간만큼" 움직이므로 프레임레이트와 관계없이 같은 거리를 가요.',
+ concepts:[['Time.deltaTime','직전 프레임과 이번 프레임 사이의 시간(초). 속도 × deltaTime으로 이동하면 프레임레이트와 무관한 움직임이 된다.'],['프레임 독립 이동','프레임당 고정 이동량 대신 초당 속도 × 시간으로 움직인다.']]});
+
+QB({id:'x92',cat:'unity',stage:1,level:1,title:'프레임이 달라도 같은 속도로 왼쪽으로',
+ story:'자동차가 오른쪽 끝에서 출발해 초당 70 유닛으로 왼쪽으로 달려야 해요. 지금은 프레임마다 고정값(1.2)만큼 움직여서 기기 성능에 따라 속도가 달라져요. 3초 뒤 노란 목표 지점(x≈70)에 도착하도록 고쳐 주세요.',
+ goals:['30fps와 144fps 모두 3초 뒤 노란 목표 지점(x≈70)에 도착한다','속도는 speed 필드(초당 70)로 조절할 수 있다'],
+ limits:['프레임당 이동량(1.2 같은 숫자)을 직접 쓰지 않는다','transform.position.x 에 직접 대입하지 않는다 (CS1612)'],
+ api:'transform.position(Vector3), Time.deltaTime',
+ starter:C`
+public float speed = 70f;
+
+void Update()
+{
+    // 프레임마다 1.2씩 왼쪽으로 움직이는 중입니다.
+    Vector3 pos = transform.position;
+    pos.x -= 1.2f;
+    transform.position = pos;
+}`,
+ solution:C`
+public float speed = 70f;
+
+void Update()
+{
+    Vector3 pos = transform.position;
+    pos.x -= speed * Time.deltaTime;
+    transform.position = pos;
+}`,
+ world:{start:{x:280,y:135},goal:{x:70,y:135,r:10}},runs:[{fps:30,seconds:3},{fps:144,seconds:3}],show:3,
+ rules:[has('Time.deltaTime 사용',/Time\.deltaTime/,'이동량에 Time.deltaTime을 곱했어요.','이동량에 Time.deltaTime을 곱해야 프레임레이트와 무관해져요.'),
+  inFn('speed 필드 사용','Update',/\bspeed\b/,'speed 값을 사용해요.','하드코딩한 숫자 대신 speed 필드를 쓰세요.')],
+ check:rs=>{const a=last(rs[0]),b=last(rs[1]);const same=Math.abs(a[1]-b[1])<4,hit=Math.abs(b[1]-70)<12;
+  return {items:[
+   it(same,'프레임레이트 무관',`30fps x=${a[1].toFixed(1)}, 144fps x=${b[1].toFixed(1)} 로 거의 같아요.`,`30fps x=${a[1].toFixed(1)}, 144fps x=${b[1].toFixed(1)} 로 달라요. 속도 × Time.deltaTime으로 움직이세요.`),
+   it(hit,'목표 도착',`3초 뒤 목표 지점(x≈70)에 도착했어요 (x=${b[1].toFixed(1)}).`,`3초 뒤 x=${b[1].toFixed(1)} 로 목표(70)에 도착하지 못했어요. 속도가 초당 70 유닛인지 확인하세요.`)]}},
+ hints:['프레임마다 고정값을 빼면 프레임 수가 많은 기기가 더 빨리 가요.','Time.deltaTime은 직전 프레임이 걸린 시간(초)이에요.','pos.x -= speed * Time.deltaTime; 으로 바꾸세요.'],
+ why:'방향이 반대여도 원리는 같아요. 부호는 방향을, speed × Time.deltaTime은 이번 프레임의 이동 거리를 정합니다.',
+ concepts:[['Time.deltaTime','직전 프레임과 이번 프레임 사이의 시간(초).'],['프레임 독립 이동','프레임당 고정 이동량 대신 초당 속도 × 시간으로 움직인다.']]});
+
+QB({id:'x93',cat:'unity',stage:1,level:1,title:'프레임이 달라도 같은 속도로 대각선 이동',
+ story:'드론이 초당 x로 50, y로 50 유닛씩 대각선으로 날아가야 해요. 지금은 프레임마다 고정값(0.8)만큼 움직여서 기기마다 도착 시간이 달라요. 3초 뒤 노란 목표 지점(x≈190, y≈180)에 도착하도록 고쳐 주세요.',
+ goals:['30fps와 144fps 모두 3초 뒤 노란 목표 지점(190, 180)에 도착한다','속도는 speed 필드(초당 50)로 조절할 수 있다'],
+ limits:['프레임당 이동량(0.8 같은 숫자)을 직접 쓰지 않는다','transform.position.x 에 직접 대입하지 않는다 (CS1612)'],
+ api:'transform.position(Vector3), Time.deltaTime',
+ starter:C`
+public float speed = 50f;
+
+void Update()
+{
+    // 프레임마다 0.8씩 움직이는 중입니다.
+    Vector3 pos = transform.position;
+    pos.x += 0.8f;
+    pos.y += 0.8f;
+    transform.position = pos;
+}`,
+ solution:C`
+public float speed = 50f;
+
+void Update()
+{
+    Vector3 pos = transform.position;
+    pos.x += speed * Time.deltaTime;
+    pos.y += speed * Time.deltaTime;
+    transform.position = pos;
+}`,
+ world:{start:{x:40,y:30},goal:{x:190,y:180,r:10}},runs:[{fps:30,seconds:3},{fps:144,seconds:3}],show:3,
+ rules:[has('Time.deltaTime 사용',/Time\.deltaTime/,'이동량에 Time.deltaTime을 곱했어요.','이동량에 Time.deltaTime을 곱해야 프레임레이트와 무관해져요.'),
+  inFn('speed 필드 사용','Update',/\bspeed\b/,'speed 값을 사용해요.','하드코딩한 숫자 대신 speed 필드를 쓰세요.')],
+ check:rs=>{const a=last(rs[0]),b=last(rs[1]);const same=Math.abs(a[1]-b[1])<4&&Math.abs(a[2]-b[2])<4,hit=Math.abs(b[1]-190)<12&&Math.abs(b[2]-180)<12;
+  return {items:[
+   it(same,'프레임레이트 무관',`30fps (${a[1].toFixed(0)}, ${a[2].toFixed(0)}), 144fps (${b[1].toFixed(0)}, ${b[2].toFixed(0)}) 로 거의 같아요.`,`30fps (${a[1].toFixed(0)}, ${a[2].toFixed(0)}), 144fps (${b[1].toFixed(0)}, ${b[2].toFixed(0)}) 로 달라요. x와 y 모두 속도 × Time.deltaTime으로 움직이세요.`),
+   it(hit,'목표 도착',`3초 뒤 목표 지점에 도착했어요 (${b[1].toFixed(0)}, ${b[2].toFixed(0)}).`,`3초 뒤 (${b[1].toFixed(0)}, ${b[2].toFixed(0)}) 로 목표(190, 180)에 도착하지 못했어요. 속도가 초당 50 유닛인지 확인하세요.`)]}},
+ hints:['x와 y 모두 프레임당 고정값이라 둘 다 프레임레이트에 영향을 받아요.','두 축 모두에 Time.deltaTime을 곱해야 해요.','pos.x와 pos.y에 각각 speed * Time.deltaTime 을 더하세요.'],
+ why:'축이 늘어도 원리는 같아요. 이동량에는 항상 "시간"이 들어가야 프레임레이트와 무관해집니다.',
+ concepts:[['Time.deltaTime','직전 프레임과 이번 프레임 사이의 시간(초).'],['프레임 독립 이동','프레임당 고정 이동량 대신 초당 속도 × 시간으로 움직인다.']]});
+
+QB({id:'x94',cat:'unity',stage:1,level:2,title:'적은 UIManager가 준비된 뒤에 등록하자',
+ story:'Enemy.Awake에서 UIManager.Instance.AddEnemy(this)를 호출했더니 가끔 NullReferenceException이 나요. UIManager는 자기 Awake에서 Instance를 설정하는데, 서로 다른 오브젝트의 Awake 순서는 정해져 있지 않기 때문이에요.',
+ goals:['자기 자신에게 붙은 컴포넌트(Animator)를 가져오는 일은 Awake에서 한다','다른 오브젝트(UIManager.Instance)에 접근하는 일은 Start에서 한다'],
+ limits:['Awake와 OnEnable에서는 UIManager.Instance를 쓰지 않는다','AddEnemy(this) 호출은 정확히 그대로 유지한다'],
+ starter:C`
+using UnityEngine;
+
+public class Enemy : MonoBehaviour
+{
+    private Animator anim;
+
+    void Awake()
+    {
+        // 지금은 UIManager가 아직 준비되기 전일 수 있어서 NullReferenceException이 납니다
+        UIManager.Instance.AddEnemy(this);
+        anim = GetComponent<Animator>();
+    }
+}`,
+ solution:C`
+using UnityEngine;
+
+public class Enemy : MonoBehaviour
+{
+    private Animator anim;
+
+    void Awake()
+    {
+        anim = GetComponent<Animator>();
+    }
+
+    void Start()
+    {
+        UIManager.Instance.AddEnemy(this);
+    }
+}`,
+ rules:[
+  inFn('Awake에서 자기 컴포넌트 가져오기','Awake',/\banim\s*=\s*GetComponent\s*<\s*Animator\s*>\s*\(\s*\)|TryGetComponent\s*(?:<\s*Animator\s*>)?\s*\(\s*out\s+anim\b/,'자기 컴포넌트는 Awake에서 가져와요.','자기 자신의 컴포넌트(anim)는 Awake에서 가져오세요.'),
+  notIn('Awake에서 Instance 금지','Awake',/\bUIManager\s*\.\s*Instance\b/,'Awake에서 다른 오브젝트에 접근하지 않아요.','Awake는 오브젝트마다 순서가 정해져 있지 않아요. 다른 오브젝트의 Instance는 Start에서 쓰세요.'),
+  notIn('OnEnable에서 Instance 금지','OnEnable',/\bUIManager\s*\.\s*Instance\b/,'OnEnable에서도 접근하지 않아요.','OnEnable은 Awake 직후에 호출되므로 마찬가지로 안전하지 않아요.'),
+  inFn('Start에서 등록','Start',/\bUIManager\s*\.\s*Instance\s*\.\s*AddEnemy\s*\(\s*this\s*\)\s*;/,'Start에서 UIManager에 등록해요.','Start 안에서 UIManager.Instance.AddEnemy(this); 를 호출하세요.')
+ ],
+ hints:['Unity는 모든 오브젝트의 Awake를 먼저 실행한 뒤 첫 Update 전에 Start를 실행해요.','Awake: 내 것 준비. Start: 남의 것 사용.','AddEnemy 호출을 Start로 옮기세요.'],
+ why:'서로 다른 오브젝트 사이의 Awake 순서는 보장되지 않아요. 그래서 "자기 초기화는 Awake, 다른 오브젝트 접근은 Start"가 Unity의 기본 약속입니다.',
+ concepts:[['Awake와 Start의 차이','Awake는 자기 초기화에, Start는 모든 Awake가 끝난 뒤 다른 오브젝트에 접근하는 초기화에 쓴다.']]});
+
+QB({id:'x95',cat:'unity',stage:1,level:2,title:'HUD는 플레이어 이벤트를 Start에서 연결',
+ story:'Hud.Awake에서 Player.Instance.OnHpChanged += Refresh; 로 이벤트를 연결했더니 씬을 시작할 때 가끔 NullReferenceException이 나요. Player가 자기 Awake에서 Instance를 설정하기 전에 Hud의 Awake가 먼저 실행될 수 있기 때문이에요.',
+ goals:['자기 자신에게 붙은 컴포넌트(CanvasGroup)를 가져오는 일은 Awake에서 한다','다른 오브젝트(Player.Instance)의 이벤트를 연결하는 일은 Start에서 한다'],
+ limits:['Awake와 OnEnable에서는 Player.Instance를 쓰지 않는다','이벤트 연결 코드는 그대로 유지한다'],
+ starter:C`
+using UnityEngine;
+
+public class Hud : MonoBehaviour
+{
+    private CanvasGroup group;
+
+    void Awake()
+    {
+        // 지금은 Player가 아직 준비되기 전일 수 있어서 NullReferenceException이 납니다
+        Player.Instance.OnHpChanged += Refresh;
+        group = GetComponent<CanvasGroup>();
+    }
+
+    void Refresh(int hp) { }
+}`,
+ solution:C`
+using UnityEngine;
+
+public class Hud : MonoBehaviour
+{
+    private CanvasGroup group;
+
+    void Awake()
+    {
+        group = GetComponent<CanvasGroup>();
+    }
+
+    void Start()
+    {
+        Player.Instance.OnHpChanged += Refresh;
+    }
+
+    void Refresh(int hp) { }
+}`,
+ rules:[
+  inFn('Awake에서 자기 컴포넌트 가져오기','Awake',/\bgroup\s*=\s*GetComponent\s*<\s*CanvasGroup\s*>\s*\(\s*\)|TryGetComponent\s*(?:<\s*CanvasGroup\s*>)?\s*\(\s*out\s+group\b/,'자기 컴포넌트는 Awake에서 가져와요.','자기 자신의 컴포넌트(group)는 Awake에서 가져오세요.'),
+  notIn('Awake에서 Instance 금지','Awake',/\bPlayer\s*\.\s*Instance\b/,'Awake에서 다른 오브젝트에 접근하지 않아요.','다른 오브젝트의 Instance는 Start에서 쓰세요.'),
+  notIn('OnEnable에서 Instance 금지','OnEnable',/\bPlayer\s*\.\s*Instance\b/,'OnEnable에서도 접근하지 않아요.','OnEnable은 Awake 직후에 호출되므로 마찬가지로 안전하지 않아요.'),
+  inFn('Start에서 연결','Start',/\bPlayer\s*\.\s*Instance\s*\.\s*OnHpChanged\s*\+=\s*Refresh\s*;/,'Start에서 이벤트를 연결해요.','Start 안에서 Player.Instance.OnHpChanged += Refresh; 를 쓰세요.')
+ ],
+ hints:['Awake에서는 다른 오브젝트가 준비됐다고 믿을 수 없어요.','내 컴포넌트 가져오기는 Awake, 남의 이벤트 연결은 Start.','이벤트 연결 줄을 Start로 옮기세요.'],
+ why:'이벤트 구독처럼 다른 오브젝트에 접근하는 일은 모든 Awake가 끝난 Start 이후가 안전해요.',
+ concepts:[['Awake와 Start의 차이','Awake는 자기 초기화, Start는 다른 오브젝트에 접근하는 초기화에 쓴다.']]});
+
+QB({id:'x96',cat:'unity',stage:1,level:2,title:'AudioManager는 Start에서 부르자',
+ story:'Stage.Awake에서 AudioManager.Instance.PlayBgm(bgm)을 바로 부르면 가끔 NullReferenceException이 나요. AudioManager의 Awake가 아직 실행되지 않았을 수 있기 때문이에요.',
+ goals:['자기 자신에게 붙은 컴포넌트(Animator)를 가져오는 일은 Awake에서 한다','다른 오브젝트(AudioManager.Instance)를 쓰는 일은 Start에서 한다'],
+ limits:['Awake와 OnEnable에서는 AudioManager.Instance를 쓰지 않는다','PlayBgm(bgm) 호출은 그대로 유지한다'],
+ starter:C`
+using UnityEngine;
+
+public class Stage : MonoBehaviour
+{
+    public AudioClip bgm;
+    private Animator anim;
+
+    void Awake()
+    {
+        // 지금은 AudioManager가 아직 준비되기 전일 수 있어서 NullReferenceException이 납니다
+        AudioManager.Instance.PlayBgm(bgm);
+        anim = GetComponent<Animator>();
+    }
+}`,
+ solution:C`
+using UnityEngine;
+
+public class Stage : MonoBehaviour
+{
+    public AudioClip bgm;
+    private Animator anim;
+
+    void Awake()
+    {
+        anim = GetComponent<Animator>();
+    }
+
+    void Start()
+    {
+        AudioManager.Instance.PlayBgm(bgm);
+    }
+}`,
+ rules:[
+  inFn('Awake에서 자기 컴포넌트 가져오기','Awake',/\banim\s*=\s*GetComponent\s*<\s*Animator\s*>\s*\(\s*\)|TryGetComponent\s*(?:<\s*Animator\s*>)?\s*\(\s*out\s+anim\b/,'자기 컴포넌트는 Awake에서 가져와요.','자기 자신의 컴포넌트(anim)는 Awake에서 가져오세요.'),
+  notIn('Awake에서 Instance 금지','Awake',/\bAudioManager\s*\.\s*Instance\b/,'Awake에서 다른 오브젝트에 접근하지 않아요.','다른 오브젝트의 Instance는 Start에서 쓰세요.'),
+  notIn('OnEnable에서 Instance 금지','OnEnable',/\bAudioManager\s*\.\s*Instance\b/,'OnEnable에서도 접근하지 않아요.','OnEnable은 Awake 직후에 호출되므로 마찬가지로 안전하지 않아요.'),
+  inFn('Start에서 재생','Start',/\bAudioManager\s*\.\s*Instance\s*\.\s*PlayBgm\s*\(\s*bgm\s*\)\s*;/,'Start에서 배경음을 재생해요.','Start 안에서 AudioManager.Instance.PlayBgm(bgm); 를 호출하세요.')
+ ],
+ hints:['AudioManager의 Awake가 먼저일 거라는 보장이 없어요.','내 것은 Awake, 남의 것은 Start.','PlayBgm 호출을 Start로 옮기세요.'],
+ why:'싱글톤 매니저를 쓰는 코드는 Start 이후에 호출하는 것이 Unity에서 가장 흔한 안전 장치예요.',
+ concepts:[['Awake와 Start의 차이','Awake는 자기 초기화, Start는 다른 오브젝트에 접근하는 초기화에 쓴다.']]});
+
+QB({id:'x97',cat:'unity',stage:1,level:3,title:'슬로모션에도 쿨다운 바는 실제 속도로',
+ story:'슬로모션 스킬을 쓰면 Time.timeScale이 0.3으로 내려가요. 그런데 스킬 쿨다운 UI가 같이 느려져서 답답해요. 쿨다운은 실제 시간으로 3초에 걸쳐 줄어야 해요.',
+ goals:['Update(): cooldown 을 Time.unscaledDeltaTime 만큼 줄인다','cooldown 은 0 아래로 내려가지 않는다','SlowMo(): timeScale 을 0.3으로 낮춘다 (이미 구현되어 있어요)'],
+ limits:['Time.deltaTime 은 timeScale 영향을 받으므로 쓰지 않는다'],
+ api:'Time.timeScale, Time.deltaTime, Time.unscaledDeltaTime, Mathf.Max',
+ starter:C`
+public float cooldown = 3f;
+
+public void SlowMo()
+{
+    Time.timeScale = 0.3f;
+}
+
+void Update()
+{
+    cooldown -= Time.deltaTime;
+    cooldown = Mathf.Max(cooldown, 0f);
+}`,
+ solution:C`
+public float cooldown = 3f;
+
+public void SlowMo()
+{
+    Time.timeScale = 0.3f;
+}
+
+void Update()
+{
+    cooldown -= Time.unscaledDeltaTime;
+    cooldown = Mathf.Max(cooldown, 0f);
+}`,
+ rules:[
+  inFn('unscaledDeltaTime 사용','Update',/Time\.unscaledDeltaTime/,'timeScale의 영향을 받지 않는 시간을 써요.','UI 연출에는 Time.unscaledDeltaTime을 쓰세요.'),
+  notIn('Update에서 deltaTime 금지','Update',/Time\.deltaTime/,'timeScale 영향을 받는 deltaTime을 쓰지 않았어요.','Time.deltaTime은 슬로모션에서 작아져요. Update에서 쓰지 마세요.')
+ ],
+ test:(api,ok)=>{
+  const T=api.env.Time;
+  T.deltaTime=0.025;T.unscaledDeltaTime=0.125;
+  api.call('SlowMo');
+  ok('SlowMo',T.timeScale===0.3,'SlowMo가 timeScale을 0.3으로 낮춰요.','SlowMo 후 Time.timeScale이 0.3이어야 해요.');
+  for(let i=0;i<8;i++)api.call('Update');
+  const c=api.get('cooldown');
+  ok('실제 시간으로 감소',Math.abs(c-2)<1e-6,'슬로모션 중에도 쿨다운이 실제 시간(1초)만큼 줄었어요.',`쿨다운이 ${c.toFixed(2)} 입니다. 실제 1초가 지났으니 2여야 해요. deltaTime은 슬로모션에서 작아져요.`);
+  for(let i=0;i<40;i++)api.call('Update');
+  ok('0 아래 금지',api.get('cooldown')===0,'쿨다운이 0 아래로 내려가지 않아요.','쿨다운은 0에서 멈춰야 해요. Mathf.Max로 제한하세요.');
+ },
+ hints:['timeScale이 줄면 Time.deltaTime도 같이 줄어요.','Time.unscaledDeltaTime은 timeScale과 상관없이 실제로 흐른 시간이에요.','cooldown -= Time.unscaledDeltaTime; 으로 바꾸세요.'],
+ why:'게임 속 시간(timeScale 영향)과 실제 시간은 구분해서 써야 해요. 게임 로직은 deltaTime, UI 연출과 쿨다운 표시는 unscaledDeltaTime입니다.',
+ concepts:[['Time.timeScale','게임 시간의 배속. 0이면 deltaTime 기반 로직이 모두 멈춘다.'],['Time.unscaledDeltaTime','timeScale의 영향을 받지 않는 프레임 간격.']]});
+
+QB({id:'x98',cat:'unity',stage:1,level:3,title:'일시정지 메뉴가 위에서 내려오게',
+ story:'일시정지하면 timeScale이 0이 되어 메뉴가 내려오는 슬라이드 연출도 멈춰요. 메뉴가 화면 밖에 걸린 채로 남아 있죠. 일시정지 중에도 메뉴가 초당 slideSpeed 속도로 내려와 0 위치에서 멈추도록 고쳐 주세요.',
+ goals:['Pause(): 시간을 멈추고(timeScale 0) menuY 를 −300으로 초기화한다 (이미 구현되어 있어요)','Resume(): 시간을 정상 속도(1)로 되돌린다','Update(): 일시정지 중에도 menuY 가 slideSpeed 속도로 0까지 올라간다 (0을 넘지 않는다)'],
+ limits:['Time.deltaTime 은 timeScale 이 0이면 0이 되므로 쓰지 않는다'],
+ api:'Time.timeScale, Time.deltaTime, Time.unscaledDeltaTime, Mathf.Min',
+ starter:C`
+public float slideSpeed = 600f;
+float menuY = 0f;
+
+public void Pause()
+{
+    Time.timeScale = 0f;
+    menuY = -300f;
+}
+
+public void Resume()
+{
+    // TODO
+}
+
+void Update()
+{
+    menuY += slideSpeed * Time.deltaTime;
+    menuY = Mathf.Min(menuY, 0f);
+}`,
+ solution:C`
+public float slideSpeed = 600f;
+float menuY = 0f;
+
+public void Pause()
+{
+    Time.timeScale = 0f;
+    menuY = -300f;
+}
+
+public void Resume()
+{
+    Time.timeScale = 1f;
+}
+
+void Update()
+{
+    menuY += slideSpeed * Time.unscaledDeltaTime;
+    menuY = Mathf.Min(menuY, 0f);
+}`,
+ rules:[
+  inFn('Resume이 시간을 되돌림','Resume',/Time\.timeScale\s*=\s*1(?:\.0*)?f?\s*;/,'Resume에서 timeScale을 1로 되돌려요.','Resume에서 Time.timeScale = 1f; 로 시간을 다시 흐르게 하세요.'),
+  inFn('unscaledDeltaTime 사용','Update',/Time\.unscaledDeltaTime/,'timeScale의 영향을 받지 않는 시간을 써요.','일시정지 중에도 흘러야 하는 UI 연출에는 Time.unscaledDeltaTime을 쓰세요.'),
+  notIn('Update에서 deltaTime 금지','Update',/Time\.deltaTime/,'timeScale 영향을 받는 deltaTime을 쓰지 않았어요.','Time.deltaTime은 timeScale이 0이면 0이 돼요.')
+ ],
+ test:(api,ok)=>{
+  const T=api.env.Time;
+  T.deltaTime=0;T.unscaledDeltaTime=0.125;
+  api.call('Pause');
+  ok('Pause',T.timeScale===0&&api.get('menuY')===-300,'Pause가 시간을 멈추고 메뉴를 위에 둬요.','Pause 후 timeScale이 0, menuY가 −300이어야 해요.');
+  for(let i=0;i<2;i++)api.call('Update');
+  const y=api.get('menuY');
+  ok('일시정지 중 슬라이드',Math.abs(y+150)<1e-6,'timeScale이 0이어도 0.25초 동안 메뉴가 150 내려왔어요.',`일시정지 중에 menuY가 ${y.toFixed(0)} 입니다. 600 × 0.25초 = 150 만큼 올라 −150이어야 해요.`);
+  for(let i=0;i<20;i++)api.call('Update');
+  ok('0 상한',api.get('menuY')===0,'menuY가 0에서 멈춰요.','menuY가 0을 넘었어요. Mathf.Min으로 제한하세요.');
+  api.call('Resume');
+  ok('Resume',T.timeScale===1,'Resume이 시간을 되돌려요.','Resume 후 Time.timeScale이 1이어야 해요.');
+ },
+ hints:['timeScale = 0 이면 Time.deltaTime도 0이에요.','Time.unscaledDeltaTime은 실제로 흐른 시간이에요.','Resume은 timeScale을 1로 되돌리는 한 줄이면 돼요.'],
+ why:'일시정지 중에도 움직여야 하는 것은 메뉴, 페이드, 입력 처리 같은 UI예요. 이들은 unscaledDeltaTime으로 움직입니다.',
+ concepts:[['Time.timeScale','게임 시간의 배속. 0이면 deltaTime 기반 로직이 모두 멈춘다.'],['Time.unscaledDeltaTime','timeScale의 영향을 받지 않는 프레임 간격.']]});
+
+QB({id:'x99',cat:'unity',stage:1,level:3,title:'히트스톱: 멈췄다가 스스로 풀리기',
+ story:'타격감을 위해 맞는 순간 시간을 0.5초 동안 멈추는 "히트스톱"을 만들어요. 그런데 타이머를 Time.deltaTime으로 줄였더니 시간이 멈춘 동안 타이머도 멈춰서 게임이 영영 풀리지 않아요.',
+ goals:['HitStop(): timeScale 을 0으로 만들고 stopTimer 를 duration 으로 채운다 (이미 구현되어 있어요)','Update(): stopTimer 가 남아 있으면 실제 시간만큼 줄인다','stopTimer 가 0 이하가 되면 timeScale 을 1로 되돌린다'],
+ limits:['Time.deltaTime 은 timeScale 이 0이면 0이 되므로 쓰지 않는다'],
+ api:'Time.timeScale, Time.unscaledDeltaTime',
+ starter:C`
+public float duration = 0.5f;
+float stopTimer = 0f;
+
+public void HitStop()
+{
+    Time.timeScale = 0f;
+    stopTimer = duration;
+}
+
+void Update()
+{
+    if (stopTimer > 0f)
+    {
+        stopTimer -= Time.deltaTime;
+        if (stopTimer <= 0f)
+        {
+            Time.timeScale = 1f;
+        }
+    }
+}`,
+ solution:C`
+public float duration = 0.5f;
+float stopTimer = 0f;
+
+public void HitStop()
+{
+    Time.timeScale = 0f;
+    stopTimer = duration;
+}
+
+void Update()
+{
+    if (stopTimer > 0f)
+    {
+        stopTimer -= Time.unscaledDeltaTime;
+        if (stopTimer <= 0f)
+        {
+            Time.timeScale = 1f;
+        }
+    }
+}`,
+ rules:[
+  inFn('unscaledDeltaTime 사용','Update',/Time\.unscaledDeltaTime/,'timeScale의 영향을 받지 않는 시간으로 타이머를 줄여요.','히트스톱 타이머는 Time.unscaledDeltaTime으로 줄이세요.'),
+  notIn('Update에서 deltaTime 금지','Update',/Time\.deltaTime/,'timeScale 영향을 받는 deltaTime을 쓰지 않았어요.','Time.deltaTime은 timeScale이 0이면 0이 돼요.'),
+  inFn('timeScale 복구','Update',/Time\.timeScale\s*=\s*1(?:\.0*)?f?\s*;/,'타이머가 끝나면 시간을 되돌려요.','타이머가 끝나면 Time.timeScale = 1f; 로 되돌리세요.')
+ ],
+ test:(api,ok)=>{
+  const T=api.env.Time;
+  T.deltaTime=0;T.unscaledDeltaTime=0.125;
+  api.call('HitStop');
+  ok('시간 정지',T.timeScale===0,'맞는 순간 시간이 멈춰요.','HitStop 후 Time.timeScale이 0이어야 해요.');
+  for(let i=0;i<3;i++)api.call('Update');
+  ok('멈춘 동안 유지',T.timeScale===0,'0.375초 동안은 계속 멈춰 있어요.',`0.375초 만에 timeScale이 ${T.timeScale} 가 됐어요. 0.5초가 지나기 전에는 0이어야 해요.`);
+  api.call('Update');
+  ok('스스로 풀림',T.timeScale===1,'0.5초가 지나면 시간이 다시 흘러요.','0.5초가 지났는데도 timeScale이 0이에요. deltaTime 대신 unscaledDeltaTime으로 타이머를 줄이세요.');
+ },
+ hints:['timeScale이 0이면 Time.deltaTime도 0이라 타이머가 안 줄어요.','타이머처럼 "실제 시간"을 재야 하는 값은 unscaledDeltaTime으로 줄이세요.','deltaTime을 unscaledDeltaTime으로 바꾸면 돼요.'],
+ why:'시간을 멈추는 코드는 "멈춘 시간을 재는 시계"를 따로 가져야 해요. 이 시계는 timeScale의 영향을 받지 않는 unscaledDeltaTime입니다.',
+ concepts:[['Time.timeScale','게임 시간의 배속. 0이면 deltaTime 기반 로직이 모두 멈춘다.'],['Time.unscaledDeltaTime','timeScale의 영향을 받지 않는 프레임 간격.']]});
+
+/* ---- 유니티 2단계 ---- */
+QB({id:'x100',cat:'unity',stage:2,level:1,title:'웅크리기는 누를 때 한 번만 바뀌게',
+ story:'C 키를 누르면 웅크리기가 켜지고 다시 누르면 꺼져야 해요. 지금은 GetKey를 써서 키를 누르고 있는 동안 매 프레임 뒤집혀서 상태가 깜빡거려요. 누른 프레임에 딱 한 번만 바뀌게 해 주세요.',
+ goals:['C 키를 누른 프레임에만 crouching 을 반대로 뒤집는다 (true ↔ false)','누르고 있는 동안에는 상태가 바뀌지 않는다'],
+ limits:['누른 순간은 Input.GetKeyDown 으로 구분한다'],
+ api:'Input.GetKeyDown (KeyCode.C)',
+ starter:C`
+public bool crouching;
+
+void Update()
+{
+    // GetKey는 누르고 있는 내내 true라서 매 프레임 뒤집혀요.
+    if (Input.GetKey(KeyCode.C))
+    {
+        crouching = !crouching;
+    }
+}`,
+ solution:C`
+public bool crouching;
+
+void Update()
+{
+    if (Input.GetKeyDown(KeyCode.C))
+    {
+        crouching = !crouching;
+    }
+}`,
+ rules:[has('GetKeyDown 사용',/Input\.GetKeyDown\s*\(/,'누른 순간은 GetKeyDown으로 감지해요.','"누른 프레임 한 번"은 Input.GetKeyDown 으로 감지합니다.')],
+ test:(api,ok)=>{
+  const I=api.env.Input;
+  const frames=[{d:1,h:1},{d:0,h:1},{d:0,h:1},{d:0,h:0}];
+  let f=frames[0];
+  I.GetKeyDown=k=>k==='C'&&!!f.d;I.GetKey=k=>k==='C'&&!!f.h;I.GetKeyUp=k=>false;
+  for(f of frames)api.call('Update');
+  ok('한 번 누르면 켜짐',api.get('crouching')===true,'3프레임 동안 눌러도 한 번만 바뀌어 켜졌어요.',`crouching이 ${api.get('crouching')} 입니다. 눌러서 한 번만 뒤집히면 true여야 해요.`);
+  f={d:1,h:1};api.call('Update');
+  ok('다시 누르면 꺼짐',api.get('crouching')===false,'다시 누르면 꺼져요.','한 번 더 누르면 false로 돌아와야 해요.');
+ },
+ hints:['GetKey는 누르고 있는 모든 프레임에서 true예요.','"누른 그 프레임"에만 true인 함수를 쓰세요.','if (Input.GetKeyDown(KeyCode.C)) 로 감싸세요.'],
+ why:'토글처럼 "한 번 일어나는 일"에는 GetKeyDown을 써야 해요. GetKey는 누르고 있는 동안 계속 true라서 폭주합니다.',
+ concepts:[['GetKeyDown / GetKey / GetKeyUp','누른 프레임, 누르는 동안, 뗀 프레임에서 각각 true가 되는 입력 함수. 한 번만 일어날 동작은 Down/Up을 쓴다.']]});
+
+QB({id:'x101',cat:'unity',stage:2,level:1,title:'질주: 시작·지속·종료를 구분하기',
+ story:'Shift를 누르면 질주가 시작되고(startCount 증가), 누르고 있는 동안 스태미나가 줄고, 떼면 종료돼요(stopCount 증가). 지금은 GetKey 하나만 써서 시작 횟수가 폭주하고 종료는 감지하지 못해요.',
+ goals:['Shift를 누른 프레임에만 startCount를 1 올린다','Shift를 누르고 있는 동안 매 프레임 stamina에서 20 × Time.deltaTime 을 뺀다','Shift를 뗀 프레임에 stopCount를 1 올린다'],
+ limits:['세 가지 입력을 각각 GetKeyDown, GetKey, GetKeyUp 으로 구분해서 쓴다'],
+ api:'Input.GetKeyDown / GetKey / GetKeyUp (KeyCode.LeftShift), Time.deltaTime',
+ starter:C`
+public int startCount;
+public int stopCount;
+public float stamina = 100f;
+
+void Update()
+{
+    // 지금은 GetKey만 써서 누르고 있는 내내 시작이 폭주하고, 뗄 때는 아무 일도 없습니다.
+    if (Input.GetKey(KeyCode.LeftShift))
+    {
+        startCount++;
+    }
+}`,
+ solution:C`
+public int startCount;
+public int stopCount;
+public float stamina = 100f;
+
+void Update()
+{
+    if (Input.GetKeyDown(KeyCode.LeftShift))
+    {
+        startCount++;
+    }
+    if (Input.GetKey(KeyCode.LeftShift))
+    {
+        stamina -= 20f * Time.deltaTime;
+    }
+    if (Input.GetKeyUp(KeyCode.LeftShift))
+    {
+        stopCount++;
+    }
+}`,
+ rules:[
+  has('GetKeyDown 사용',/Input\.GetKeyDown\s*\(/,'누른 순간은 GetKeyDown으로 감지해요.','"누른 프레임 한 번"은 Input.GetKeyDown 으로 감지합니다.'),
+  has('GetKey 사용',/Input\.GetKey\s*\(/,'누르는 동안은 GetKey로 감지해요.','"누르고 있는 동안"은 Input.GetKey 로 감지합니다.'),
+  has('GetKeyUp 사용',/Input\.GetKeyUp\s*\(/,'뗀 순간은 GetKeyUp으로 감지해요.','"뗀 프레임 한 번"은 Input.GetKeyUp 으로 감지합니다.')
+ ],
+ test:(api,ok)=>{
+  const I=api.env.Input,T=api.env.Time;
+  T.deltaTime=0.5;
+  const frames=[{d:1,h:1,u:0},{d:0,h:1,u:0},{d:0,h:1,u:0},{d:0,h:0,u:1},{d:0,h:0,u:0}];
+  let f=frames[0];
+  I.GetKeyDown=k=>k==='LeftShift'&&!!f.d;I.GetKey=k=>k==='LeftShift'&&!!f.h;I.GetKeyUp=k=>k==='LeftShift'&&!!f.u;
+  for(f of frames)api.call('Update');
+  const s=api.get('startCount'),e=api.get('stopCount'),st=api.get('stamina');
+  ok('시작은 한 번',s===1,'누르고 있는 3프레임 동안에도 시작은 1번만 일어났어요.',`startCount가 ${s} 입니다. 누른 순간(GetKeyDown)에만 1 올라야 해요.`);
+  ok('지속 중 스태미나',Math.abs(st-70)<1e-6,'3프레임(1.5초) 동안 스태미나가 30 줄었어요.',`stamina가 ${st} 입니다. 100 − 20 × 0.5 × 3 = 70 이어야 해요.`);
+  ok('종료 감지',e===1,'뗀 순간 stopCount가 1 올랐어요.',`stopCount가 ${e} 입니다. 키를 뗀 프레임(GetKeyUp)에 1 올라야 해요.`);
+ },
+ hints:['세 함수는 각각 "누른 프레임", "누르는 중 매 프레임", "뗀 프레임"에만 true가 돼요.','스태미나는 GetKey 블록에서 줄이고, 시작·종료 횟수는 Down/Up 블록에서 올리세요.','Update 안에 if를 세 개 나란히 쓰면 돼요.'],
+ why:'입력의 "순간"과 "상태"를 구분하면 시작 효과, 지속 소모, 종료 정리를 깔끔하게 나눌 수 있어요.',
+ concepts:[['GetKeyDown / GetKey / GetKeyUp','누른 프레임, 누르는 동안, 뗀 프레임에서 각각 true가 되는 입력 함수.']]});
+
+QB({id:'x102',cat:'unity',stage:2,level:1,title:'활: 당기고, 모으고, 놓으면 발사',
+ story:'F 키를 누르면 활시위를 걸고(nocked 증가), 누르고 있는 동안 힘이 모이며(power, 초당 2씩, 최대 1), 떼는 순간 모은 힘으로 발사돼요(shot에 기록, power는 0으로). 지금은 GetKey 하나만 써서 제대로 동작하지 않아요.',
+ goals:['F 키를 누른 프레임에만 nocked를 1 올린다','F 키를 누르고 있는 동안 매 프레임 power에 2 × Time.deltaTime 을 더한다 (최대 1)','F 키를 뗀 프레임에 power 값을 shot에 저장하고 power를 0으로 되돌린다'],
+ limits:['세 가지 입력을 각각 GetKeyDown, GetKey, GetKeyUp 으로 구분해서 쓴다'],
+ api:'Input.GetKeyDown / GetKey / GetKeyUp (KeyCode.F), Time.deltaTime, Mathf.Min',
+ starter:C`
+public int nocked;
+public float power;
+public float shot;
+
+void Update()
+{
+    // 지금은 GetKey만 써서 누르고 있는 내내 시위를 걸고, 놓을 때는 아무 일도 없습니다.
+    if (Input.GetKey(KeyCode.F))
+    {
+        nocked++;
+    }
+}`,
+ solution:C`
+public int nocked;
+public float power;
+public float shot;
+
+void Update()
+{
+    if (Input.GetKeyDown(KeyCode.F))
+    {
+        nocked++;
+    }
+    if (Input.GetKey(KeyCode.F))
+    {
+        power = Mathf.Min(power + 2f * Time.deltaTime, 1f);
+    }
+    if (Input.GetKeyUp(KeyCode.F))
+    {
+        shot = power;
+        power = 0f;
+    }
+}`,
+ rules:[
+  has('GetKeyDown 사용',/Input\.GetKeyDown\s*\(/,'누른 순간은 GetKeyDown으로 감지해요.','"누른 프레임 한 번"은 Input.GetKeyDown 으로 감지합니다.'),
+  has('GetKey 사용',/Input\.GetKey\s*\(/,'누르는 동안은 GetKey로 감지해요.','"누르고 있는 동안"은 Input.GetKey 로 감지합니다.'),
+  has('GetKeyUp 사용',/Input\.GetKeyUp\s*\(/,'뗀 순간은 GetKeyUp으로 감지해요.','"뗀 프레임 한 번"은 Input.GetKeyUp 으로 감지합니다.')
+ ],
+ test:(api,ok)=>{
+  const I=api.env.Input,T=api.env.Time;
+  T.deltaTime=0.125;
+  const frames=[{d:1,h:1,u:0},{d:0,h:1,u:0},{d:0,h:1,u:0},{d:0,h:0,u:1},{d:0,h:0,u:0}];
+  let f=frames[0];
+  I.GetKeyDown=k=>k==='F'&&!!f.d;I.GetKey=k=>k==='F'&&!!f.h;I.GetKeyUp=k=>k==='F'&&!!f.u;
+  for(f of frames)api.call('Update');
+  const n=api.get('nocked'),sh=api.get('shot'),p=api.get('power');
+  ok('시위는 한 번',n===1,'누르고 있는 3프레임 동안에도 시위는 1번만 걸렸어요.',`nocked가 ${n} 입니다. 누른 순간(GetKeyDown)에만 1 올라야 해요.`);
+  ok('모은 힘 발사',Math.abs(sh-0.75)<1e-6,'3프레임 동안 모은 힘 0.75가 shot에 저장됐어요.',`shot이 ${sh} 입니다. 3프레임 × 2 × 0.125 = 0.75 여야 해요.`);
+  ok('힘 초기화',p===0,'발사 뒤 power가 0으로 돌아왔어요.',`power가 ${p} 입니다. 키를 뗀 뒤에는 0이어야 해요.`);
+  f={d:0,h:1,u:0};for(let i=0;i<20;i++)api.call('Update');
+  ok('최대 1',api.get('power')<=1,'power가 1을 넘지 않아요.','power가 1을 넘었어요. Mathf.Min으로 제한하세요.');
+ },
+ hints:['세 함수는 각각 "누른 프레임", "누르는 중 매 프레임", "뗀 프레임"에만 true가 돼요.','power는 GetKey 블록에서 누적하고, GetKeyUp 블록에서 shot으로 옮긴 뒤 0으로 만드세요.','최대값 1은 Mathf.Min으로 제한하세요.'],
+ why:'차징 무기는 "시작·유지·해제" 세 입력이 모두 필요해요. GetKeyDown/GetKey/GetKeyUp은 그 세 순간에 딱 맞는 도구입니다.',
+ concepts:[['GetKeyDown / GetKey / GetKeyUp','누른 프레임, 누르는 동안, 뗀 프레임에서 각각 true가 되는 입력 함수.'],['충전(차징) 입력','GetKey로 시간을 누적하고 GetKeyUp에서 결과를 확정한다.']]});
+
+QB({id:'x103',cat:'unity',stage:2,level:2,title:'수직 입력은 Update, 속도는 FixedUpdate',
+ story:'Rigidbody2D로 비행체를 위아래로 움직이는데, Update 안에서 입력도 읽고 속도도 바로 바꾸고 있어요. 입력은 Update에서 읽어 필드에 저장하고, 속도 적용은 FixedUpdate로 옮겨 주세요.',
+ goals:['Update에서는 수직 입력을 읽어 moveY 필드에 저장만 한다','FixedUpdate에서는 저장된 moveY로 Rigidbody2D의 y 속도를 적용한다 (x속도는 유지)'],
+ limits:['Update에서는 rb의 속도를 건드리지 않는다','FixedUpdate에서는 Input을 읽지 않는다'],
+ api:'Input.GetAxisRaw("Vertical"), rb.velocity',
+ starter:C`
+using UnityEngine;
+
+public class Flyer : MonoBehaviour
+{
+    public float speed = 4f;
+    private Rigidbody2D rb;
+
+    void Awake()
+    {
+        rb = GetComponent<Rigidbody2D>();
+    }
+
+    void Update()
+    {
+        // 입력과 물리가 한 곳에 섞여 있어요. 나눠 보세요.
+        float y = Input.GetAxisRaw("Vertical");
+        rb.velocity = new Vector2(rb.velocity.x, y * speed);
+    }
+}`,
+ solution:C`
+using UnityEngine;
+
+public class Flyer : MonoBehaviour
+{
+    public float speed = 4f;
+    private Rigidbody2D rb;
+    private float moveY;
+
+    void Awake()
+    {
+        rb = GetComponent<Rigidbody2D>();
+    }
+
+    void Update()
+    {
+        moveY = Input.GetAxisRaw("Vertical");
+    }
+
+    void FixedUpdate()
+    {
+        rb.velocity = new Vector2(rb.velocity.x, moveY * speed);
+    }
+}`,
+ rules:[
+  inFn('Update에서 입력 읽기','Update',/Input\.GetAxis(?:Raw)?\s*\(/,'입력은 Update에서 읽어요.','Update 안에서 Input.GetAxisRaw("Vertical") 로 입력을 읽어 필드에 저장하세요.'),
+  notIn('Update에서 물리 금지','Update',/\b(?:velocity|linearVelocity|AddForce|MovePosition)\b/,'Update에서 물리를 건드리지 않아요.','Update에서 rb의 속도를 바꾸면 물리 주기와 어긋나요. FixedUpdate로 옮기세요.'),
+  inFn('FixedUpdate에서 속도 적용','FixedUpdate',/\b(?:velocity|linearVelocity|AddForce|MovePosition)\b/,'FixedUpdate에서 속도를 적용해요.','FixedUpdate 메서드를 만들어 rb의 속도를 적용하세요.'),
+  notIn('FixedUpdate에서 입력 금지','FixedUpdate',/\bInput\s*\./,'FixedUpdate에서 입력을 읽지 않아요.','입력은 Update에서 읽으세요.')
+ ],
+ test:(api,ok)=>{
+  const rb={velocity:{x:3,y:0},linearVelocity:{x:3,y:0}};
+  api.env.components.Rigidbody2D=rb;
+  api.call('Awake');
+  api.env.Input.GetAxisRaw=()=>1;
+  api.call('Update');
+  const vy=()=>Math.max(Math.abs(rb.velocity.y),Math.abs(rb.linearVelocity.y));
+  ok('Update는 입력만',vy()===0,'Update는 입력만 읽고 속도는 건드리지 않아요.','Update를 호출했더니 속도가 바뀌었어요. 속도 적용은 FixedUpdate에서 하세요.');
+  api.env.Input.GetAxisRaw=()=>0;
+  api.call('FixedUpdate');
+  const sp=api.get('speed');
+  ok('FixedUpdate가 저장된 입력 적용',rb.velocity.y===sp||rb.linearVelocity.y===sp,'FixedUpdate가 저장된 입력으로 속도를 적용해요.',`FixedUpdate 후 속도 y가 ${rb.velocity.y} 입니다. Update에서 저장해 둔 입력을 써야 해요.`);
+  ok('x 속도 유지',rb.velocity.x===3||rb.linearVelocity.x===3,'x 속도를 덮어쓰지 않아요.','x 속도가 바뀌었어요. new Vector2(rb.velocity.x, y * speed) 처럼 기존 x를 유지하세요.');
+ },
+ hints:['Update는 프레임마다, FixedUpdate는 고정된 물리 주기마다 호출돼요.','Update에서 읽은 입력을 FixedUpdate가 쓸 수 있도록 필드에 저장하세요.','x속도는 rb.velocity.x 를 그대로 넘겨 유지하세요.'],
+ why:'입력은 프레임마다 확인해야 놓치지 않고, 물리는 고정 주기로 일관되게 적용해야 안정적이에요.',
+ concepts:[['Update vs FixedUpdate','Update는 렌더 프레임마다, FixedUpdate는 일정한 물리 주기마다 호출된다. 입력은 Update, 물리 적용은 FixedUpdate에서 한다.']]});
+
+QB({id:'x104',cat:'unity',stage:2,level:2,title:'점프 요청은 Update에서, 실행은 FixedUpdate에서',
+ story:'스페이스를 누르면 점프해야 하는데, FixedUpdate 안에서 GetKeyDown을 읽었더니 점프가 가끔 씹혀요(FixedUpdate는 프레임마다 호출되지 않기 때문). Update에서는 "점프 요청" 플래그만 세우고, 실제 점프는 FixedUpdate에서 한 번 실행하게 고쳐 주세요.',
+ goals:['Update에서는 스페이스를 누른 프레임에 jumpRequested 를 true로 만든다','FixedUpdate에서는 요청이 있으면 y 속도를 jumpPower로 만들고 요청을 false로 되돌린다 (x속도는 유지)'],
+ limits:['Update에서는 rb의 속도를 건드리지 않는다','FixedUpdate에서는 Input을 읽지 않는다'],
+ api:'Input.GetKeyDown(KeyCode.Space), rb.velocity',
+ starter:C`
+using UnityEngine;
+
+public class Jumper : MonoBehaviour
+{
+    public float jumpPower = 10f;
+    private Rigidbody2D rb;
+    private bool jumpRequested;
+
+    void Awake()
+    {
+        rb = GetComponent<Rigidbody2D>();
+    }
+
+    void FixedUpdate()
+    {
+        // 입력을 FixedUpdate에서 읽으면 가끔 놓쳐요.
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            rb.velocity = new Vector2(rb.velocity.x, jumpPower);
+        }
+    }
+}`,
+ solution:C`
+using UnityEngine;
+
+public class Jumper : MonoBehaviour
+{
+    public float jumpPower = 10f;
+    private Rigidbody2D rb;
+    private bool jumpRequested;
+
+    void Awake()
+    {
+        rb = GetComponent<Rigidbody2D>();
+    }
+
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            jumpRequested = true;
+        }
+    }
+
+    void FixedUpdate()
+    {
+        if (jumpRequested)
+        {
+            rb.velocity = new Vector2(rb.velocity.x, jumpPower);
+            jumpRequested = false;
+        }
+    }
+}`,
+ rules:[
+  inFn('Update에서 입력 읽기','Update',/Input\.GetKeyDown\s*\(/,'입력은 Update에서 읽어요.','Update 안에서 Input.GetKeyDown(KeyCode.Space) 으로 입력을 읽으세요.'),
+  notIn('Update에서 물리 금지','Update',/\b(?:velocity|linearVelocity|AddForce|MovePosition)\b/,'Update에서 물리를 건드리지 않아요.','Update에서는 요청 플래그만 세우고 속도는 FixedUpdate에서 바꾸세요.'),
+  inFn('FixedUpdate에서 속도 적용','FixedUpdate',/\b(?:velocity|linearVelocity|AddForce)\b/,'FixedUpdate에서 점프를 적용해요.','FixedUpdate에서 rb의 y 속도를 jumpPower로 바꾸세요.'),
+  notIn('FixedUpdate에서 입력 금지','FixedUpdate',/\bInput\s*\./,'FixedUpdate에서 입력을 읽지 않아요.','FixedUpdate는 프레임보다 덜 자주 호출될 수 있어 GetKeyDown을 놓쳐요.')
+ ],
+ test:(api,ok)=>{
+  const rb={velocity:{x:2,y:0},linearVelocity:{x:2,y:0}};
+  api.env.components.Rigidbody2D=rb;
+  api.call('Awake');
+  api.env.Input.GetKeyDown=k=>k==='Space';
+  api.call('Update');
+  const vy=()=>Math.max(Math.abs(rb.velocity.y),Math.abs(rb.linearVelocity.y));
+  ok('Update는 요청만',vy()===0,'Update는 점프를 요청만 하고 속도는 건드리지 않아요.','Update를 호출했더니 속도가 바뀌었어요. 속도 적용은 FixedUpdate에서 하세요.');
+  api.env.Input.GetKeyDown=()=>false;
+  api.call('FixedUpdate');
+  const jp=api.get('jumpPower');
+  ok('FixedUpdate가 점프 실행',rb.velocity.y===jp||rb.linearVelocity.y===jp,'FixedUpdate가 저장된 요청으로 점프해요.',`FixedUpdate 후 y 속도가 ${rb.velocity.y} 입니다. 요청이 있으면 jumpPower(10)가 되어야 해요.`);
+  ok('x 속도 유지',rb.velocity.x===2||rb.linearVelocity.x===2,'x 속도를 덮어쓰지 않아요.','x 속도가 바뀌었어요. rb.velocity.x 를 그대로 유지하세요.');
+  rb.velocity={x:2,y:0};rb.linearVelocity={x:2,y:0};
+  api.call('FixedUpdate');
+  ok('한 번만 점프',vy()===0,'요청은 한 번만 처리돼요.','요청을 처리한 뒤 jumpRequested를 false로 되돌려야 매 물리 틱마다 점프하지 않아요.');
+ },
+ hints:['FixedUpdate는 프레임보다 덜 자주 호출될 수 있어 GetKeyDown을 놓칠 수 있어요.','Update에서 "점프 요청" 플래그를 세우고, FixedUpdate에서 처리하세요.','처리한 뒤에는 플래그를 꺼야 한 번만 점프해요.'],
+ why:'한 번만 일어나는 입력은 Update에서 요청으로 저장하고, 물리 적용은 FixedUpdate에서 처리한 뒤 요청을 지우는 패턴이 안전해요.',
+ concepts:[['Update vs FixedUpdate','입력은 Update, 물리 적용은 FixedUpdate에서 한다.'],['입력 요청 플래그','Update에서 플래그를 세우고 FixedUpdate에서 소비한 뒤 지운다.']]});
+
+QB({id:'x105',cat:'unity',stage:2,level:2,title:'힘으로 미는 이동도 FixedUpdate에서',
+ story:'공이 좌우 입력에 따라 힘을 받아 굴러가요. 지금은 Update에서 입력을 읽자마자 AddForce를 부르고 있어서 프레임이 빠른 기기에서 힘이 더 많이 쌓여요. 입력은 Update에서 저장하고, 힘은 FixedUpdate에서 가하게 고쳐 주세요.',
+ goals:['Update에서는 수평 입력을 읽어 moveX 필드에 저장만 한다','FixedUpdate에서는 저장된 moveX × force 만큼 x 방향으로 AddForce 한다'],
+ limits:['Update에서는 rb에 힘을 가하지 않는다','FixedUpdate에서는 Input을 읽지 않는다'],
+ api:'Input.GetAxisRaw("Horizontal"), rb.AddForce(Vector2)',
+ starter:C`
+using UnityEngine;
+
+public class Ball : MonoBehaviour
+{
+    public float force = 20f;
+    private Rigidbody2D rb;
+
+    void Awake()
+    {
+        rb = GetComponent<Rigidbody2D>();
+    }
+
+    void Update()
+    {
+        // 입력과 물리가 한 곳에 섞여 있어요. 나눠 보세요.
+        float x = Input.GetAxisRaw("Horizontal");
+        rb.AddForce(new Vector2(x * force, 0f));
+    }
+}`,
+ solution:C`
+using UnityEngine;
+
+public class Ball : MonoBehaviour
+{
+    public float force = 20f;
+    private Rigidbody2D rb;
+    private float moveX;
+
+    void Awake()
+    {
+        rb = GetComponent<Rigidbody2D>();
+    }
+
+    void Update()
+    {
+        moveX = Input.GetAxisRaw("Horizontal");
+    }
+
+    void FixedUpdate()
+    {
+        rb.AddForce(new Vector2(moveX * force, 0f));
+    }
+}`,
+ rules:[
+  inFn('Update에서 입력 읽기','Update',/Input\.GetAxis(?:Raw)?\s*\(/,'입력은 Update에서 읽어요.','Update 안에서 Input.GetAxisRaw("Horizontal") 로 입력을 읽어 필드에 저장하세요.'),
+  notIn('Update에서 물리 금지','Update',/\b(?:velocity|linearVelocity|AddForce|MovePosition)\b/,'Update에서 물리를 건드리지 않아요.','Update에서 힘을 가하면 물리 주기와 어긋나요. FixedUpdate로 옮기세요.'),
+  inFn('FixedUpdate에서 힘 적용','FixedUpdate',/\bAddForce\b/,'FixedUpdate에서 힘을 가해요.','FixedUpdate 메서드를 만들어 rb.AddForce 를 호출하세요.'),
+  notIn('FixedUpdate에서 입력 금지','FixedUpdate',/\bInput\s*\./,'FixedUpdate에서 입력을 읽지 않아요.','입력은 Update에서 읽으세요.')
+ ],
+ test:(api,ok)=>{
+  const rb=api.mk.rb();api.env.components.Rigidbody2D=rb;
+  api.call('Awake');
+  api.env.Input.GetAxisRaw=()=>1;
+  api.call('Update');
+  ok('Update는 입력만',rb.forces.length===0,'Update는 입력만 읽고 힘은 가하지 않아요.','Update를 호출했더니 힘이 가해졌어요. 힘은 FixedUpdate에서 가하세요.');
+  api.env.Input.GetAxisRaw=()=>0;
+  api.call('FixedUpdate');
+  ok('FixedUpdate가 저장된 입력 적용',rb.forces.length===1&&rb.forces[0][0].x===20,'FixedUpdate가 저장된 입력으로 힘(20)을 가해요.',`FixedUpdate 후 힘이 ${rb.forces.length}번, ${rb.forces[0]?rb.forces[0][0].x:'-'} 입니다. Update에서 저장한 입력 × force(20)를 한 번 가해야 해요.`);
+ },
+ hints:['Update는 프레임마다, FixedUpdate는 물리 주기마다 호출돼요.','Update에서 읽은 입력을 필드에 저장해 두세요.','FixedUpdate에서 rb.AddForce(new Vector2(moveX * force, 0f)) 를 호출하세요.'],
+ why:'힘은 물리 틱마다 한 번씩 가해야 일정해요. Update에서 가하면 프레임이 많은 기기에서 더 큰 힘이 누적됩니다.',
+ concepts:[['Update vs FixedUpdate','입력은 Update, 물리 적용은 FixedUpdate에서 한다.'],['Rigidbody2D.AddForce','물체에 힘을 가한다. 물리 주기(FixedUpdate)에서 부른다.']]});
+
+QB({id:'x106',cat:'unity',stage:2,level:3,title:'수직 속도에도 deltaTime을 곱했더니',
+ story:'FixedUpdate에서 Rigidbody2D를 위아래로 움직이는 두 방법을 쓰고 있어요. ApplyVelocity를 쓰면 느리고, ApplyStep을 쓰면 아예 움직이지 않아요. 두 메서드 모두 초당 speed 유닛으로 움직이게 고쳐 주세요.',
+ goals:['ApplyVelocity(): rb.velocity 의 y를 dirY * speed 로 설정한다 (x는 유지)','ApplyStep(): rb.MovePosition으로 y를 dirY * speed * Time.fixedDeltaTime 만큼 옮긴 위치를 넘긴다 (x는 유지)'],
+ limits:['ApplyVelocity 안에서는 Time.deltaTime 을 쓰지 않는다','ApplyStep 에서는 현재 위치(rb.position)에서 출발한다'],
+ api:'rb.velocity, rb.position, rb.MovePosition(Vector2), Time.fixedDeltaTime',
+ starter:C`
+public float speed = 4f;
+public float dirY = 1f;
+private Rigidbody2D rb;
+
+void Awake()
+{
+    rb = GetComponent<Rigidbody2D>();
+}
+
+void ApplyVelocity()
+{
+    rb.velocity = new Vector2(rb.velocity.x, dirY * speed * Time.deltaTime);
+}
+
+void ApplyStep()
+{
+    rb.MovePosition(new Vector2(rb.position.x, rb.position.y));
+}`,
+ solution:C`
+public float speed = 4f;
+public float dirY = 1f;
+private Rigidbody2D rb;
+
+void Awake()
+{
+    rb = GetComponent<Rigidbody2D>();
+}
+
+void ApplyVelocity()
+{
+    rb.velocity = new Vector2(rb.velocity.x, dirY * speed);
+}
+
+void ApplyStep()
+{
+    float step = dirY * speed * Time.fixedDeltaTime;
+    rb.MovePosition(new Vector2(rb.position.x, rb.position.y + step));
+}`,
+ rules:[
+  notIn('velocity에 deltaTime 금지','ApplyVelocity',/deltaTime/,'velocity에는 시간을 곱하지 않았어요.','velocity는 이미 초당 속도예요. 여기에 deltaTime을 또 곱하면 이동이 너무 느려져요.'),
+  inFn('MovePosition에 시간 곱하기','ApplyStep',/(?:fixedDeltaTime|deltaTime)/,'MovePosition에는 시간을 곱해 한 스텝의 이동량을 만들어요.','MovePosition에 넘기는 건 위치예요. 속도 × 시간(Time.fixedDeltaTime)으로 이동량을 만드세요.')
+ ],
+ test:(api,ok)=>{
+  const T=api.env.Time;T.deltaTime=0.02;T.fixedDeltaTime=0.02;
+  const rb={velocity:{x:1,y:0},linearVelocity:{x:1,y:0},position:{x:6,y:5},MovePosition(p){this.moved=p}};
+  api.env.components.Rigidbody2D=rb;
+  api.call('Awake');
+  api.call('ApplyVelocity');
+  const vy=rb.velocity.y,ly=rb.linearVelocity.y;
+  ok('속도 적용',vy===4||ly===4,'y 속도가 4(초당 유닛)예요.',`y 속도가 ${vy} 입니다. dirY(1) × speed(4) = 4 여야 해요. deltaTime을 곱하면 0.08이 돼요.`);
+  api.call('ApplyStep');
+  const m=rb.moved;
+  ok('MovePosition 호출',!!m,'MovePosition을 호출했어요.','ApplyStep 안에서 rb.MovePosition(...)을 호출하세요.');
+  if(m){
+   ok('한 스텝 이동량',Math.abs(m.y-5.08)<1e-6,'현재 위치에서 한 스텝(0.08유닛)만큼 옮겼어요.',`MovePosition y가 ${m.y} 입니다. 5 + 4 × 0.02 = 5.08 이어야 해요.`);
+   ok('x 유지',m.x===6,'x 위치는 유지했어요.','x 위치가 바뀌었어요. rb.position.x 를 그대로 넘기세요.');
+  }
+ },
+ hints:['넘기는 값이 "초당 속도"인지 "이번 스텝의 위치"인지에 따라 deltaTime을 곱할지가 달라요.','velocity는 이미 초당 속도라서 Rigidbody가 시간을 알아서 곱해 줘요.','MovePosition은 위치를 넘기므로 이동량(속도 × fixedDeltaTime)을 직접 더하세요.'],
+ why:'값이 "속도"인지 "위치/이동량"인지 구분하면 deltaTime을 곱할지 말지가 정해져요. velocity에는 곱하지 않고, 직접 위치를 계산하는 MovePosition에는 곱합니다.',
+ concepts:[['속도 vs 이동량','속도(초당 거리)는 엔진이 시간에 맞춰 적용하고, 이동량은 직접 속도 × 시간으로 계산해야 한다.'],['Time.fixedDeltaTime','물리 업데이트 간격(기본 0.02초).']]});
+
+QB({id:'x107',cat:'unity',stage:2,level:3,title:'속도와 Translate, 곱할 곳 구분하기',
+ story:'엘리베이터를 두 방식으로 움직여요. Rigidbody2D 속도로 움직이는 Lift()는 너무 느리고, transform.Translate로 움직이는 Slide()는 프레임이 빠를수록 휙휙 날아가요. 어디에 deltaTime을 곱해야 하는지 바로잡아 주세요.',
+ goals:['Lift(): rb.velocity 의 y를 dirY * speed 로 설정한다 (x는 유지)','Slide(): transform.Translate 로 y를 dirY * speed * Time.deltaTime 만큼 이동한다'],
+ limits:['Lift 안에서는 Time.deltaTime 을 쓰지 않는다','Slide 에서는 Time.deltaTime 을 곱한다'],
+ api:'rb.velocity, transform.Translate(x, y, z), Time.deltaTime',
+ starter:C`
+public float speed = 3f;
+public float dirY = 1f;
+private Rigidbody2D rb;
+
+void Awake()
+{
+    rb = GetComponent<Rigidbody2D>();
+}
+
+void Lift()
+{
+    rb.velocity = new Vector2(rb.velocity.x, dirY * speed * Time.deltaTime);
+}
+
+void Slide()
+{
+    transform.Translate(0f, dirY * speed, 0f);
+}`,
+ solution:C`
+public float speed = 3f;
+public float dirY = 1f;
+private Rigidbody2D rb;
+
+void Awake()
+{
+    rb = GetComponent<Rigidbody2D>();
+}
+
+void Lift()
+{
+    rb.velocity = new Vector2(rb.velocity.x, dirY * speed);
+}
+
+void Slide()
+{
+    transform.Translate(0f, dirY * speed * Time.deltaTime, 0f);
+}`,
+ rules:[
+  notIn('velocity에 deltaTime 금지','Lift',/deltaTime/,'velocity에는 시간을 곱하지 않았어요.','velocity는 이미 초당 속도예요. deltaTime을 곱하지 마세요.'),
+  inFn('Translate에 deltaTime 곱하기','Slide',/Time\.deltaTime/,'Translate에는 시간을 곱했어요.','Translate는 이동량을 받아요. speed × Time.deltaTime 으로 이동량을 만드세요.')
+ ],
+ test:(api,ok)=>{
+  const T=api.env.Time;T.deltaTime=0.5;
+  const rb=api.mk.rb();rb.velocity={x:1,y:0};api.env.components.Rigidbody2D=rb;
+  api.call('Awake');
+  api.call('Lift');
+  ok('속도 적용',rb.velocity.y===3,'y 속도가 3(초당 유닛)이고 x는 유지돼요.',`y 속도가 ${rb.velocity.y} 입니다. dirY(1) × speed(3) = 3 이어야 해요.`);
+  const y0=api.transform.position.y;
+  api.call('Slide');
+  const dy=api.transform.position.y-y0;
+  ok('이동량',Math.abs(dy-1.5)<1e-6,'한 프레임(0.5초)에 1.5유닛 이동했어요.',`y가 ${dy} 만큼 움직였어요. 3 × 0.5초 = 1.5 여야 해요.`);
+ },
+ hints:['velocity는 "초당 속도"라서 엔진이 시간을 곱해 줘요.','Translate는 "이번에 움직일 거리"를 받으므로 직접 시간을 곱해야 해요.','Lift에서는 deltaTime을 빼고, Slide에서는 추가하세요.'],
+ why:'API마다 받는 값의 단위가 달라요. 속도를 받으면 곱하지 않고, 거리(이동량)를 받으면 시간을 곱합니다.',
+ concepts:[['속도 vs 이동량','속도(초당 거리)는 엔진이 시간에 맞춰 적용하고, 이동량은 직접 속도 × 시간으로 계산해야 한다.'],['Time.deltaTime','직전 프레임과 이번 프레임 사이의 시간(초).']]});
+
+QB({id:'x108',cat:'unity',stage:2,level:3,title:'AddForce와 MovePosition, 시간을 곱할 곳은?',
+ story:'넉백(밀려남) 처리를 두 방법으로 만들었어요. Knock()은 AddForce로 한 번 세게 밀고, Drift()는 MovePosition으로 천천히 흘러가요. 그런데 Knock이 약하고 Drift는 아예 움직이지 않아요. 어디에 시간을 곱해야 하는지 바로잡아 주세요.',
+ goals:['Knock(): rb.AddForce 로 x 방향에 dirX * force 를 가한다 (시간을 곱하지 않는다)','Drift(): rb.MovePosition으로 x를 dirX * drift * Time.fixedDeltaTime 만큼 옮긴 위치를 넘긴다 (y는 유지)'],
+ limits:['Knock 안에서는 deltaTime 을 쓰지 않는다','Drift 에서는 현재 위치(rb.position)에서 출발한다'],
+ api:'rb.AddForce(Vector2), rb.position, rb.MovePosition(Vector2), Time.fixedDeltaTime',
+ starter:C`
+public float force = 10f;
+public float drift = 2f;
+public float dirX = 1f;
+private Rigidbody2D rb;
+
+void Awake()
+{
+    rb = GetComponent<Rigidbody2D>();
+}
+
+void Knock()
+{
+    rb.AddForce(new Vector2(dirX * force * Time.fixedDeltaTime, 0f));
+}
+
+void Drift()
+{
+    rb.MovePosition(new Vector2(rb.position.x, rb.position.y));
+}`,
+ solution:C`
+public float force = 10f;
+public float drift = 2f;
+public float dirX = 1f;
+private Rigidbody2D rb;
+
+void Awake()
+{
+    rb = GetComponent<Rigidbody2D>();
+}
+
+void Knock()
+{
+    rb.AddForce(new Vector2(dirX * force, 0f));
+}
+
+void Drift()
+{
+    float step = dirX * drift * Time.fixedDeltaTime;
+    rb.MovePosition(new Vector2(rb.position.x + step, rb.position.y));
+}`,
+ rules:[
+  notIn('AddForce에 시간 금지','Knock',/deltaTime/,'AddForce에는 시간을 곱하지 않았어요.','AddForce는 엔진이 물리 스텝에 맞춰 적용해요. 여기에 deltaTime을 곱하면 힘이 너무 약해져요.'),
+  inFn('MovePosition에 시간 곱하기','Drift',/(?:fixedDeltaTime|deltaTime)/,'MovePosition에는 시간을 곱해 한 스텝의 이동량을 만들어요.','MovePosition에 넘기는 건 위치예요. 속도 × 시간(Time.fixedDeltaTime)으로 이동량을 만드세요.')
+ ],
+ test:(api,ok)=>{
+  const T=api.env.Time;T.deltaTime=0.02;T.fixedDeltaTime=0.02;
+  const rb={forces:[],velocity:{x:0,y:0},linearVelocity:{x:0,y:0},position:{x:3,y:8},AddForce(f){this.forces.push(f)},MovePosition(p){this.moved=p}};
+  api.env.components.Rigidbody2D=rb;
+  api.call('Awake');
+  api.call('Knock');
+  const f=rb.forces[0];
+  ok('힘 적용',!!f&&Math.abs(f.x-10)<1e-6,'x 방향으로 힘 10을 한 번 가해요.',`힘이 ${f?f.x:'없음'} 입니다. dirX(1) × force(10) = 10 이어야 해요. deltaTime을 곱하지 마세요.`);
+  api.call('Drift');
+  const m=rb.moved;
+  ok('MovePosition 호출',!!m,'MovePosition을 호출했어요.','Drift 안에서 rb.MovePosition(...)을 호출하세요.');
+  if(m){
+   ok('한 스텝 이동량',Math.abs(m.x-3.04)<1e-6,'현재 위치에서 한 스텝(0.04유닛)만큼 옮겼어요.',`MovePosition x가 ${m.x} 입니다. 3 + 2 × 0.02 = 3.04 여야 해요.`);
+   ok('y 유지',m.y===8,'y 위치는 유지했어요.','y 위치가 바뀌었어요. rb.position.y 를 그대로 넘기세요.');
+  }
+ },
+ hints:['AddForce는 힘을 받아 엔진이 알아서 시간에 맞춰 적용해요.','MovePosition은 위치를 받으므로 이동량(속도 × 시간)을 직접 만들어야 해요.','Knock에서는 시간을 빼고, Drift에서는 현재 위치에 이동량을 더하세요.'],
+ why:'엔진이 시간을 처리해 주는 API(velocity, AddForce)에는 시간을 곱하지 않고, 위치를 직접 계산해 넘기는 API(MovePosition, Translate)에는 곱합니다.',
+ concepts:[['속도 vs 이동량','엔진이 시간을 곱해 주는 값(속도·힘)과 직접 곱해야 하는 값(이동량)을 구분한다.'],['Time.fixedDeltaTime','물리 업데이트 간격(기본 0.02초).']]});

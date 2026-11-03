@@ -32,10 +32,10 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
  ok(await pg.$('nav.tabs [data-tab="bank"]')!==null,'문제 사전 탭이 있음');
  ok(await pg.$('.bankcard')===null,'아직 열린 단계가 없으면 홈 카드가 없음');
  await pg.click('nav.tabs [data-tab="bank"]');await pg.waitForSelector('.bhero');
- ok(await pg.$$eval('.bcard',e=>e.length)===5,'입문 5단계 카드가 보임');
- ok(await pg.$$eval('.bcard.lock',e=>e.length)===5,'처음에는 5개 모두 잠김');
- ok(/0 \/ 15/.test(await pg.textContent('.bstat')),'열린 세트 0 / 15');
- ok(await pg.$$eval('.lvset.lock',e=>e.length)===15,'레벨 세트 15개가 모두 잠김');
+ ok(await pg.$$eval('.bcard',e=>e.length)===12,'입문·기초 12단계 카드가 보임');
+ ok(await pg.$$eval('.bcard.lock',e=>e.length)===12,'처음에는 12개 모두 잠김');
+ ok(/0 \/ 36/.test(await pg.textContent('.bstat')),'열린 세트 0 / 36');
+ ok(await pg.$$eval('.lvset.lock',e=>e.length)===36,'레벨 세트 36개가 모두 잠김');
 
  // 학습 지도 문제를 하나 풀면 열린다
  await pg.click('nav.tabs [data-tab="learn"]');await pg.waitForSelector('.scgrid');
@@ -67,8 +67,8 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
  ok(await pg.$$eval('.stagepage.bank .bset.lock',e=>e.length)===2,'나머지 두 레벨은 잠김');
  ok(/1 \/ 9/.test(await pg.textContent('.stagepage.bank .card')),'단계 화면에 1 / 9 해결');
  await pg.click('#back');await pg.waitForSelector('.bhero');
- ok(await pg.$$eval('.bcard.lock',e=>e.length)===4,'나머지 4단계는 잠긴 채로');
- ok(/1 \/ 15/.test(await pg.textContent('.bstat')),'열린 세트 1 / 15');
+ ok(await pg.$$eval('.bcard.lock',e=>e.length)===11,'나머지 11단계는 잠긴 채로');
+ ok(/1 \/ 36/.test(await pg.textContent('.bstat')),'열린 세트 1 / 36');
  await pg.click('[data-bt="intro"]');
  ok(await pg.$$eval('.bsec',e=>e.length)===1,'단계 거르기');
 
@@ -81,7 +81,7 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
  await pg.evaluate(()=>{const p=PROBLEMS.find(x=>x.cat==='start'&&x.stage===1&&x.level===2);delete S.solved[p.id];});
 
  await pg.click('nav.tabs [data-tab="me"]');await pg.waitForSelector('.statrow');
- ok(await pg.$$eval('#banklog tbody tr',e=>e.length)===5,'내 기록에 단계별 문제 사전 현황(5줄)이 표로 보임');
+ ok(await pg.$$eval('#banklog tbody tr',e=>e.length)===12,'내 기록에 단계별 문제 사전 현황(12줄)이 표로 보임');
  ok(/1 \/ 9/.test(await pg.textContent('#banklog')),'푼 개수가 단계별로 집계됨');
  ok(await pg.$$eval('#banklog .pc',e=>e.length)===0,'문제를 하나씩 늘어놓지 않음');
  // 홈 카드, 복습, 저장 유지
