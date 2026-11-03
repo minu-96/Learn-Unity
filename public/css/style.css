@@ -568,3 +568,8 @@ kbd{font-family:var(--font-mono);font-size:11px;padding:1px 6px;border:1px solid
 /* 단계 처음: 개념을 먼저 읽도록 강조 */
 .lesson.gate{border:2px solid var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
 .lesson.gate>summary b{color:var(--accent)}
+
+.splitbar i.sr,.legend i.sr{background:var(--ok,#2e9d6b)}
+.splitbar.tri{min-width:80px;height:8px}
+#history .tbl tr.zero td{color:var(--muted)}
+#history .tbl td:nth-child(2){width:36%;vertical-align:middle}

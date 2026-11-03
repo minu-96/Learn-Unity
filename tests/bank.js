@@ -84,6 +84,9 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
  ok(await pg.$$eval('#banklog tbody tr',e=>e.length)===12,'내 기록에 단계별 문제 사전 현황(12줄)이 표로 보임');
  ok(/1 \/ 9/.test(await pg.textContent('#banklog')),'푼 개수가 단계별로 집계됨');
  ok(await pg.$$eval('#banklog .pc',e=>e.length)===0,'문제를 하나씩 늘어놓지 않음');
+ ok(await pg.$$eval('#history tbody tr',e=>e.length)===14,'내 기록에 최근 14일 날짜별 기록이 보임');
+ ok(/1/.test(await pg.textContent('#history tbody tr:first-child td:nth-child(4)')),'오늘 푼 문제 사전 문제가 날짜별 기록에 잡힘');
+ ok(await pg.$$eval('#revstats .stat',e=>e.length)===5,'복습 통계 카드가 보임');
  // 홈 카드, 복습, 저장 유지
  await pg.click('nav.tabs [data-tab="home"]');await pg.waitForSelector('.hero');
  ok(await pg.$('.bankcard')!==null,'홈에 문제 사전 카드');

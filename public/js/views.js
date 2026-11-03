@@ -62,6 +62,39 @@ function statsHTML(sl){
     <div class="statrow sm">${st(sb.solved+'<small> / '+sb.total+'</small>','해결')}${st(sb.self,'정답 안 보고')}${st(sb.tries,'채점')}${st(rt(br),'복습 유지')}</div></section>
   </div></div>`;
 }
+/* 날짜별 기록: 풀이는 해결 시각(at)에서, 복습은 복습 로그(rlog)에서 모은다 */
+function dailyStats(){
+ const m={};const g=k=>m[k]||(m[k]={l:0,b:0,r:0,rok:0});
+ Object.entries(S.solved).forEach(([id,r])=>{const p=byId(id);if(!p||!r||!r.ok||!r.at)return;g(dayKey(r.at))[p.bank?'b':'l']++});
+ Object.entries(S.rlog||{}).forEach(([k,o])=>{const x=g(k);x.r=o.n||0;x.rok=o.ok||0});
+ return m;
+}
+function historyHTML(){
+ const m=dailyStats(),days=Object.keys(m).sort();
+ const tot=k=>{const x=m[k];return x?x.l+x.b+x.r:0};
+ const wk=[...Array(7)].map((_,i)=>dayKey(Date.now()-i*DAY)).reduce((a,k)=>a+tot(k),0);
+ const best=days.reduce((a,k)=>Math.max(a,tot(k)),0);
+ const st=(v,l)=>`<div class="stat"><b>${v}</b><span>${l}</span></div>`;
+ const N=14,names=['일','월','화','수','목','금','토'];
+ const rows=[...Array(N)].map((_,i)=>{const t=Date.now()-i*DAY,k=dayKey(t),x=m[k]||{l:0,b:0,r:0,rok:0},sum=x.l+x.b+x.r;
+  const w=best?sum/best*100:0,seg=n=>sum?n/sum*w:0;
+  return `<tr class="${sum?'':'zero'}"><td>${k.slice(5).replace('-','/')} (${names[new Date(t).getDay()]})${i===0?' · 오늘':''}</td><td><div class="splitbar tri" role="img" aria-label="${sum}번"><i class="sl" style="width:${seg(x.l)}%"></i><i class="sb" style="width:${seg(x.b)}%"></i><i class="sr" style="width:${seg(x.r)}%"></i></div></td><td class="num">${x.l||'-'}</td><td class="num">${x.b||'-'}</td><td class="num">${x.r||'-'}</td><td class="num"><b>${sum||'-'}</b></td></tr>`}).join('');
+ return `<div class="card" id="history" style="gap:10px"><div class="row"><b>날짜별 기록</b><span class="note">새로 해결한 문제와 복습 횟수 · 최근 ${N}일</span></div>
+  <div class="statrow sm">${st(tot(dayKey()),'오늘')}${st(wk,'최근 7일')}${st(days.length,'공부한 날')}${st(streak(),'연속 일수')}</div>
+  <div class="legend"><span><i class="sl"></i>학습</span><span><i class="sb"></i>문제 사전</span><span><i class="sr"></i>복습</span></div>
+  <div class="tblwrap"><table class="tbl"><thead><tr><th>날짜</th><th></th><th class="num">학습</th><th class="num">사전</th><th class="num">복습</th><th class="num">합계</th></tr></thead><tbody>${rows}</tbody></table></div>
+  <div class="note">학습·문제 사전은 처음 해결한 날, 복습은 복습 문제를 채점한 날로 세요. 복습 날짜 기록은 이 기능이 생긴 뒤부터 쌓여요.</div></div>`;
+}
+function reviewStatsHTML(){
+ const es=Object.entries(S.review||{}).filter(([id])=>byId(id));
+ const done=es.reduce((a,[,r])=>a+(r.reps||0),0),kinds=es.filter(([,r])=>(r.reps||0)>0).length;
+ const bk=es.filter(([id,r])=>byId(id).bank&&(r.reps||0)>0).length;
+ const due=dueList().length,deep=es.filter(([,r])=>(r.box||0)>=3).length;
+ const todayR=(S.rlog[dayKey()]||{}).n||0;
+ const st=(v,l)=>`<div class="stat"><b>${v}</b><span>${l}</span></div>`;
+ return `<section class="card" id="revstats" style="gap:10px"><div class="row"><b>복습</b><span class="note">학습 ${kinds-bk}문제 · 문제 사전 ${bk}문제를 복습했어요</span></div>
+  <div class="statrow mid">${st(done,'복습 채점 횟수')}${st(kinds,'복습해 본 문제')}${st(todayR,'오늘 복습')}${st(due,'지금 복습할 문제')}${st(deep,'오래 기억 중')}</div></section>`;
+}
 function bankLogHTML(){
  const sets=bankSets(),open=sets.filter(x=>bankOpen(x.s.cat.id,x.s.si,x.l)).length;
  const rows=bankAllStages().map(s=>{
@@ -69,25 +102,6 @@ function bankLogHTML(){
   return `<tr><td>${esc(s.cat.name)} · ${esc(s.st.title)}</td><td>${meter(n.length,ps.length)}</td><td class="num">${n.length} / ${ps.length}</td><td class="num">${self}</td></tr>`}).join('');
  return `<div class="card" id="banklog" style="gap:6px"><div class="row"><b>문제 사전 현황</b><span class="badge bank">문제 사전</span><span class="note">열린 세트 ${open} / ${sets.length}</span></div>
   <table class="tbl"><thead><tr><th>단계</th><th></th><th>해결</th><th>자력</th></tr></thead><tbody>${rows}</tbody></table></div>`;
-}
-function statsHTML(sl){
- const sb=summarize(BANK,S.solved,S.review),sa=summarize(PROBLEMS.concat(BANK),S.solved,S.review);
- const rb=Object.fromEntries(Object.entries(S.review||{}).filter(([k])=>byId(k)&&byId(k).bank));
- const rl=Object.fromEntries(Object.entries(S.review||{}).filter(([k])=>!(byId(k)&&byId(k).bank)));
- const rt=x=>x==null?'-':x+'%';
- const lr=summarize(PROBLEMS,S.solved,rl).retain,br=summarize(BANK,S.solved,rb).retain;
- const bar=(a,b)=>{const t=(a+b)||1;return `<div class="splitbar" role="img" aria-label="학습 ${a}문제, 문제 사전 ${b}문제"><i class="sl" style="width:${a/t*100}%"></i><i class="sb" style="width:${b/t*100}%"></i></div>`};
- const st=(v,l,c)=>`<div class="stat ${c||''}"><b>${v}</b><span>${l}</span></div>`;
- return `<div class="statsys">
-  <section class="sgroup all"><div class="row"><h3>종합</h3><span class="note">학습 + 문제 사전</span></div>
-   <div class="statrow big">${st(sa.solved+'<small> / '+sa.total+'</small>','해결')}${st(sa.self,'정답 안 보고 해결')}${st(sa.tries,'채점 횟수')}${st(rt(sa.retain),'복습 유지율')}</div>
-   ${bar(sl.solved,sb.solved)}<div class="legend"><span><i class="sl"></i>학습 ${sl.solved}</span><span><i class="sb"></i>문제 사전 ${sb.solved}</span></div></section>
-  <div class="sgroup2">
-   <section class="sgroup learn"><div class="row"><h3>학습</h3><span class="note">학습 지도 ${sl.total}문제</span></div>
-    <div class="statrow mid">${st(sl.solved+'<small> / '+sl.total+'</small>','해결')}${st(sl.self,'정답 안 보고')}${st(sl.tries,'채점')}${st(rt(lr),'복습 유지')}</div></section>
-   <section class="sgroup bank"><div class="row"><h3>문제 사전</h3><span class="note">비슷한 문제 ${sb.total}개</span></div>
-    <div class="statrow sm">${st(sb.solved+'<small> / '+sb.total+'</small>','해결')}${st(sb.self,'정답 안 보고')}${st(sb.tries,'채점')}${st(rt(br),'복습 유지')}</div></section>
-  </div></div>`;
 }
 function renderMe(){
  const sm=summarize(PROBLEMS,S.solved,S.review);
@@ -104,6 +118,8 @@ function renderMe(){
  const redo=PROBLEMS.concat(BANK).map(p=>({p,r:S.solved[p.id]})).filter(o=>o.r&&((!o.r.ok&&(o.r.tries||0)>=2)||(o.r.ok&&o.r.via==='auto'&&!o.r.clean)||(o.r.ok&&o.r.via==='ai'))).sort((a,b)=>(b.r.tries||0)-(a.r.tries||0)).slice(0,6);
  $('#main').innerHTML=`<div style="display:flex;flex-direction:column;gap:20px">
   ${statsHTML(sm)}
+  ${historyHTML()}
+  ${reviewStatsHTML()}
   <div class="card" style="gap:10px"><div class="row"><b>레벨</b><span class="note">풀이·복습·메모로 경험치가 쌓여요</span></div>${(()=>{const li=Fx.levelInfo(S);return `<div class="lvstrip"><span class="big">Lv.${li.lv}</span><span class="tt2">${li.title}</span><span class="lvbar"><i style="width:${li.pct}%"></i></span><span class="note">${li.xp} XP · 다음 레벨까지 ${li.need}</span></div>`})()}<b>배지 ${Fx.earned(S).length} / ${Fx.BADGES.length}</b>${badgesHTML(Fx.BADGES)}</div>
   <div class="tiergrid">${cards}</div>
   <div class="note">수료 기준: 구간 문제의 ${PASS_SOLVED*100}% 이상을 해결하고, 푼 문제 중 ${PASS_SELF*100}% 이상은 정답을 보지 않고 풀기. 복습 유지율은 복습한 문제 중 기억이 이어지고 있는 비율이에요.</div>

@@ -10,7 +10,7 @@ function md(t){
 const VER=3;
 const DAY=86400000;
 const BOX_DAYS=[1,3,7,16,35];
-let S={v:VER,solved:{},dict:{},custom:[],drafts:{},review:{},practice:{},act:{},notes:{}};
+let S={v:VER,solved:{},dict:{},custom:[],drafts:{},review:{},practice:{},act:{},rlog:{},notes:{}};
 let V={tab:'home',cat:'csharp',pid:null,mode:null,tier:null,stage:null},liveTimer=0;
 let P=null; /* 현재 문제 화면의 임시 상태 */
 let me=null,guest=false,sample=null,saveTimer=0,saving=false,dirty=false,raf=0,aiCtl=null,draftTimer=0;
@@ -31,7 +31,7 @@ function normalize(d){
  d=d||{};
  /* 예전 객관식 버전의 진행도는 문제가 달라져서 이어받지 않고, 개념 사전만 가져온다 */
  const fresh=d.v===VER;
- return {v:VER,solved:fresh?(d.solved||{}):{},dict:d.dict||{},custom:fresh?sanitizeCustom(d.custom):[],drafts:fresh?(d.drafts||{}):{},review:fresh?(d.review||{}):{},practice:d.practice||{},act:d.act||{},notes:d.notes||{},diag:migDiag(d.diag),intro:d.intro||null,lsn:d.lsn||{}};
+ return {v:VER,solved:fresh?(d.solved||{}):{},dict:d.dict||{},custom:fresh?sanitizeCustom(d.custom):[],drafts:fresh?(d.drafts||{}):{},review:fresh?(d.review||{}):{},practice:d.practice||{},act:d.act||{},rlog:d.rlog||{},notes:d.notes||{},diag:migDiag(d.diag),intro:d.intro||null,lsn:d.lsn||{}};
 }
 const lsKey=()=>me?LS+'-'+me.uid:LS;
 function loadLocal(){
@@ -63,7 +63,7 @@ async function flush(){
  if(!me||saving||!dirty)return;
  saving=true;dirty=false;
  try{
-  await Store.save({v:VER,solved:S.solved,dict:S.dict,review:S.review,practice:S.practice,act:S.act,notes:S.notes,diag:S.diag},{custom:S.custom,drafts:S.drafts},summarize(PROBLEMS,S.solved,S.review),probMap());
+  await Store.save({v:VER,solved:S.solved,dict:S.dict,review:S.review,practice:S.practice,act:S.act,rlog:S.rlog,notes:S.notes,diag:S.diag},{custom:S.custom,drafts:S.drafts},summarize(PROBLEMS,S.solved,S.review),probMap());
   setSync('저장됨');
  }catch(e){dirty=true;setSync('저장 실패 · 다시 시도 중');clearTimeout(saveTimer);saveTimer=setTimeout(flush,15000)}
  saving=false;if(dirty&&!saveTimer)saveTimer=setTimeout(flush,4000);
@@ -82,7 +82,7 @@ function schedule(p,pass,firstTry){
  const now=Date.now(),rv=S.review[p.id];
  if(V.mode==='review'&&rv){
   rv.box=pass&&firstTry?Math.min(BOX_DAYS.length-1,(rv.box||0)+1):0;
-  rv.due=now+BOX_DAYS[rv.box]*DAY;rv.last=now;rv.reps=(rv.reps||0)+1;if(pass)bumpAct();return;
+  rv.due=now+BOX_DAYS[rv.box]*DAY;rv.last=now;rv.reps=(rv.reps||0)+1;{const k=dayKey(),o=S.rlog[k]||(S.rlog[k]={n:0,ok:0});o.n++;if(pass)o.ok++}if(pass)bumpAct();return;
  }
  if(!rv&&pass){
   const r=S.solved[p.id]||{};
