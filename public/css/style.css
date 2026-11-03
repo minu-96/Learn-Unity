@@ -498,3 +498,81 @@ kbd{font-family:var(--font-mono);font-size:11px;padding:1px 6px;border:1px solid
  .top{grid-template-columns:minmax(0,1fr)}
  .top .brand{order:1}.top .topr{order:2;justify-content:flex-start;gap:8px}.top nav.tabs{order:3}
 }
+
+/* ===== 코딩이란? ===== */
+.intro{display:flex;flex-direction:column;gap:14px;max-width:760px;margin:0 auto}
+.idots{display:flex;gap:8px;margin-left:auto}
+.idot{width:28px;height:6px;border-radius:99px;background:var(--line)}
+.idot.cur{background:var(--accent)}.idot.ok{background:var(--good)}.idot.cur.ok{background:var(--good)}
+.inslide,.introend{gap:14px;padding:22px}
+.inslide .lead{font-size:16px;margin:0;color:var(--ink)}
+.inslide .pt,.introend .pt{font-size:24px}
+.inafter{display:none;padding:12px 14px;border-left:4px solid var(--good);background:var(--good-soft);border-radius:8px}
+.inafter.show{display:block;animation:inrise .35s ease-out}
+.inafter p{margin:0}
+@keyframes inrise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.fb{font-size:14px;color:var(--muted);min-height:22px}
+.fb.ok{color:var(--good)}.fb.no{color:var(--bad)}
+/* 1 순서 */
+.inord{display:flex;flex-direction:column;gap:12px}
+.slots{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.slot{display:flex;gap:8px;align-items:center;min-height:46px;padding:8px 10px;border:2px dashed var(--line);border-radius:10px;color:var(--muted)}
+.slot b{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--line);font-size:12px;color:var(--ink)}
+.slot.on{border-style:solid;border-color:var(--good);background:var(--good-soft);color:var(--ink)}
+.slot.on b{background:var(--good);color:#fff}
+.cards{display:flex;flex-wrap:wrap;gap:8px}
+.icard{font:inherit;padding:10px 14px;border:1px solid var(--line);border-bottom-width:3px;border-radius:10px;background:var(--surface);color:var(--ink);cursor:pointer}
+.icard:hover{border-color:var(--accent)}
+.shake{animation:inshake .3s}
+@keyframes inshake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+/* 2 정확함 */
+.inerr{display:flex;flex-direction:column;gap:12px}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px}
+.iopt{font:inherit;text-align:left;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);cursor:pointer}
+.iopt code{font-family:var(--font-mono);font-size:13px}
+.iopt:hover{border-color:var(--accent)}
+.iopt.ok{border-color:var(--good);background:var(--good-soft)}
+.iopt.no{border-color:var(--bad);background:var(--bad-soft)}
+.console{background:var(--code-bg);color:var(--code-ink);font-family:var(--font-mono);font-size:13px;padding:12px 14px;border-radius:8px;min-height:48px}
+.console .err{color:#ff8a65}.console .out{color:#7ee0a0}.dim{color:var(--code-dim)}
+/* 3 값 */
+.invals{display:flex;flex-direction:column;gap:12px}
+.scene{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;padding:14px;border-radius:12px;background:var(--code-bg)}
+.spot{font:inherit;display:flex;flex-direction:column;gap:6px;text-align:left;padding:10px 12px;border:1px solid #2b3d49;border-radius:10px;background:#16242d;color:var(--code-ink);cursor:pointer}
+.spot:hover,.spot.seen{border-color:var(--accent)}
+.spot .k{font-size:12px;color:var(--code-dim)}
+.bar{display:block;height:8px;border-radius:99px;background:#2b3d49;overflow:hidden}
+.bar i{display:block;height:100%;background:#6cc78a;transition:width .3s}
+.mini{margin:0;padding:12px 14px;border-radius:8px;background:var(--code-bg);color:var(--code-ink);font-family:var(--font-mono);font-size:13px;line-height:1.6;white-space:pre-wrap;min-height:44px}
+/* 4 판단·반복 */
+.inlogic{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.inlogic .box{display:flex;flex-direction:column;gap:10px;padding:14px;border:1px solid var(--line);border-radius:12px}
+.sl{display:flex;gap:8px;align-items:center;font-size:14px}.sl input{flex:1}
+.state{padding:8px 12px;border-radius:8px;background:var(--good-soft);color:var(--good);text-align:center}
+.state.over{background:var(--bad-soft);color:var(--bad)}
+.alog{margin:0;padding-left:18px;min-height:66px}
+/* 5 지도 */
+.inmap{display:flex;flex-direction:column;gap:12px}
+.chain{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px}
+.node{font:inherit;display:flex;flex-direction:column;gap:2px;text-align:left;padding:12px 14px;min-width:120px;flex:1;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);cursor:pointer}
+.node:hover,.node.seen{border-color:var(--accent)}
+.arrow{align-self:center;color:var(--muted)}
+/* 진입 카드 */
+.act.introcard{border-left:4px solid var(--accent)}
+.introlink{font:inherit;display:flex;flex-direction:column;gap:2px;text-align:left;padding:14px 16px;border:1px dashed var(--accent);border-radius:12px;background:var(--accent-soft);color:var(--ink);cursor:pointer}
+.introlink .kick{color:var(--accent)}
+@media (prefers-reduced-motion:reduce){.shake,.inafter.show{animation:none}.bar i{transition:none}}
+.spot{box-sizing:border-box;min-width:0}
+.spot .bar{width:100%;box-sizing:border-box}
+
+/* 단계 처음: 개념을 먼저 읽도록 강조 */
+.lesson.gate{border:2px solid var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+.lesson.gate>summary b{color:var(--accent)}
+
+.splitbar i.sr,.legend i.sr{background:var(--ok,#2e9d6b)}
+.splitbar.tri{min-width:80px;height:8px}
+.dtbl{margin-top:6px;font-size:13px}
+.dtbl td,.dtbl th{padding:4px 6px}
+.dtbl tr.zero td{color:var(--muted)}
+.linkbtn{background:none;border:0;padding:0;font:inherit;color:var(--accent,#3b6ef5);cursor:pointer;text-align:left}
+.linkbtn:hover{text-decoration:underline}

@@ -77,7 +77,7 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
 
  // 주차 과제 진행 + 구문 색
  ok(/\d+ \/ \d+ 해결/.test(await pg.textContent('.act.wk')),'과제 진행률 표시');
- await pg.click('.act.wk .btn');await pg.waitForSelector('#code');
+ await pg.click('.act.wk .btn');await pg.waitForSelector('#code,#startnext');if(await pg.$('#startnext'))await pg.click('#startnext');await pg.waitForSelector('#code');
  ok(await pg.$$eval('#hlpre .hk, #hlpre .ht, #hlpre .hf',e=>e.length)>0,'편집기 구문 색 적용');
  const same=await pg.evaluate(()=>document.getElementById('hlpre').textContent.replace(/\n $/,'')===document.getElementById('code').value);
  ok(same,'구문 색 겹침 글자가 입력과 같음');
@@ -113,7 +113,7 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
  await pg.setViewportSize({width:390,height:844});
  await pg.click('#logout');await pg.waitForSelector('#g');await pg.click('#g');await pg.waitForSelector('.hero');
  ok(await pg.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth)<=0,'모바일 홈: 가로 스크롤 없음');
- await pg.click('.act.wk .btn');await pg.waitForSelector('#code');
+ await pg.click('.act.wk .btn');await pg.waitForSelector('#code,#startnext');if(await pg.$('#startnext'))await pg.click('#startnext');await pg.waitForSelector('#code');
  ok(await pg.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth)<=0,'모바일 문제: 가로 스크롤 없음');
 
  ok(errs.length===0,'페이지 오류 없음'+(errs.length?': '+errs.slice(0,3).join(' | '):''));

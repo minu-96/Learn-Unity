@@ -10,7 +10,7 @@ function md(t){
 const VER=3;
 const DAY=86400000;
 const BOX_DAYS=[1,3,7,16,35];
-let S={v:VER,solved:{},dict:{},custom:[],drafts:{},review:{},practice:{},act:{},notes:{}};
+let S={v:VER,solved:{},dict:{},custom:[],drafts:{},review:{},practice:{},act:{},rlog:{},notes:{}};
 let V={tab:'home',cat:'csharp',pid:null,mode:null,tier:null,stage:null},liveTimer=0;
 let P=null; /* 현재 문제 화면의 임시 상태 */
 let me=null,guest=false,sample=null,saveTimer=0,saving=false,dirty=false,raf=0,aiCtl=null,draftTimer=0;
@@ -31,7 +31,7 @@ function normalize(d){
  d=d||{};
  /* 예전 객관식 버전의 진행도는 문제가 달라져서 이어받지 않고, 개념 사전만 가져온다 */
  const fresh=d.v===VER;
- return {v:VER,solved:fresh?(d.solved||{}):{},dict:d.dict||{},custom:fresh?sanitizeCustom(d.custom):[],drafts:fresh?(d.drafts||{}):{},review:fresh?(d.review||{}):{},practice:d.practice||{},act:d.act||{},notes:d.notes||{},diag:migDiag(d.diag)};
+ return {v:VER,solved:fresh?(d.solved||{}):{},dict:d.dict||{},custom:fresh?sanitizeCustom(d.custom):[],drafts:fresh?(d.drafts||{}):{},review:fresh?(d.review||{}):{},practice:d.practice||{},act:d.act||{},rlog:d.rlog||{},notes:d.notes||{},diag:migDiag(d.diag),intro:d.intro||null,lsn:d.lsn||{}};
 }
 const lsKey=()=>me?LS+'-'+me.uid:LS;
 function loadLocal(){
@@ -58,12 +58,23 @@ function probMap(){
  for(const p of PROBLEMS.concat(BANK)){const r=S.solved[p.id];if(!r||!(r.tries||r.ok))continue;o[p.id]=[r.ok?(r.via==='auto'?(r.clean?1:2):3):0,r.tries||0]}
  return o;
 }
+/* 운영진 화면용 활동 통계: 문제 사전 해결, 복습, 최근 60일 날짜별 횟수([학습,사전,복습]) */
+function userStats(){
+ const d={},g=k=>d[k]||(d[k]=[0,0,0]);
+ const cut=dayKey(Date.now()-59*DAY);
+ const bk={solved:0,self:0,tries:0};
+ for(const p of BANK){const r=S.solved[p.id];if(!r)continue;bk.tries+=r.tries||0;if(r.ok){bk.solved++;if(r.via==='auto'&&r.clean)bk.self++}}
+ for(const p of PROBLEMS.concat(BANK)){const r=S.solved[p.id];if(r&&r.ok&&r.at){const k=dayKey(r.at);if(k>=cut)g(k)[p.bank?1:0]++}}
+ Object.entries(S.rlog||{}).forEach(([k,o])=>{if(k>=cut)g(k)[2]=o.n||0});
+ const es=Object.entries(S.review||{}).filter(([id])=>byId(id));
+ return {bank:bk,rev:{done:es.reduce((a,[,r])=>a+(r.reps||0),0),kinds:es.filter(([,r])=>(r.reps||0)>0).length,due:dueList().length},days:d};
+}
 function setSync(t){const e=$('#sync');if(e)e.textContent=t}
 async function flush(){
  if(!me||saving||!dirty)return;
  saving=true;dirty=false;
  try{
-  await Store.save({v:VER,solved:S.solved,dict:S.dict,review:S.review,practice:S.practice,act:S.act,notes:S.notes,diag:S.diag},{custom:S.custom,drafts:S.drafts},summarize(PROBLEMS,S.solved,S.review),probMap());
+  await Store.save({v:VER,solved:S.solved,dict:S.dict,review:S.review,practice:S.practice,act:S.act,rlog:S.rlog,notes:S.notes,diag:S.diag},{custom:S.custom,drafts:S.drafts},Object.assign(summarize(PROBLEMS,S.solved,S.review),{stats:userStats()}),probMap());
   setSync('저장됨');
  }catch(e){dirty=true;setSync('저장 실패 · 다시 시도 중');clearTimeout(saveTimer);saveTimer=setTimeout(flush,15000)}
  saving=false;if(dirty&&!saveTimer)saveTimer=setTimeout(flush,4000);
@@ -82,7 +93,7 @@ function schedule(p,pass,firstTry){
  const now=Date.now(),rv=S.review[p.id];
  if(V.mode==='review'&&rv){
   rv.box=pass&&firstTry?Math.min(BOX_DAYS.length-1,(rv.box||0)+1):0;
-  rv.due=now+BOX_DAYS[rv.box]*DAY;rv.last=now;rv.reps=(rv.reps||0)+1;if(pass)bumpAct();return;
+  rv.due=now+BOX_DAYS[rv.box]*DAY;rv.last=now;rv.reps=(rv.reps||0)+1;{const k=dayKey(),o=S.rlog[k]||(S.rlog[k]={n:0,ok:0});o.n++;if(pass)o.ok++}if(pass)bumpAct();return;
  }
  if(!rv&&pass){
   const r=S.solved[p.id]||{};
@@ -135,6 +146,7 @@ function render(){
  else if(V.tab==='admin'&&me&&me.admin)renderAdmin();
  else if(V.tab==='learn')V.stage?renderStage():renderLearn();
  else if(V.tab==='bank')V.bankStage?renderBankStage():renderBank();
+ else if(V.tab==='intro')renderIntro();
  else renderHome();
  const lo=$('#logout');if(lo)lo.onclick=()=>Store.signOut();
  const sn=$('#snd');if(sn)sn.onclick=()=>{Fx.setOn(!Fx.isOn());sn.setAttribute('aria-pressed',String(Fx.isOn()));sn.textContent=Fx.isOn()?'♪ 켬':'♪ 끔'};
@@ -155,7 +167,16 @@ function whoHTML(){
  if(Store.configured)return `<div class="who"><span class="note">게스트 · 이 브라우저에만 저장</span><button class="btn ghost sm" id="login">로그인</button></div>`;
  return `<div class="who"><span class="note">이 브라우저에만 저장돼요</span></div>`;
 }
-const openProblem=(id,mode)=>{const p=byId(id);V.pid=id;V.mode=mode||null;if(p&&mode==='review')V.tab='review';else if(p&&p.bank){V.tab='bank';V.bankStage={cat:p.cat,stage:p.stage}}else if(p){V.tab='learn';V.stage={cat:p.cat,stage:p.stage}}render();window.scrollTo(0,0)};
+/* 단계를 처음 시작할 때는 개념(이론)을 먼저 보게 한다. 이미 풀었거나 시도한 단계, 복습, 진단, 문제 사전은 건너뛴다 */
+const lessonNeeded=p=>{
+ if(!p||p.bank||p.custom||V.diag||typeof LESSONS==='undefined')return false;
+ const key=p.cat+':'+p.stage;if(!LESSONS[key]||S.lsn[key])return false;
+ return !stageProblems(p.cat,p.stage).some(q=>isSolved(q.id)||S.drafts[q.id]||(S.solved[q.id]&&S.solved[q.id].tries));
+};
+const markLesson=(cid,si)=>{const k=cid+':'+si;if(!S.lsn[k]){S.lsn[k]=Date.now();persist()}};
+const openProblem=(id,mode,force)=>{const p=byId(id);
+ if(p&&!mode&&!force&&lessonNeeded(p)){V.tab='learn';V.pid=null;V.mode=null;V.stage={cat:p.cat,stage:p.stage};V.bankStage=null;render();window.scrollTo(0,0);return}
+ V.pid=id;V.mode=mode||null;if(p&&mode==='review')V.tab='review';else if(p&&p.bank){V.tab='bank';V.bankStage={cat:p.cat,stage:p.stage}}else if(p){V.tab='learn';V.stage={cat:p.cat,stage:p.stage}}render();window.scrollTo(0,0)};
 
 /* ---------- 훈련 목록 ---------- */
 function stageInfo(p){

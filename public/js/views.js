@@ -70,25 +70,6 @@ function bankLogHTML(){
  return `<div class="card" id="banklog" style="gap:6px"><div class="row"><b>문제 사전 현황</b><span class="badge bank">문제 사전</span><span class="note">열린 세트 ${open} / ${sets.length}</span></div>
   <table class="tbl"><thead><tr><th>단계</th><th></th><th>해결</th><th>자력</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
-function statsHTML(sl){
- const sb=summarize(BANK,S.solved,S.review),sa=summarize(PROBLEMS.concat(BANK),S.solved,S.review);
- const rb=Object.fromEntries(Object.entries(S.review||{}).filter(([k])=>byId(k)&&byId(k).bank));
- const rl=Object.fromEntries(Object.entries(S.review||{}).filter(([k])=>!(byId(k)&&byId(k).bank)));
- const rt=x=>x==null?'-':x+'%';
- const lr=summarize(PROBLEMS,S.solved,rl).retain,br=summarize(BANK,S.solved,rb).retain;
- const bar=(a,b)=>{const t=(a+b)||1;return `<div class="splitbar" role="img" aria-label="학습 ${a}문제, 문제 사전 ${b}문제"><i class="sl" style="width:${a/t*100}%"></i><i class="sb" style="width:${b/t*100}%"></i></div>`};
- const st=(v,l,c)=>`<div class="stat ${c||''}"><b>${v}</b><span>${l}</span></div>`;
- return `<div class="statsys">
-  <section class="sgroup all"><div class="row"><h3>종합</h3><span class="note">학습 + 문제 사전</span></div>
-   <div class="statrow big">${st(sa.solved+'<small> / '+sa.total+'</small>','해결')}${st(sa.self,'정답 안 보고 해결')}${st(sa.tries,'채점 횟수')}${st(rt(sa.retain),'복습 유지율')}</div>
-   ${bar(sl.solved,sb.solved)}<div class="legend"><span><i class="sl"></i>학습 ${sl.solved}</span><span><i class="sb"></i>문제 사전 ${sb.solved}</span></div></section>
-  <div class="sgroup2">
-   <section class="sgroup learn"><div class="row"><h3>학습</h3><span class="note">학습 지도 ${sl.total}문제</span></div>
-    <div class="statrow mid">${st(sl.solved+'<small> / '+sl.total+'</small>','해결')}${st(sl.self,'정답 안 보고')}${st(sl.tries,'채점')}${st(rt(lr),'복습 유지')}</div></section>
-   <section class="sgroup bank"><div class="row"><h3>문제 사전</h3><span class="note">비슷한 문제 ${sb.total}개</span></div>
-    <div class="statrow sm">${st(sb.solved+'<small> / '+sb.total+'</small>','해결')}${st(sb.self,'정답 안 보고')}${st(sb.tries,'채점')}${st(rt(br),'복습 유지')}</div></section>
-  </div></div>`;
-}
 function renderMe(){
  const sm=summarize(PROBLEMS,S.solved,S.review);
  const cards=TIERS.map(t=>{
@@ -114,12 +95,16 @@ function renderMe(){
 }
 
 /* ---------- 운영진 ---------- */
-let AD={users:[],reports:[],q:'',sort:'last',idle:false,wkLeft:false};
+let AD={users:[],reports:[],q:'',sort:'last',idle:false,wkLeft:false,sel:null,wk:0,club:false};
 function csvCell(v){v=String(v==null?'':v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
+function csvDownload(lines,name){
+ const blob=new Blob(['\ufeff'+lines.map(r=>r.map(csvCell).join(',')).join('\n')],{type:'text/csv;charset=utf-8'});
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+}
 function adminCsv(rows){
- const head=['이름','이메일','마지막 접속','해결','자력','입문 해결','기초 해결','응용 해결','심화 해결','복습 유지율','이번 주 과제'];
+ const head=['이름','이메일','마지막 접속','해결','자력','입문 해결','기초 해결','응용 해결','심화 해결','문제 사전 해결','복습 횟수','최근 7일 활동','복습 유지율','이번 주 과제'];
  const lines=[head].concat(rows.map(u=>{const s=u.summary||{tier:{},solved:0,self:0};const t=s.tier||{};
-  return [u.name,u.email,u.lastActive?new Date(u.lastActive).toLocaleString('ko-KR'):'',s.solved||0,s.self||0,(t.intro||{}).solved||0,(t.basic||{}).solved||0,(t.app||{}).solved||0,(t.adv||{}).solved||0,s.retain==null?'':s.retain,WK&&wkProblems(WK).length?wkDone(u)+'/'+wkProblems(WK).length:'']}));
+  return [u.name,u.email,u.lastActive?new Date(u.lastActive).toLocaleString('ko-KR'):'',s.solved||0,s.self||0,(t.intro||{}).solved||0,(t.basic||{}).solved||0,(t.app||{}).solved||0,(t.adv||{}).solved||0,s.stats?s.stats.bank.solved:'',s.stats?s.stats.rev.done:'',s.stats?adminWeek(s.stats.days):'',s.retain==null?'':s.retain,WK&&wkProblems(WK).length?wkDone(u)+'/'+wkProblems(WK).length:'']}));
  const blob=new Blob(['﻿'+lines.map(r=>r.map(csvCell).join(',')).join('\n')],{type:'text/csv;charset=utf-8'});
  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='learn-unity-progress.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
 }
@@ -145,6 +130,62 @@ function wkAdminHTML(rows){
    ${groups}
    <div class="row"><button class="btn" id="wksave">과제 저장</button><button class="btn ghost" id="wkclear">과제 내리기</button><span class="note" id="wkmsg" role="status"></span></div></div></details></div>`;
 }
+/* 부원별 활동 통계(summary.stats): 날짜별 [학습, 문제 사전, 복습] */
+const DAYNAMES=['일','월','화','수','목','금','토'];
+const adminWeek=days=>[...Array(7)].reduce((a,_,i)=>a+((days||{})[dayKey(Date.now()-i*DAY)]||[0,0,0]).reduce((x,y)=>x+y,0),0);
+/* 월~일 한 주 단위: off=0 이번 주, -1 지난주 … (통계는 최근 60일만 보관) */
+const WK_MIN=-8;
+function weekDays(off){
+ const t=new Date();t.setHours(12,0,0,0);
+ const mon=t.getTime()-((t.getDay()+6)%7)*DAY+(off||0)*7*DAY;
+ return [...Array(7)].map((_,i)=>mon+i*DAY);
+}
+function weekNav(){
+ const d=weekDays(AD.wk),f=t=>{const x=new Date(t);return (x.getMonth()+1)+'/'+x.getDate()};
+ return `<div class="row wknav"><button class="btn ghost sm" data-wkm="-1" ${AD.wk<=WK_MIN?'disabled':''} aria-label="이전 주">‹ 이전 주</button><b>${f(d[0])} ~ ${f(d[6])}</b><span class="note">${AD.wk===0?'이번 주':AD.wk===-1?'지난주':-AD.wk+'주 전'}</span><span style="flex:1"></span><button class="btn ghost sm" data-wkm="1" ${AD.wk>=0?'disabled':''} aria-label="다음 주">다음 주 ›</button></div>`;
+}
+function adminDaysHTML(st){
+ if(!st)return '<div class="note">아직 활동 통계가 없어요. 부원이 다시 접속하면 채워져요.</div>';
+ const now=Date.now();
+ const rows=weekDays(AD.wk).map(t=>{const fut=t>now+DAY/2,x=st.days[dayKey(t)]||[0,0,0],sum=x[0]+x[1]+x[2];
+  return `<tr class="${sum?'':'zero'}"><td>${dayKey(t).slice(5).replace('-','/')} (${DAYNAMES[new Date(t).getDay()]})</td><td class="num">${fut?'':x[0]||'-'}</td><td class="num">${fut?'':x[1]||'-'}</td><td class="num">${fut?'':x[2]||'-'}</td><td class="num"><b>${fut?'':sum||'-'}</b></td></tr>`}).join('');
+ const b=st.bank,r=st.rev;
+ return `<div class="note" style="margin-top:4px">문제 사전 해결 ${b.solved}문제(자력 ${b.self}, 채점 ${b.tries}회) · 복습 ${r.done}회(${r.kinds}문제), 지금 복습할 문제 ${r.due}개</div>${weekNav()}
+  <table class="tbl dtbl"><thead><tr><th>요일</th><th class="num">학습</th><th class="num">사전</th><th class="num">복습</th><th class="num">합계</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+function adminClubDays(us){
+ const sum={};let any=false;
+ us.forEach(u=>{const st=u.summary&&u.summary.stats;if(!st)return;any=true;Object.entries(st.days).forEach(([k,v])=>{const o=sum[k]||(sum[k]={a:0,v:[0,0,0]});o.a++;v.forEach((x,i)=>o.v[i]+=x)})});
+ if(!any)return '';
+ const now=Date.now();
+ const rows=weekDays(AD.wk).map(t=>{const fut=t>now+DAY/2,o=sum[dayKey(t)]||{a:0,v:[0,0,0]};
+  return `<tr class="${o.a?'':'zero'}"><td>${dayKey(t).slice(5).replace('-','/')} (${DAYNAMES[new Date(t).getDay()]})</td><td class="num">${fut?'':o.a||'-'}</td><td class="num">${fut?'':o.v[0]||'-'}</td><td class="num">${fut?'':o.v[1]||'-'}</td><td class="num">${fut?'':o.v[2]||'-'}</td></tr>`}).join('');
+ return `<details class="card" id="clubdays" style="gap:8px" ${AD.club?'open':''}><summary><b>날짜별 전체 활동</b> <span class="note">부원 전체 합계 · 월~일 한 주씩</span></summary>
+  ${weekNav()}<div style="overflow-x:auto"><table class="tbl dtbl"><thead><tr><th>요일</th><th class="num">활동 인원</th><th class="num">학습</th><th class="num">사전</th><th class="num">복습</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
+}
+const ADMIN_HEAD=()=>`<th>마지막 접속</th><th>입문</th><th>기초</th><th>응용</th><th>심화</th>${WK&&wkProblems(WK).length?'<th>과제</th>':''}<th class="num">사전</th><th class="num">복습</th><th class="num">7일</th><th class="num">자력</th><th class="num">유지율</th>`;
+/* 부원 한 명의 피드백용 CSV: 요약 → 날짜별 활동 → 문제별 상태 */
+function adminUserCsv(u){
+ const s=u.summary||{tier:{}},t=s.tier||{},st=s.stats,T=id=>(t[id]||{}).solved||0;
+ const L=[['이름',u.name],['이메일',u.email],['마지막 접속',u.lastActive?new Date(u.lastActive).toLocaleString('ko-KR'):''],
+  ['학습 해결',s.solved||0],['자력',s.self||0],['입문 해결',T('intro')],['기초 해결',T('basic')],['응용 해결',T('app')],['심화 해결',T('adv')],
+  ['문제 사전 해결',st?st.bank.solved:''],['문제 사전 자력',st?st.bank.self:''],['복습 횟수',st?st.rev.done:''],['복습한 문제 수',st?st.rev.kinds:''],['지금 복습할 문제',st?st.rev.due:''],
+  ['최근 7일 활동',st?adminWeek(st.days):''],['복습 유지율(%)',s.retain==null?'':s.retain]];
+ if(WK&&wkProblems(WK).length)L.push(['이번 주 과제',wkDone(u)+'/'+wkProblems(WK).length]);
+ if(st){L.push([],['날짜','학습','문제 사전','복습','합계']);
+  Object.keys(st.days).sort().forEach(k=>{const x=st.days[k];L.push([k,x[0],x[1],x[2],x[0]+x[1]+x[2]])})}
+ const stName=['시도 중','자력 해결','정답 참고 해결','AI 도움 해결'];
+ const pr=Object.entries(u.prob||{}).filter(([id])=>byId(id));
+ if(pr.length){L.push([],['문제','분야','구분','상태','채점 횟수']);
+  pr.forEach(([id,v])=>{const p=byId(id);L.push([p.title,(CATS.find(c=>c.id===p.cat)||{}).name||'',p.bank?'문제 사전':'학습',stName[v[0]]||'',v[1]||0])})}
+ csvDownload(L,'feedback-'+(u.name||'member')+'.csv');
+}
+function adminDetailHTML(cellsOf){
+ const u=AD.sel&&AD.users.find(x=>x.uid===AD.sel);if(!u)return '';
+ const s=u.summary||{},st=s.stats||null;
+ return `<div class="card" id="adetail" style="gap:8px"><div class="row"><b>${esc(u.name||'(이름 없음)')}</b><span class="note">${esc(u.email||'')}</span><span style="flex:1"></span><button class="btn ghost sm" id="adcsv">CSV 내려받기</button><button class="btn ghost sm" id="aclose">닫기</button></div>
+  <div class="tblwrap"><table class="tbl"><thead><tr>${ADMIN_HEAD()}</tr></thead><tbody><tr>${cellsOf(u)}</tr></tbody></table></div>${adminDaysHTML(st)}</div>`;
+}
 function drawAdmin(){
  const now=Date.now(),us=AD.users,tot=PROBLEMS.length;
  const empty=summarize(PROBLEMS,{},{});
@@ -156,8 +197,10 @@ function drawAdmin(){
  const key={last:u=>-(u.lastActive||0),solved:u=>-(sm(u).solved||0),name:u=>(u.name||'')};
  rows.sort((a,b)=>{const x=key[AD.sort](a),y=key[AD.sort](b);return x<y?-1:x>y?1:0});
  const tcell=(s,id)=>{const x=(s.tier||{})[id]||{total:0,solved:0,passed:false};return `<td>${meter(x.solved,x.total,x.passed?'good':'')}<span class="note">${x.solved}/${x.total}${x.passed?' 수료':''}</span></td>`};
- const body=rows.map(u=>{const s=sm(u),idle=!u.lastActive||now-u.lastActive>=14*DAYMS;
-  return `<tr><td><b>${esc(u.name||'(이름 없음)')}</b><div class="note">${esc(u.email||'')}</div></td><td class="${idle?'warnc':''}">${ago(u.lastActive)}</td>${tcell(s,'intro')}${tcell(s,'basic')}${tcell(s,'app')}${tcell(s,'adv')}${WK&&wkProblems(WK).length?(()=>{const n=wkDone(u),t=wkProblems(WK).length;return `<td>${meter(n,t,n>=t?'good':'')}<span class="note">${n}/${t}</span></td>`})():''}<td class="num">${s.solved?pct(s.self,s.solved)+'%':'-'}</td><td class="num">${s.retain==null?'-':s.retain+'%'}</td></tr>`}).join('')||'<tr><td colspan="8" class="note">조건에 맞는 부원이 없어요.</td></tr>';
+ const cellsOf=u=>{const s=sm(u),idle=!u.lastActive||now-u.lastActive>=14*DAYMS;
+  const stt=s.stats||null,w7=stt?adminWeek(stt.days):0;
+  return `<td class="${idle?'warnc':''}">${ago(u.lastActive)}</td>${tcell(s,'intro')}${tcell(s,'basic')}${tcell(s,'app')}${tcell(s,'adv')}${WK&&wkProblems(WK).length?(()=>{const n=wkDone(u),t=wkProblems(WK).length;return `<td>${meter(n,t,n>=t?'good':'')}<span class="note">${n}/${t}</span></td>`})():''}<td class="num">${stt?stt.bank.solved:'-'}</td><td class="num">${stt?stt.rev.done:'-'}</td><td class="num">${stt?w7:'-'}</td><td class="num">${s.solved?pct(s.self,s.solved)+'%':'-'}</td><td class="num">${s.retain==null?'-':s.retain+'%'}</td>`};
+ const body=rows.map(u=>`<tr><td><button class="linkbtn" data-sel="${esc(u.uid||'')}"><b>${esc(u.name||'(이름 없음)')}</b></button><div class="note">${esc(u.email||'')}</div></td>${cellsOf(u)}</tr>`).join('')||'<tr><td colspan="11" class="note">조건에 맞는 부원이 없어요.</td></tr>';
  /* 문제별 집계: prob = {문제id:[상태코드(0시도중 1자력 2참고 3AI), 채점횟수]} */
  const agg={};
  us.forEach(u=>Object.entries(u.prob||{}).forEach(([id,v])=>{const a=agg[id]||(agg[id]={n:0,ok:0,peek:0,tries:0});a.n++;a.tries+=v[1]||0;if(v[0]>0)a.ok++;if(v[0]===2||v[0]===3)a.peek++}));
@@ -169,8 +212,10 @@ function drawAdmin(){
  $('#main').innerHTML=`<div style="display:flex;flex-direction:column;gap:20px">
   <div class="statrow"><div class="stat"><b>${us.length}</b><span>가입 부원</span></div><div class="stat"><b>${active7}</b><span>최근 7일 활동</span></div><div class="stat"><b>${idle14}</b><span>14일 이상 미활동</span></div>${pass.map(p=>`<div class="stat"><b>${p.n}</b><span>${p.t.name} 수료</span></div>`).join('')}</div>
   ${wkAdminHTML(rows)}
+  ${adminDetailHTML(cellsOf)}
+  ${adminClubDays(us)}
   <div class="card" style="gap:10px"><div class="row"><b>부원 현황</b><span style="flex:1"></span><input type="text" id="aq" placeholder="이름·이메일 검색" value="${esc(AD.q)}" style="max-width:200px"><select id="as" aria-label="정렬"><option value="last" ${AD.sort==='last'?'selected':''}>최근 접속순</option><option value="solved" ${AD.sort==='solved'?'selected':''}>해결 많은 순</option><option value="name" ${AD.sort==='name'?'selected':''}>이름순</option></select><label class="chk"><input type="checkbox" id="ai" ${AD.idle?'checked':''}> 14일 미활동만</label>${WK&&wkProblems(WK).length?`<label class="chk"><input type="checkbox" id="aw" ${AD.wkLeft?'checked':''}> 과제 미완료만</label>`:''}<button class="btn ghost sm" id="acsv">CSV</button></div>
-  <div class="tblwrap"><table class="tbl"><thead><tr><th>부원</th><th>마지막 접속</th><th>입문</th><th>기초</th><th>응용</th><th>심화</th>${WK&&wkProblems(WK).length?'<th>과제</th>':''}<th class="num">자력</th><th class="num">유지율</th></tr></thead><tbody>${body}</tbody></table></div>
+  <div class="tblwrap"><table class="tbl"><thead><tr><th>부원</th>${ADMIN_HEAD()}</tr></thead><tbody>${body}</tbody></table></div>
   <div class="note">자력은 해결한 문제 중 정답을 보지 않고 푼 비율, 유지율은 복습한 문제 중 기억이 이어지는 비율이에요. 수료는 구간 문제의 ${PASS_SOLVED*100}% 해결 + 자력 ${PASS_SELF*100}% 이상.</div></div>
   <div class="card" style="gap:8px"><b>많이 막히는 문제</b>${hardHtml}</div>
   <div class="card" style="gap:8px"><b>채점 오류 신고</b>${rep}</div></div>`;
@@ -178,6 +223,11 @@ function drawAdmin(){
  $('#as').onchange=e=>{AD.sort=e.target.value;drawAdmin()};
  $('#ai').onchange=e=>{AD.idle=e.target.checked;drawAdmin()};
  $('#acsv').onclick=()=>adminCsv(rows);
+ document.querySelectorAll('[data-sel]').forEach(b=>b.onclick=()=>{AD.sel=b.dataset.sel;drawAdmin();const d=$('#adetail');if(d)d.scrollIntoView({block:'nearest'})});
+ document.querySelectorAll('[data-wkm]').forEach(b=>b.onclick=()=>{AD.wk=Math.max(WK_MIN,Math.min(0,AD.wk+(+b.dataset.wkm)));AD.club=!!$('#clubdays[open]');drawAdmin()});
+ const cd=$('#clubdays');if(cd)cd.ontoggle=()=>{AD.club=cd.open};
+ const adc=$('#adcsv');if(adc)adc.onclick=()=>adminUserCsv(AD.users.find(x=>x.uid===AD.sel));
+ const ac=$('#aclose');if(ac)ac.onclick=()=>{AD.sel=null;drawAdmin()};
  const aw=$('#aw');if(aw)aw.onchange=e=>{AD.wkLeft=e.target.checked;drawAdmin()};
  const ws=$('#wksave');
  if(ws){
