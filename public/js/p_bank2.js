@@ -924,250 +924,268 @@ void Flip(float dir)
  concepts:[['Vector3 프로퍼티','position, localScale, eulerAngles는 모두 복사본을 돌려준다. 고치려면 복사 후 다시 대입한다.']]});
 
 /* ---- 컴포넌트 1단계 ---- */
-QB({id:'x63',cat:'components',stage:1,level:1,title:'Update마다 GetComponent를 부르는 이동',
- story:'D 키를 누르는 동안 오른쪽으로 달리는 스크립트예요. 그런데 Update에서 매 프레임 GetComponent<Rigidbody2D>()로 컴포넌트를 찾고 있어요. 컴포넌트 검색은 가벼운 작업이 아니라서 이런 호출이 쌓이면 성능이 떨어져요. 한 번만 찾아서 재사용하도록 바꿔 주세요.',
- goals:['Rigidbody2D를 가리키는 필드(rb)를 만든다','Awake에서 GetComponent로 한 번만 가져와 rb에 저장한다','Update에서는 GetComponent를 호출하지 않고 rb를 사용한다','기능은 그대로: D 키를 누르는 동안 x 속도가 moveSpeed가 된다'],
- limits:['Update 안에서 GetComponent 호출 금지','Update 안에서 Rigidbody2D 지역 변수를 새로 만들지 않는다'],
- api:'GetComponent<T>(), Input.GetKey, rb.velocity',
+QB({id:'x63',cat:'components',stage:1,level:1,title:'방어막이 있을 수도, 없을 수도 있는 적',
+ story:'일부 적에게만 Shield 컴포넌트가 붙어 있어요. 방어막이 있으면 피해에서 block만큼 줄여서 받고, 없으면 피해를 그대로 받아야 해요. 지금 코드는 방어막이 없는 적이 피해를 입으면 NullReferenceException이 나요. 있을 수도 없을 수도 있는 컴포넌트는 TryGetComponent로 가져오고 null을 확인하세요.',
+ goals:['Awake에서 TryGetComponent로 Shield를 가져와 shield에 저장한다 (없으면 null)','TakeDamage(dmg): 방어막이 있으면 dmg에서 block을 뺀 값(최소 0)만큼, 없으면 dmg 그대로 hp를 줄인다'],
+ limits:['TakeDamage 안에서 GetComponent를 호출하지 않는다','방어막이 없는 오브젝트에서도 에러가 나면 안 된다'],
+ api:'TryGetComponent<T>(out T), != null',
  starter:C`
 using UnityEngine;
 
-public class Runner : MonoBehaviour
+public class Mob : MonoBehaviour
 {
-    public float moveSpeed = 5f;
-
-    void Update()
-    {
-        // 매 프레임 컴포넌트를 새로 찾고 있어요
-        Rigidbody2D rb = GetComponent<Rigidbody2D>();
-        if (Input.GetKey(KeyCode.D))
-        {
-            rb.velocity = new Vector2(moveSpeed, rb.velocity.y);
-        }
-    }
-}`,
- solution:C`
-using UnityEngine;
-
-public class Runner : MonoBehaviour
-{
-    public float moveSpeed = 5f;
-    private Rigidbody2D rb;
+    public int hp = 10;
+    private Shield shield;
 
     void Awake()
     {
-        rb = GetComponent<Rigidbody2D>();
+        shield = GetComponent<Shield>();
     }
 
-    void Update()
+    public void TakeDamage(int dmg)
     {
-        if (Input.GetKey(KeyCode.D))
-        {
-            rb.velocity = new Vector2(moveSpeed, rb.velocity.y);
-        }
+        dmg -= shield.block;
+        if (dmg < 0) dmg = 0;
+        hp -= dmg;
     }
-}`,
- rules:[
-  has('rb 필드',/\bRigidbody2D\s+rb\s*;/,'Rigidbody2D를 담을 rb 필드가 있어요.','Rigidbody2D를 담아 둘 필드(private Rigidbody2D rb;)를 클래스에 선언하세요.'),
-  inFn('Awake에서 캐싱','Awake',/\brb\s*=\s*GetComponent\s*<\s*Rigidbody2D\s*>\s*\(\s*\)|TryGetComponent\s*(?:<\s*Rigidbody2D\s*>)?\s*\(\s*out\s+rb\b/,'Awake에서 한 번만 가져와 rb에 저장해요.','Awake에서 rb = GetComponent<Rigidbody2D>(); 로 한 번만 가져와 저장하세요.'),
-  notIn('Update에서 GetComponent 금지','Update',/\bGetComponent\b/,'Update에서 GetComponent를 부르지 않아요.','Update에서는 GetComponent를 호출하지 마세요. 필드 rb를 쓰면 됩니다.'),
-  notIn('Update에서 지역 변수 금지','Update',/\bRigidbody2D\s+\w+\s*=/,'Update에서 새 지역 변수를 만들지 않아요.','Update 안에서 Rigidbody2D rb = ... 를 쓰면 필드를 가려서 캐싱한 의미가 없어요.')
- ],
- test:(api,ok)=>{
-  const rb=api.mk.rb();
-  api.env.components.Rigidbody2D=rb;
-  api.call('Awake');
-  api.env.getCalls=0;
-  api.env.Input.GetKey=k=>k==='D';
-  for(let i=0;i<10;i++)api.call('Update');
-  const n=api.env.getCalls;
-  ok('GetComponent 호출 횟수',n===0,'Update 10번 동안 GetComponent를 한 번도 호출하지 않았어요.',`Update 10번 동안 GetComponent를 ${n}번 호출했어요. 캐싱한 필드를 쓰세요.`);
-  ok('이동 동작 유지',rb.velocity.x===5,'D 키를 누르면 x 속도가 moveSpeed가 돼요.','D 키를 누르는 동안 x속도가 moveSpeed(5)가 되어야 해요.');
- },
- hints:['GetComponent는 오브젝트의 컴포넌트 목록을 뒤져서 찾아요. 매 프레임 하면 같은 일을 반복해요.','결과를 담아 둘 필드를 만들고, 오브젝트가 만들어질 때 한 번만 채워 넣어요.','Awake는 오브젝트가 만들어질 때 한 번 호출돼요.'],
- why:'자주 쓰는 컴포넌트 참조는 Awake(또는 Start)에서 한 번 가져와 필드에 저장하는 것이 기본 습관이에요. 점프든 이동이든 같은 구조예요.',
- concepts:[['컴포넌트 캐싱','GetComponent의 결과를 필드에 저장해 재사용한다.']]});
+}
 
-QB({id:'x64',cat:'components',stage:1,level:1,title:'매 프레임 GetComponent로 낙하 속도 제한',
- story:'낙하 속도를 제한하는 스크립트예요. 아래로 떨어지는 속도가 maxFall(12)보다 빨라지면 maxFall로 고정해요. 그런데 Update에서 매 프레임 GetComponent<Rigidbody2D>()를 부르고 있어요. 한 번만 찾아서 재사용하도록 바꿔 주세요.',
- goals:['Rigidbody2D를 가리키는 필드(rb)를 만든다','Awake에서 GetComponent로 한 번만 가져와 rb에 저장한다','Update에서는 GetComponent를 호출하지 않고 rb를 사용한다','기능은 그대로: 아래로 떨어지는 속도가 -maxFall보다 빠르면 -maxFall로 고정한다'],
- limits:['Update 안에서 GetComponent 호출 금지','Update 안에서 Rigidbody2D 지역 변수를 새로 만들지 않는다'],
- api:'GetComponent<T>(), rb.velocity',
- starter:C`
-using UnityEngine;
-
-public class FallLimiter : MonoBehaviour
+public class Shield : MonoBehaviour
 {
-    public float maxFall = 12f;
-
-    void Update()
-    {
-        // 매 프레임 컴포넌트를 새로 찾고 있어요
-        Rigidbody2D rb = GetComponent<Rigidbody2D>();
-        if (rb.velocity.y < -maxFall)
-        {
-            rb.velocity = new Vector2(rb.velocity.x, -maxFall);
-        }
-    }
+    public int block = 3;
 }`,
  solution:C`
 using UnityEngine;
 
-public class FallLimiter : MonoBehaviour
+public class Mob : MonoBehaviour
 {
-    public float maxFall = 12f;
-    private Rigidbody2D rb;
+    public int hp = 10;
+    private Shield shield;
 
     void Awake()
     {
-        rb = GetComponent<Rigidbody2D>();
+        TryGetComponent<Shield>(out shield);
     }
 
-    void Update()
+    public void TakeDamage(int dmg)
     {
-        if (rb.velocity.y < -maxFall)
+        if (shield != null)
         {
-            rb.velocity = new Vector2(rb.velocity.x, -maxFall);
+            dmg -= shield.block;
+            if (dmg < 0) dmg = 0;
         }
+        hp -= dmg;
     }
+}
+
+public class Shield : MonoBehaviour
+{
+    public int block = 3;
 }`,
  rules:[
-  has('rb 필드',/\bRigidbody2D\s+rb\s*;/,'Rigidbody2D를 담을 rb 필드가 있어요.','Rigidbody2D를 담아 둘 필드(private Rigidbody2D rb;)를 클래스에 선언하세요.'),
-  inFn('Awake에서 캐싱','Awake',/\brb\s*=\s*GetComponent\s*<\s*Rigidbody2D\s*>\s*\(\s*\)|TryGetComponent\s*(?:<\s*Rigidbody2D\s*>)?\s*\(\s*out\s+rb\b/,'Awake에서 한 번만 가져와 rb에 저장해요.','Awake에서 rb = GetComponent<Rigidbody2D>(); 로 한 번만 가져와 저장하세요.'),
-  notIn('Update에서 GetComponent 금지','Update',/\bGetComponent\b/,'Update에서 GetComponent를 부르지 않아요.','Update에서는 GetComponent를 호출하지 마세요. 필드 rb를 쓰면 됩니다.'),
-  notIn('Update에서 지역 변수 금지','Update',/\bRigidbody2D\s+\w+\s*=/,'Update에서 새 지역 변수를 만들지 않아요.','Update 안에서 Rigidbody2D rb = ... 를 쓰면 필드를 가려서 캐싱한 의미가 없어요.')
+  inFn('Awake에서 TryGetComponent','Awake',/TryGetComponent\s*(?:<\s*Shield\s*>)?\s*\(\s*out\s+shield\b/,'Awake에서 TryGetComponent로 Shield를 찾아요.','Awake에서 TryGetComponent<Shield>(out shield); 로 가져오세요.'),
+  notIn('TakeDamage에서 GetComponent 금지','TakeDamage',/GetComponent/,'TakeDamage에서 컴포넌트를 다시 찾지 않아요.','Awake에서 한 번만 가져오세요.'),
+  inFn('null 확인','TakeDamage',/shield\s*!=\s*null|shield\s*==\s*null|!\s*shield\b|shield\s+is\s+(?:not\s+)?null/,'방어막이 없는 경우를 확인해요.','shield가 null일 수 있어요. 사용하기 전에 확인하세요.')
  ],
  test:(api,ok)=>{
-  const rb=api.mk.rb();
-  api.env.components.Rigidbody2D=rb;
-  api.call('Awake');
-  api.env.getCalls=0;
-  rb.velocity={x:3,y:-20};
-  for(let i=0;i<10;i++)api.call('Update');
-  const n=api.env.getCalls;
-  ok('GetComponent 호출 횟수',n===0,'Update 10번 동안 GetComponent를 한 번도 호출하지 않았어요.',`Update 10번 동안 GetComponent를 ${n}번 호출했어요. 캐싱한 필드를 쓰세요.`);
-  ok('낙하 속도 제한',rb.velocity.y===-12&&rb.velocity.x===3,'낙하 속도가 -12로 제한되고 x 속도는 유지돼요.',`속도가 (${rb.velocity.x}, ${rb.velocity.y}) 입니다. (3, -12)여야 해요.`);
-  rb.velocity={x:0,y:-5};api.call('Update');
-  ok('느리면 그대로',rb.velocity.y===-5,'제한보다 느리면 건드리지 않아요.','속도가 -12보다 느릴 때는 그대로 두어야 해요.');
+  api.env.components.Shield={block:3};
+  let e1=null;try{api.call('Awake');api.call('TakeDamage',5)}catch(e){e1=e}
+  ok('방어막 있음',!e1&&api.get('hp')===8,'방어막이 있으면 5 − 3 = 2만 받아요 (hp 8).',e1?'방어막이 있는데도 에러가 나요.':`hp가 ${api.get('hp')} 입니다. 방어막이 3을 막아 2만 받으니 8이어야 해요.`);
+  api.call('TakeDamage',1);
+  ok('피해가 방어막보다 작음',api.get('hp')===8,'방어막보다 작은 피해는 0이에요.',`hp가 ${api.get('hp')} 입니다. 피해가 0보다 작아지지 않게 하세요.`);
+  delete api.env.components.Shield;api.set('hp',10);
+  let e2=null;try{api.call('Awake');api.call('TakeDamage',5)}catch(e){e2=e}
+  ok('방어막 없음',!e2&&api.get('hp')===5,'방어막이 없으면 5를 그대로 받아요 (hp 5).',e2?'방어막이 없을 때 NullReferenceException이 나요. null 확인이 필요해요.':`hp가 ${api.get('hp')} 입니다. 방어막이 없으면 5를 그대로 받아 5여야 해요.`);
  },
- hints:['GetComponent는 매 프레임 부르면 같은 일을 반복해요.','결과를 담아 둘 필드를 만들고 Awake에서 한 번만 채워요.','Update에서는 필드 rb를 그대로 써요.'],
- why:'캐싱은 어떤 동작이든 같은 구조예요. "Awake에서 한 번 찾고 Update에서 쓴다"를 손에 익혀 두면 성능 문제를 미리 피할 수 있어요.',
- concepts:[['컴포넌트 캐싱','GetComponent의 결과를 필드에 저장해 재사용한다. 보통 Awake에서 한 번만 가져온다.']]});
+ hints:['방어막이 없는 적에서 shield는 null이에요. 그 상태로 shield.block을 읽으면 에러가 나요.','TryGetComponent(out shield)는 컴포넌트가 있으면 true를 돌려주고, 없으면 shield를 null로 둬요.','TakeDamage에서는 if (shield != null)일 때만 block을 계산에 넣으세요.'],
+ why:'"있을 수도 없을 수도 있는" 컴포넌트는 Awake에서 TryGetComponent로 한 번 가져오고, 쓸 때마다 null을 확인하는 것이 안전해요. 필수 컴포넌트는 GetComponent로, 선택 컴포넌트는 TryGetComponent로 구분해 쓰면 의도가 코드에 드러납니다.',
+ concepts:[['TryGetComponent','컴포넌트가 있으면 true와 함께 값을 돌려주고 없으면 false. 선택적 컴포넌트에 적합하다.'],['null 확인','없을 수 있는 참조는 사용 전에 != null 로 확인한다.']]});
 
-QB({id:'x65',cat:'components',stage:1,level:1,title:'Animator를 한 번만 찾기',
- story:'캐릭터가 오른쪽 키(D)를 누르는 동안 Animator의 "Run" 값을 켜고, 떼면 끄려고 해요. 그런데 Update에서 매 프레임 GetComponent<Animator>()를 부르고 있어요. 한 번만 찾아서 재사용하도록 바꿔 주세요.',
- goals:['Animator를 가리키는 필드(anim)를 만든다','Awake에서 GetComponent로 한 번만 가져와 anim에 저장한다','Update에서는 GetComponent를 호출하지 않고 anim을 사용한다','기능은 그대로: D 키를 누르는 동안 SetBool("Run", true), 아니면 false'],
- limits:['Update 안에서 GetComponent 호출 금지','Update 안에서 Animator 지역 변수를 새로 만들지 않는다'],
- api:'GetComponent<T>(), Animator.SetBool, Input.GetKey',
+QB({id:'x64',cat:'components',stage:1,level:1,title:'자식 오브젝트의 Animator를 매 프레임 찾는 중',
+ story:'캐릭터의 Animator는 루트가 아니라 자식 오브젝트(Visual)에 붙어 있어서 GetComponentInChildren으로 찾아야 해요. 지금은 Update에서 매 프레임 자식 계층을 뒤져 Animator를 찾고 있어요. 한 번만 찾아 두고 쓰도록 바꿔 주세요.',
+ goals:['Animator를 담을 필드(anim)를 만든다','Awake에서 GetComponentInChildren으로 한 번만 가져온다','Update에서는 방향키 입력이 있으면 "Run"을 true, 없으면 false로 anim에 설정한다'],
+ limits:['Update 안에서 GetComponent 계열을 호출하지 않는다','Update 안에서 Animator 지역 변수를 새로 만들지 않는다'],
+ api:'GetComponentInChildren<T>(), Input.GetAxisRaw, anim.SetBool',
  starter:C`
 using UnityEngine;
 
-public class RunAnim : MonoBehaviour
+public class Hero : MonoBehaviour
 {
     void Update()
     {
-        // 매 프레임 컴포넌트를 새로 찾고 있어요
-        Animator anim = GetComponent<Animator>();
-        anim.SetBool("Run", Input.GetKey(KeyCode.D));
+        // 매 프레임 자식 계층을 뒤져서 찾고 있어요
+        Animator anim = GetComponentInChildren<Animator>();
+        bool run = Mathf.Abs(Input.GetAxisRaw("Horizontal")) > 0.1f;
+        anim.SetBool("Run", run);
     }
 }`,
  solution:C`
 using UnityEngine;
 
-public class RunAnim : MonoBehaviour
+public class Hero : MonoBehaviour
 {
     private Animator anim;
 
     void Awake()
     {
-        anim = GetComponent<Animator>();
+        anim = GetComponentInChildren<Animator>();
     }
 
     void Update()
     {
-        anim.SetBool("Run", Input.GetKey(KeyCode.D));
+        bool run = Mathf.Abs(Input.GetAxisRaw("Horizontal")) > 0.1f;
+        anim.SetBool("Run", run);
     }
 }`,
  rules:[
-  has('anim 필드',/\bAnimator\s+anim\s*;/,'Animator를 담을 anim 필드가 있어요.','Animator를 담아 둘 필드(private Animator anim;)를 클래스에 선언하세요.'),
-  inFn('Awake에서 캐싱','Awake',/\banim\s*=\s*GetComponent\s*<\s*Animator\s*>\s*\(\s*\)|TryGetComponent\s*(?:<\s*Animator\s*>)?\s*\(\s*out\s+anim\b/,'Awake에서 한 번만 가져와 anim에 저장해요.','Awake에서 anim = GetComponent<Animator>(); 로 한 번만 가져와 저장하세요.'),
-  notIn('Update에서 GetComponent 금지','Update',/\bGetComponent\b/,'Update에서 GetComponent를 부르지 않아요.','Update에서는 GetComponent를 호출하지 마세요. 필드 anim을 쓰면 됩니다.'),
-  notIn('Update에서 지역 변수 금지','Update',/\bAnimator\s+\w+\s*=/,'Update에서 새 지역 변수를 만들지 않아요.','Update 안에서 Animator anim = ... 를 쓰면 필드를 가려서 캐싱한 의미가 없어요.')
+  has('anim 필드',/\bAnimator\s+anim\s*;/,'Animator를 담을 anim 필드가 있어요.','private Animator anim; 필드를 클래스에 선언하세요.'),
+  inFn('Awake에서 캐싱','Awake',/\banim\s*=\s*GetComponentInChildren\s*<\s*Animator\s*>\s*\(/,'Awake에서 자식 Animator를 한 번만 가져와요.','Awake에서 anim = GetComponentInChildren<Animator>(); 로 저장하세요.'),
+  notIn('Update에서 GetComponent 금지','Update',/\bGetComponent\w*\b/,'Update에서 컴포넌트를 찾지 않아요.','Update에서는 필드 anim을 쓰세요.'),
+  notIn('Update에서 지역 변수 금지','Update',/\bAnimator\s+\w+\s*=/,'Update에서 새 지역 변수를 만들지 않아요.','Update 안의 Animator anim = ... 은 필드를 가려요. 지우세요.')
  ],
  test:(api,ok)=>{
-  const anim=api.mk.anim();
-  api.env.components.Animator=anim;
+  const anim=api.mk.anim();api.env.components.Animator=anim;
   api.call('Awake');
   api.env.getCalls=0;
-  let held=true;api.env.Input.GetKey=k=>k==='D'&&held;
+  let axis=1;api.env.Input.GetAxisRaw=()=>axis;
   for(let i=0;i<10;i++)api.call('Update');
   const n=api.env.getCalls;
-  ok('GetComponent 호출 횟수',n===0,'Update 10번 동안 GetComponent를 한 번도 호출하지 않았어요.',`Update 10번 동안 GetComponent를 ${n}번 호출했어요. 캐싱한 필드를 쓰세요.`);
+  ok('찾는 횟수',n===0,'Update 10번 동안 컴포넌트를 한 번도 찾지 않았어요.',`Update 10번 동안 ${n}번 찾았어요. Awake에서 한 번만 찾으세요.`);
   const val=()=>{const l=anim.log.filter(x=>x[0]==='SetBool'&&x[1]==='Run');return l.length?l[l.length-1][2]:undefined};
-  ok('누르면 켜짐',val()===true,'D 키를 누르면 Run이 true예요.','D 키를 누르는 동안 SetBool("Run", true)가 불려야 해요.');
-  held=false;api.call('Update');
-  ok('떼면 꺼짐',val()===false,'D 키를 떼면 Run이 false예요.','D 키를 떼면 SetBool("Run", false)가 불려야 해요.');
+  ok('입력 있음',val()===true,'입력이 있으면 Run이 true예요.','입력이 있는 동안 SetBool("Run", true)가 불려야 해요.');
+  axis=0;api.call('Update');
+  ok('입력 없음',val()===false,'입력이 없으면 Run이 false예요.','입력이 없으면 SetBool("Run", false)가 불려야 해요.');
  },
- hints:['GetComponent는 매 프레임 부르면 같은 일을 반복해요.','결과를 담아 둘 필드를 만들고 Awake에서 한 번만 채워요.','Update에서는 필드 anim을 그대로 써요.'],
- why:'Animator, Rigidbody, Collider, AudioSource 등 자주 쓰는 컴포넌트는 모두 같은 방식으로 캐싱해요. 대상만 바뀔 뿐 구조는 같아요.',
- concepts:[['컴포넌트 캐싱','자주 쓰는 컴포넌트 참조를 필드에 저장해 재사용한다.']]});
+ hints:['Animator가 루트에 없으면 GetComponent로는 못 찾고, 자식까지 뒤지는 GetComponentInChildren을 써야 해요. 이 검색은 더 비싸요.','결과를 담을 필드를 만들고 Awake에서 한 번만 채우세요.','Update에서는 필드 anim을 그대로 쓰세요.'],
+ why:'자식 계층까지 뒤지는 GetComponentInChildren은 GetComponent보다 비용이 커서 캐싱의 이득이 더 커요. 어디에 붙어 있는지에 따라 검색 함수가 달라진다는 점을 기억하세요.',
+ concepts:[['GetComponentInChildren','자기 자신과 자식 오브젝트에서 컴포넌트를 찾는다. 계층을 순회하므로 반복 호출을 피한다.'],['컴포넌트 캐싱','한 번 찾은 컴포넌트를 필드에 저장해 재사용한다.']]});
 
-QB({id:'x66',cat:'components',stage:1,level:2,title:'점프 스크립트에 필요한 컴포넌트 보장하기',
- story:'Jumper는 Rigidbody2D와 BoxCollider2D가 있어야 동작해요. 그런데 동료가 이 스크립트만 빈 오브젝트에 붙였다가 NullReferenceException을 만났어요. 필요한 컴포넌트가 없으면 Unity가 자동으로 붙여 주게 하고, 실수로 스크립트를 두 번 붙이는 일도 막아 주세요.',
- goals:['Jumper를 붙이면 Rigidbody2D와 BoxCollider2D가 자동으로 함께 붙게 한다','같은 오브젝트에 Jumper를 두 번 붙일 수 없게 한다'],
- limits:['코드에서 AddComponent로 직접 붙이지 않는다 — 특성(Attribute)으로 해결한다'],
+QB({id:'x65',cat:'components',stage:1,level:1,title:'씬의 점수판을 매 프레임 찾고 있다',
+ story:'생존 시간을 점수판(ScoreBoard)에 더하는 스크립트예요. 그런데 Update에서 매 프레임 FindObjectOfType으로 씬 전체를 뒤져 점수판을 찾고 있어요. 씬 전체 검색은 특히 비싼 작업이에요. 다른 오브젝트인 점수판은 Start에서 한 번만 찾아 두세요.',
+ goals:['ScoreBoard를 담을 필드(board)를 만든다','Start에서 FindObjectOfType으로 한 번만 가져온다','Update에서는 board.seconds에 Time.deltaTime을 더한다'],
+ limits:['Update 안에서 Find 계열을 호출하지 않는다','Awake가 아니라 Start에서 가져온다 (다른 오브젝트이므로)'],
+ api:'FindObjectOfType<T>(), Time.deltaTime',
  starter:C`
 using UnityEngine;
 
-// TODO: 필요한 컴포넌트를 보장하고, 중복 부착을 막는 특성을 붙이세요
-public class Jumper : MonoBehaviour
+public class SurvivalTimer : MonoBehaviour
 {
-    private Rigidbody2D rb;
-
-    void Awake()
+    void Update()
     {
-        rb = GetComponent<Rigidbody2D>();
+        // 매 프레임 씬 전체를 뒤지고 있어요
+        ScoreBoard board = FindObjectOfType<ScoreBoard>();
+        board.seconds += Time.deltaTime;
     }
+}
+
+public class ScoreBoard : MonoBehaviour
+{
+    public float seconds;
 }`,
  solution:C`
 using UnityEngine;
 
-[RequireComponent(typeof(Rigidbody2D), typeof(BoxCollider2D))]
-[DisallowMultipleComponent]
-public class Jumper : MonoBehaviour
+public class SurvivalTimer : MonoBehaviour
 {
-    private Rigidbody2D rb;
+    private ScoreBoard board;
 
-    void Awake()
+    void Start()
     {
-        rb = GetComponent<Rigidbody2D>();
+        board = FindObjectOfType<ScoreBoard>();
     }
+
+    void Update()
+    {
+        board.seconds += Time.deltaTime;
+    }
+}
+
+public class ScoreBoard : MonoBehaviour
+{
+    public float seconds;
 }`,
- alts:[C`
+ rules:[
+  has('board 필드',/\bScoreBoard\s+board\s*;/,'ScoreBoard를 담을 board 필드가 있어요.','private ScoreBoard board; 필드를 SurvivalTimer에 선언하세요.'),
+  inFn('Start에서 캐싱','Start',/\bboard\s*=\s*FindObjectOfType\s*<\s*ScoreBoard\s*>\s*\(/,'Start에서 점수판을 한 번만 찾아요.','Start에서 board = FindObjectOfType<ScoreBoard>(); 로 저장하세요.'),
+  notIn('Update에서 Find 금지','Update',/\bFind\w*\s*[<(]/,'Update에서 씬을 뒤지지 않아요.','Update에서는 필드 board를 쓰세요.'),
+  notIn('Update에서 지역 변수 금지','Update',/\bScoreBoard\s+\w+\s*=/,'Update에서 새 지역 변수를 만들지 않아요.','Update 안의 ScoreBoard board = ... 는 필드를 가려요. 지우세요.')
+ ],
+ test:(api,ok)=>{
+  const sb={seconds:0};let reads=0;
+  Object.defineProperty(api.env.components,'ScoreBoard',{get(){reads++;return sb},configurable:true,enumerable:true});
+  api.env.Time.deltaTime=0.5;
+  let err=null;
+  try{api.call('Start');for(let i=0;i<10;i++)api.call('Update')}catch(e){err=e}
+  ok('에러 없이 실행',!err,'에러 없이 실행돼요.','board가 비어 있어서 에러가 나요. Start에서 board에 저장하세요.');
+  ok('검색 횟수',!err&&reads<=1,'점수판을 한 번만 찾았어요.',`10프레임 동안 ${reads}번 찾았어요. Start에서 한 번만 찾으세요.`);
+  ok('시간 누적',!err&&Math.abs(sb.seconds-5)<1e-6,'10프레임 × 0.5초 = 5초가 쌓였어요.',`seconds가 ${sb.seconds} 입니다. 5여야 해요.`);
+ },
+ hints:['FindObjectOfType은 씬의 모든 오브젝트를 뒤져요. 컴포넌트 캐싱 중에서도 가장 비싼 편이에요.','결과를 담을 필드를 만들고, 한 번만 실행되는 메서드에서 채우세요.','점수판은 다른 오브젝트라서 Awake보다 Start가 안전해요.'],
+ why:'씬 전체를 검색하는 Find 계열은 매 프레임 쓰면 성능이 크게 떨어져요. 한 번 찾아 필드에 저장하고, 다른 오브젝트에 접근하는 일이니 Start에서 하는 것이 정석입니다.',
+ concepts:[['FindObjectOfType','씬 전체에서 해당 타입의 오브젝트를 찾는다. 비용이 크므로 반복 호출하지 않고 캐싱한다.'],['Awake와 Start의 차이','다른 오브젝트에 접근하는 초기화는 Start에서 한다.']]});
+
+QB({id:'x66',cat:'components',stage:1,level:2,title:'부딪힌 상대가 아이템이 아닐 수도 있다',
+ story:'플레이어가 트리거에 닿을 때마다 상대의 Pickup 컴포넌트를 꺼내 코인을 모아요. 그런데 벽이나 적처럼 Pickup이 없는 오브젝트에 닿으면 NullReferenceException이 나요. 상대는 매번 달라서 캐싱할 수 없으니, 꺼낼 때마다 있는지 확인해야 해요.',
+ goals:['OnTriggerEnter2D에서 상대(other)의 Pickup을 가져온다','Pickup이 있으면 coins에 value를 더하고 Collect()를 호출한다','Pickup이 없는 오브젝트와 닿아도 에러 없이 무시한다'],
+ limits:['상대의 컴포넌트는 Awake에서 캐싱할 수 없다 (닿을 때마다 달라진다)'],
+ api:'other.TryGetComponent<T>(out T), other.GetComponent<T>()',
+ starter:C`
 using UnityEngine;
 
-[RequireComponent(typeof(Rigidbody2D))]
-[RequireComponent(typeof(BoxCollider2D))]
-[DisallowMultipleComponent]
-public class Jumper : MonoBehaviour
+public class Collector : MonoBehaviour
 {
-    private Rigidbody2D rb;
+    public int coins;
 
-    void Awake()
+    void OnTriggerEnter2D(Collider2D other)
     {
-        rb = GetComponent<Rigidbody2D>();
+        Pickup p = other.GetComponent<Pickup>();
+        coins += p.value;
+        p.Collect();
     }
-}`],
+}
+
+public class Pickup : MonoBehaviour
+{
+    public int value = 1;
+    public void Collect() { Destroy(gameObject); }
+}`,
+ solution:C`
+using UnityEngine;
+
+public class Collector : MonoBehaviour
+{
+    public int coins;
+
+    void OnTriggerEnter2D(Collider2D other)
+    {
+        Pickup p = other.GetComponent<Pickup>();
+        if (p == null) return;
+        coins += p.value;
+        p.Collect();
+    }
+}
+
+public class Pickup : MonoBehaviour
+{
+    public int value = 1;
+    public void Collect() { Destroy(gameObject); }
+}`,
  rules:[
-  fx('Rigidbody2D 요구',c=>/\[RequireComponent\([^\]]*typeof\(\s*Rigidbody2D\s*\)/.test(c),'Rigidbody2D를 요구해요.','[RequireComponent(typeof(Rigidbody2D))] 를 클래스 위에 붙이세요.'),
-  fx('BoxCollider2D 요구',c=>/\[RequireComponent\([^\]]*typeof\(\s*BoxCollider2D\s*\)/.test(c),'BoxCollider2D도 요구해요.','BoxCollider2D도 RequireComponent에 포함하세요. 하나의 특성에 typeof를 쉼표로 이어도 되고 특성을 두 번 써도 돼요.'),
-  has('중복 부착 방지',/\[DisallowMultipleComponent\]/,'같은 오브젝트에 두 번 붙일 수 없어요.','[DisallowMultipleComponent] 특성을 붙이면 같은 컴포넌트를 두 번 붙일 수 없어요.'),
-  fx('특성이 클래스 바로 위',c=>/\]\s*(?:public\s+)?class\s+Jumper/.test(c),'특성이 Jumper 클래스에 붙어 있어요.','특성은 class 선언 바로 위에 적어야 그 클래스에 적용돼요.'),
-  no('AddComponent 금지',/\bAddComponent\b/,'AddComponent 없이 특성으로 해결했어요.','이번에는 AddComponent 대신 특성(Attribute)으로 해결해 보세요.')
+  inFn('상대에서 Pickup 가져오기','OnTriggerEnter2D',/other\s*\.\s*(?:GetComponent|TryGetComponent)\s*<\s*Pickup\s*>/,'닿은 상대에서 Pickup을 꺼내요.','other.GetComponent<Pickup>() 또는 other.TryGetComponent<Pickup>(…) 으로 꺼내세요.'),
+  inFn('null 확인','OnTriggerEnter2D',/\bp\s*==\s*null|\bp\s*!=\s*null|!\s*p\b|TryGetComponent|\bp\s+is\s+(?:not\s+)?null/,'Pickup이 없는 경우를 확인해요.','Pickup이 없으면 건너뛰도록 null을 확인하세요.')
  ],
- hints:['Unity에는 "이 스크립트는 이 컴포넌트가 꼭 필요해"라고 선언하는 특성이 있어요. 이름에 Require가 들어갑니다.','typeof(컴포넌트 이름)을 인자로 넘겨요.','중복 부착을 막는 특성은 DisallowMultipleComponent 예요.'],
- why:'[RequireComponent]는 의존하는 컴포넌트를 선언해 두면 부착 시 자동으로 붙여 주고, 필요한 컴포넌트를 지우려는 것도 막아 줘요. 빠뜨려서 생기는 NullReferenceException을 에디터 단계에서 차단해요.',
- concepts:[['[RequireComponent]','스크립트가 의존하는 컴포넌트를 선언한다. 붙일 때 자동으로 함께 붙고 의존 컴포넌트는 지울 수 없다.']]});
+ test:(api,ok)=>{
+  let collected=0;
+  const item=api.mk.go('Coin',{Pickup:{value:5,Collect(){collected++}}});
+  let e1=null;try{api.call('OnTriggerEnter2D',item)}catch(e){e1=e}
+  ok('아이템 줍기',!e1&&api.get('coins')===5&&collected===1,'아이템에 닿으면 5코인을 얻고 Collect가 불려요.',e1?'아이템에 닿았는데 에러가 나요.':`coins=${api.get('coins')}, Collect ${collected}번. coins 5, Collect 1번이어야 해요.`);
+  const wall=api.mk.go('Wall',{});
+  let e2=null;try{api.call('OnTriggerEnter2D',wall)}catch(e){e2=e}
+  ok('벽은 무시',!e2&&api.get('coins')===5,'Pickup이 없는 벽과 닿아도 에러 없이 무시해요.','Pickup이 없는 오브젝트에서 에러가 나요. null이면 return하세요.');
+ },
+ hints:['Pickup이 없는 오브젝트에서 GetComponent<Pickup>()은 null을 돌려줘요.','null인 p의 value를 읽으면 NullReferenceException이에요.','p가 null이면 바로 return해서 무시하세요.'],
+ why:'충돌 상대처럼 매번 달라지는 대상의 컴포넌트는 캐싱할 수 없어요. 대신 "있을 수도 없을 수도 있다"는 전제로 null 확인을 해야 합니다. 캐싱할 수 있는 것(자기 컴포넌트)과 없는 것(상대 컴포넌트)을 구분하는 것이 중요해요.',
+ concepts:[['충돌 상대의 컴포넌트','상대는 매번 달라 캐싱할 수 없으므로 닿을 때마다 가져오고 null을 확인한다.'],['TryGetComponent','컴포넌트가 있으면 true와 함께 값을 돌려주고 없으면 false.']]});
 
 QB({id:'x67',cat:'components',stage:1,level:2,title:'효과음 스크립트에 AudioSource 보장하기',
  story:'SoundPlayer는 AudioSource가 있어야 소리를 낼 수 있어요. 그런데 AudioSource 없이 붙였다가 NullReferenceException이 났어요. AudioSource가 없으면 Unity가 자동으로 붙여 주게 하고, 같은 오브젝트에 SoundPlayer를 두 번 붙이는 것도 막아 주세요.',
@@ -1210,231 +1228,199 @@ public class SoundPlayer : MonoBehaviour
  why:'컴포넌트 의존성은 코드로 "선언"해 두는 편이 안전해요. 문서에 "AudioSource 필요"라고 적는 것보다, 특성이 자동으로 붙이고 지우지 못하게 막아 주는 쪽이 실수를 확실히 줄여요.',
  concepts:[['의존성 선언','스크립트가 필요한 컴포넌트를 특성으로 알려 자동 부착과 삭제 방지를 얻는다.']]});
 
-QB({id:'x68',cat:'components',stage:1,level:2,title:'적에게 필요한 컴포넌트를 모두 보장하기',
- story:'Enemy는 Health와 Mover 컴포넌트가 함께 있어야 동작해요. 동료가 Enemy만 붙였다가 NullReferenceException을 만났어요. Enemy를 붙이면 Health와 Mover가 자동으로 함께 붙게 하고, Enemy를 두 번 붙이는 일도 막아 주세요.',
- goals:['Enemy를 붙이면 Health와 Mover가 자동으로 함께 붙게 한다','같은 오브젝트에 Enemy를 두 번 붙일 수 없게 한다'],
- limits:['코드에서 AddComponent로 직접 붙이지 않는다 — 특성(Attribute)으로 해결한다','Health와 Mover 클래스는 고치지 않는다'],
+QB({id:'x68',cat:'components',stage:1,level:2,title:'오브젝트의 모든 콜라이더를 한꺼번에 끄기',
+ story:'유령 상태가 되면 이 오브젝트의 모든 Collider2D를 꺼야 해요. 발판 오브젝트에는 콜라이더가 여러 개 붙어 있는데, GetComponent는 첫 번째 하나만 돌려줘서 나머지는 계속 충돌해요. 같은 타입의 컴포넌트가 여러 개일 때는 GetComponents로 전부 가져와 반복하세요.',
+ goals:['Ghost(): 이 오브젝트의 모든 Collider2D의 enabled를 false로 만든다','Solid(): 모든 Collider2D의 enabled를 true로 되돌린다'],
+ limits:['GetComponent(단수)는 쓰지 않는다','Ghost와 Solid는 같은 방식으로 컴포넌트 목록을 가져온다'],
+ api:'GetComponents<T>(), foreach, collider.enabled',
  starter:C`
 using UnityEngine;
 
-public class Health : MonoBehaviour
+public class Platform : MonoBehaviour
 {
-    public int hp = 10;
-}
-
-public class Mover : MonoBehaviour
-{
-    public float speed = 2f;
-}
-
-// TODO: 필요한 컴포넌트를 보장하고, 중복 부착을 막는 특성을 붙이세요
-public class Enemy : MonoBehaviour
-{
-    void Start()
+    public void Ghost()
     {
-        Health h = GetComponent<Health>();
-        Mover m = GetComponent<Mover>();
-        Debug.Log(h.hp + " " + m.speed);
+        Collider2D col = GetComponent<Collider2D>();
+        col.enabled = false;
+    }
+
+    public void Solid()
+    {
+        Collider2D col = GetComponent<Collider2D>();
+        col.enabled = true;
     }
 }`,
  solution:C`
 using UnityEngine;
 
-public class Health : MonoBehaviour
+public class Platform : MonoBehaviour
 {
-    public int hp = 10;
-}
-
-public class Mover : MonoBehaviour
-{
-    public float speed = 2f;
-}
-
-[RequireComponent(typeof(Health), typeof(Mover))]
-[DisallowMultipleComponent]
-public class Enemy : MonoBehaviour
-{
-    void Start()
+    public void Ghost()
     {
-        Health h = GetComponent<Health>();
-        Mover m = GetComponent<Mover>();
-        Debug.Log(h.hp + " " + m.speed);
+        foreach (Collider2D col in GetComponents<Collider2D>())
+        {
+            col.enabled = false;
+        }
+    }
+
+    public void Solid()
+    {
+        foreach (Collider2D col in GetComponents<Collider2D>())
+        {
+            col.enabled = true;
+        }
     }
 }`,
- alts:[C`
-using UnityEngine;
-
-public class Health : MonoBehaviour
-{
-    public int hp = 10;
-}
-
-public class Mover : MonoBehaviour
-{
-    public float speed = 2f;
-}
-
-[RequireComponent(typeof(Health))]
-[RequireComponent(typeof(Mover))]
-[DisallowMultipleComponent]
-public class Enemy : MonoBehaviour
-{
-    void Start()
-    {
-        Health h = GetComponent<Health>();
-        Mover m = GetComponent<Mover>();
-        Debug.Log(h.hp + " " + m.speed);
-    }
-}`],
  rules:[
-  fx('Health 요구',c=>/\[RequireComponent\([^\]]*typeof\(\s*Health\s*\)/.test(c),'Health를 요구해요.','[RequireComponent(typeof(Health))] 를 Enemy 위에 붙이세요.'),
-  fx('Mover 요구',c=>/\[RequireComponent\([^\]]*typeof\(\s*Mover\s*\)/.test(c),'Mover도 요구해요.','Mover도 RequireComponent에 포함하세요. 하나의 특성에 typeof를 쉼표로 이어도 되고 특성을 두 번 써도 돼요.'),
-  has('중복 부착 방지',/\[DisallowMultipleComponent\]/,'같은 오브젝트에 두 번 붙일 수 없어요.','[DisallowMultipleComponent] 특성을 붙이면 같은 컴포넌트를 두 번 붙일 수 없어요.'),
-  fx('특성이 Enemy 바로 위',c=>/\]\s*(?:public\s+)?class\s+Enemy/.test(c),'특성이 Enemy 클래스에 붙어 있어요.','특성은 class 선언 바로 위에 적어야 그 클래스에 적용돼요.'),
-  no('AddComponent 금지',/\bAddComponent\b/,'AddComponent 없이 특성으로 해결했어요.','이번에는 AddComponent 대신 특성(Attribute)으로 해결해 보세요.')
+  inFn('Ghost에서 GetComponents','Ghost',/GetComponents\s*<\s*Collider2D\s*>\s*\(/,'Ghost에서 모든 콜라이더를 가져와요.','Ghost에서 GetComponents<Collider2D>() 로 전부 가져오세요.'),
+  inFn('Solid에서 GetComponents','Solid',/GetComponents\s*<\s*Collider2D\s*>\s*\(/,'Solid에서도 모든 콜라이더를 가져와요.','Solid에서도 GetComponents<Collider2D>() 를 쓰세요.'),
+  no('단수 GetComponent 금지',/\bGetComponent\s*<\s*Collider2D\s*>/,'단수 GetComponent를 쓰지 않아요.','GetComponent는 첫 번째 하나만 돌려줘요. GetComponents를 쓰세요.')
  ],
- hints:['필요한 컴포넌트를 선언하는 특성은 RequireComponent예요.','내 스크립트(Health, Mover)도 typeof로 넘길 수 있어요.','중복 부착을 막는 특성은 DisallowMultipleComponent 예요.'],
- why:'RequireComponent는 유니티 기본 컴포넌트뿐 아니라 내가 만든 스크립트에도 똑같이 써요. 조합으로 만든 오브젝트에서 필요한 조각이 빠지는 실수를 에디터 단계에서 막아 줘요.',
- concepts:[['직접 만든 컴포넌트 요구','RequireComponent에는 Rigidbody 같은 기본 컴포넌트뿐 아니라 내가 만든 MonoBehaviour도 넘길 수 있다.']]});
+ test:(api,ok)=>{
+  const c={enabled:true};api.env.components.Collider2D=c;
+  let err=null;try{api.call('Ghost')}catch(e){err=e}
+  ok('Ghost',!err&&c.enabled===false,'Ghost가 콜라이더를 껐어요.',err?'Ghost에서 에러가 나요.':'Ghost 뒤에 콜라이더의 enabled가 false여야 해요.');
+  err=null;try{api.call('Solid')}catch(e){err=e}
+  ok('Solid',!err&&c.enabled===true,'Solid가 콜라이더를 다시 켰어요.',err?'Solid에서 에러가 나요.':'Solid 뒤에 콜라이더의 enabled가 true여야 해요.');
+ },
+ hints:['같은 타입 컴포넌트가 여러 개면 GetComponent는 그중 하나만 돌려줘요.','GetComponents(복수형)는 배열을 돌려줘요.','foreach로 배열의 각 콜라이더를 순회하며 enabled를 바꾸세요.'],
+ why:'콜라이더, 오디오 소스처럼 한 오브젝트에 여러 개 붙을 수 있는 컴포넌트는 GetComponents로 전부 가져와 순회해야 해요. 단수형 GetComponent는 첫 번째 하나만 다루므로 나머지가 빠집니다.',
+ concepts:[['GetComponents','같은 타입의 컴포넌트를 모두 배열로 가져온다. 단수형은 첫 번째 하나만 돌려준다.'],['foreach 순회','배열의 각 원소에 같은 작업을 적용한다.']]});
 
-QB({id:'x69',cat:'components',stage:1,level:3,title:'상속보다 조합: Unit 쪼개기',
- story:'전사, 포탑, 벽이 모두 Unit을 상속하고 있어요. 그런데 벽은 공격하지 않는데도 power와 Attack을 물려받았고, 포탑은 체력이 필요 없는 경우도 생길 예정이에요. 상속 하나에 모든 기능을 담는 대신 기능별 컴포넌트로 나누고, 필요한 것만 붙여서 조합해 주세요.',
- goals:['Unit 클래스를 없애고, 체력을 담당하는 Health(hp, TakeDamage)와 공격을 담당하는 Attacker(power, Attack)로 나눈다','Wall은 Health만 필요로 한다 ([RequireComponent]로 선언)','Wall에는 공격 관련 코드(power, Attack, Attacker)가 없다'],
- limits:['모든 클래스는 MonoBehaviour만 상속한다 (다른 클래스 상속 금지)','Health와 Attacker는 서로를 참조하지 않는다'],
+QB({id:'x69',cat:'components',stage:1,level:3,title:'체력이 0이 되면 이동 컴포넌트만 멈추기',
+ story:'Health와 Mover는 서로 독립된 컴포넌트예요. Health가 0이 되면 같은 오브젝트의 Mover를 멈춰야 해요(Mover.enabled = false). 그런데 포탑처럼 Mover가 없는 오브젝트도 있어요. Health는 Mover가 있다는 가정 없이, 있을 때만 멈추게 만들어 주세요.',
+ goals:['Awake에서 같은 오브젝트의 Mover를 가져와 mover에 저장한다 (없으면 null)','hp가 0 이하가 되는 순간 mover가 있으면 mover.enabled를 false로 만든다','Mover가 없는 오브젝트에서도 에러가 나지 않는다'],
+ limits:['Health는 Mover를 상속하지 않는다 (서로 독립된 컴포넌트)','TakeDamage 안에서 GetComponent를 호출하지 않는다'],
+ api:'TryGetComponent<T>(out T), GetComponent<T>(), behaviour.enabled',
  starter:C`
 using UnityEngine;
 
-// 모든 유닛이 Unit을 상속하는 구조입니다
-public class Unit : MonoBehaviour
+public class Health : MonoBehaviour
 {
-    public int hp = 20;
-    public int power = 3;
+    public int hp = 3;
+    private Mover mover;
 
-    public void TakeDamage(int dmg) { hp -= dmg; }
-    public void Attack(Unit target) { target.TakeDamage(power); }
+    void Awake()
+    {
+    }
+
+    public void TakeDamage(int dmg)
+    {
+        hp -= dmg;
+        if (hp <= 0)
+        {
+            Debug.Log("죽음");
+        }
+    }
 }
 
-public class Wall : Unit
+public class Mover : MonoBehaviour
 {
-    // 벽은 공격하지 않는데 Attack과 power를 물려받았습니다
+    public float speed = 3f;
 }`,
  solution:C`
 using UnityEngine;
 
 public class Health : MonoBehaviour
 {
-    public int hp = 20;
+    public int hp = 3;
+    private Mover mover;
 
-    public void TakeDamage(int dmg) { hp -= dmg; }
+    void Awake()
+    {
+        TryGetComponent<Mover>(out mover);
+    }
+
+    public void TakeDamage(int dmg)
+    {
+        hp -= dmg;
+        if (hp <= 0 && mover != null)
+        {
+            mover.enabled = false;
+        }
+    }
 }
+
+public class Mover : MonoBehaviour
+{
+    public float speed = 3f;
+}`,
+ rules:[
+  inFn('Awake에서 Mover 가져오기','Awake',/\bmover\s*=\s*GetComponent\s*<\s*Mover\s*>\s*\(|TryGetComponent\s*(?:<\s*Mover\s*>)?\s*\(\s*out\s+mover\b/,'Awake에서 Mover를 가져와요.','Awake에서 TryGetComponent<Mover>(out mover); 로 가져오세요.'),
+  notIn('TakeDamage에서 GetComponent 금지','TakeDamage',/GetComponent/,'TakeDamage에서 다시 찾지 않아요.','Awake에서 한 번만 가져오세요.'),
+  notInClass('Health는 Mover를 상속하지 않음','Health',/class\s+Health\s*:\s*Mover/,'Health가 Mover를 상속하지 않아요.','Health는 Mover와 독립된 컴포넌트여야 해요.'),
+  inFn('null 확인','TakeDamage',/mover\s*!=\s*null|mover\s*==\s*null|!\s*mover\b|mover\s+is\s+(?:not\s+)?null|mover\?\./,'Mover가 없는 경우를 확인해요.','mover가 null일 수 있어요. 사용하기 전에 확인하세요.')
+ ],
+ test:(api,ok)=>{
+  const mv={enabled:true};api.env.components.Mover=mv;
+  let e1=null;try{api.call('Awake');api.call('TakeDamage',1)}catch(e){e1=e}
+  ok('살아 있으면 계속 이동',!e1&&mv.enabled===true,'체력이 남아 있으면 Mover는 그대로예요.',e1?'에러가 나요.':'체력이 남아 있는데 Mover가 꺼졌어요.');
+  try{api.call('TakeDamage',5)}catch(e){e1=e}
+  ok('죽으면 이동 정지',!e1&&mv.enabled===false,'체력이 0 이하가 되자 Mover가 멈췄어요.',e1?'에러가 나요.':'hp가 0 이하가 되면 mover.enabled를 false로 바꾸세요.');
+  delete api.env.components.Mover;api.set('hp',3);api.set('mover',null);
+  let e2=null;try{api.call('Awake');api.call('TakeDamage',5)}catch(e){e2=e}
+  ok('Mover 없는 오브젝트',!e2,'Mover가 없어도 에러 없이 동작해요.','Mover가 없는 오브젝트에서 에러가 나요. null을 확인하세요.');
+ },
+ hints:['컴포넌트들은 서로를 직접 상속하지 않고, 필요할 때 GetComponent로 찾아 협력해요.','Mover가 없는 오브젝트에서는 mover가 null이에요.','죽는 순간 mover가 있을 때만 enabled를 false로 바꾸세요.'],
+ why:'조합 설계에서 컴포넌트끼리는 "상대가 있으면 협력하고, 없어도 동작한다"는 느슨한 관계가 좋아요. 필요한 상대를 한 번만 찾아 두고 null을 확인하면 어떤 조합에도 재사용할 수 있습니다.',
+ concepts:[['컴포넌트 간 협력','독립된 컴포넌트가 GetComponent로 서로를 찾아 필요한 일만 요청한다. 없어도 동작하게 null을 확인한다.'],['has-a 설계','"무엇이다" 대신 "무엇을 가졌다"로 설계해 필요한 컴포넌트만 붙인다.']]});
+
+QB({id:'x70',cat:'components',stage:1,level:3,title:'무기 종류 if문을 컴포넌트 교체로 바꾸기',
+ story:'공격자가 무기 종류 문자열("sword", "bow")을 보고 if로 데미지를 정하고 있어요. 무기가 늘어날 때마다 Attacker를 고쳐야 하죠. 무기를 Weapon 컴포넌트로 분리하고, Attacker는 가진 Weapon의 damage만 읽도록 바꿔 주세요. 무기 교체는 Weapon을 갈아 끼우는 것으로 끝나야 해요.',
+ goals:['Weapon 컴포넌트를 만든다 (damage 필드, 기본값 1)','Attacker는 Weapon을 담는 필드(weapon)를 가진다','Attack()은 weapon.damage를 반환한다','weapon이 비어 있으면 0을 반환한다'],
+ limits:['Attacker 안에 무기 종류를 문자열로 비교하는 코드를 남기지 않는다'],
+ api:'public 필드로 컴포넌트 참조, null 확인',
+ starter:C`
+using UnityEngine;
 
 public class Attacker : MonoBehaviour
 {
-    public int power = 3;
+    public string type = "sword";
 
-    public void Attack(Health target) { target.TakeDamage(power); }
-}
-
-[RequireComponent(typeof(Health))]
-public class Wall : MonoBehaviour
-{
-    // 공격 기능 없음: Health만 필요
-}`,
- alts:[C`
-using UnityEngine;
-
-public class Health : MonoBehaviour
-{
-    public int hp = 20;
-
-    public void TakeDamage(int dmg) { hp -= dmg; }
-}
-
-public class Attacker : MonoBehaviour
-{
-    public int power = 3;
-
-    public void Attack(GameObject target) { }
-}
-
-[RequireComponent(typeof(Health))]
-public class Wall : MonoBehaviour
-{
-}`],
- rules:[
-  has('Health 컴포넌트',/\bclass\s+Health\s*:\s*MonoBehaviour\b/,'체력을 담당하는 Health 컴포넌트를 만들었어요.','class Health : MonoBehaviour 를 만드세요.'),
-  inClass('Health 내용','Health',/\bhp\b[\s\S]*\bTakeDamage\s*\(|\bTakeDamage\s*\([\s\S]*\bhp\b/,'Health가 hp와 TakeDamage를 가지고 있어요.','Health에 hp 필드와 TakeDamage 메서드를 넣으세요.'),
-  has('Attacker 컴포넌트',/\bclass\s+Attacker\s*:\s*MonoBehaviour\b/,'공격을 담당하는 Attacker 컴포넌트를 만들었어요.','class Attacker : MonoBehaviour 를 만드세요.'),
-  inClass('Attacker 내용','Attacker',/\bpower\b[\s\S]*\bAttack\s*\(|\bAttack\s*\([\s\S]*\bpower\b/,'Attacker가 power와 Attack을 가지고 있어요.','Attacker에 power 필드와 Attack 메서드를 넣으세요.'),
-  no('Unit 제거',/\bclass\s+Unit\b/,'Unit 클래스를 없앴어요.','Unit 클래스를 없애고 기능을 Health와 Attacker로 나누세요.'),
-  no('MonoBehaviour 외 상속 금지',/\bclass\s+\w+\s*:\s*(?!MonoBehaviour\b)\w+/,'모든 클래스가 MonoBehaviour만 상속해요.','다른 클래스를 상속하지 마세요. 필요한 기능은 컴포넌트를 함께 붙여서 조합합니다.'),
-  has('Wall은 Health 요구',/\[RequireComponent\(\s*typeof\(\s*Health\s*\)\s*\)\]\s*(?:public\s+)?class\s+Wall\b/,'Wall이 Health를 요구해요.','Wall 위에 [RequireComponent(typeof(Health))] 를 붙여 체력이 필요하다고 선언하세요.'),
-  notInClass('Wall에 공격 없음','Wall',/\b(?:power|Attack|Attacker)\b/,'Wall에는 공격 관련 코드가 없어요.','Wall은 공격하지 않으니 power, Attack, Attacker를 갖지 않아야 해요.'),
-  notInClass('Health는 Attacker를 모름','Health',/\bAttacker\b/,'Health가 Attacker를 참조하지 않아요.','Health와 Attacker는 서로 독립이어야 재사용하기 좋아요.'),
-  notInClass('Attacker는 Health 클래스를 상속·보유하지 않음','Attacker',/\bclass\s+Attacker\s*:\s*Health\b/,'Attacker가 Health를 상속하지 않아요.','Attacker는 MonoBehaviour만 상속하세요.')
- ],
- hints:['"무엇이다(is-a)" 대신 "무엇을 가졌다(has-a)"로 생각해 보세요. 벽은 체력을 가졌고, 전사는 체력과 공격을 가졌어요.','체력 관련 필드·메서드를 모은 클래스 하나, 공격 관련을 모은 클래스 하나를 MonoBehaviour로 만드세요.','Wall에는 필요한 컴포넌트만 [RequireComponent]로 선언해요.'],
- why:'깊은 상속은 "물려받고 싶지 않은 것까지 물려받는" 문제와 "새 조합이 필요할 때마다 계층이 꼬이는" 문제가 생겨요. 기능별로 쪼갠 컴포넌트는 필요한 것만 골라 붙이며 재사용할 수 있어요.',
- concepts:[['컴포넌트 조합(Composition)','기능을 작은 컴포넌트로 나누어 필요한 것만 붙여 쓰는 설계. 깊은 상속 계층보다 유연하다.']]});
-
-QB({id:'x70',cat:'components',stage:1,level:3,title:'상속보다 조합: Interactable 쪼개기',
- story:'문, 창문, 금고가 모두 Interactable을 상속하고 있어요. 그런데 창문은 잠그는 기능이 필요 없는데도 locked와 Lock을 물려받았고, 곧 잠기기만 하고 열리지 않는 사물함이 추가될 예정이에요. 기능별 컴포넌트로 나누어 필요한 것만 붙여서 조합해 주세요.',
- goals:['Interactable 클래스를 없애고, 여닫기를 담당하는 Openable(isOpen, Open)과 잠금을 담당하는 Lockable(locked, Lock)으로 나눈다','Window는 Openable만 필요로 한다 ([RequireComponent]로 선언)','Window에는 잠금 관련 코드(locked, Lock, Lockable)가 없다'],
- limits:['모든 클래스는 MonoBehaviour만 상속한다 (다른 클래스 상속 금지)','Openable과 Lockable은 서로를 참조하지 않는다'],
- starter:C`
-using UnityEngine;
-
-// 모든 사물이 Interactable을 상속하는 구조입니다
-public class Interactable : MonoBehaviour
-{
-    public bool isOpen = false;
-    public bool locked = false;
-
-    public void Open() { isOpen = true; }
-    public void Lock() { locked = true; }
-}
-
-public class Window : Interactable
-{
-    // 창문은 잠그지 않는데 Lock과 locked를 물려받았습니다
+    public int Attack()
+    {
+        if (type == "sword") return 10;
+        if (type == "bow") return 6;
+        return 0;
+    }
 }`,
  solution:C`
 using UnityEngine;
 
-public class Openable : MonoBehaviour
+public class Attacker : MonoBehaviour
 {
-    public bool isOpen = false;
+    public Weapon weapon;
 
-    public void Open() { isOpen = true; }
+    public int Attack()
+    {
+        if (weapon == null) return 0;
+        return weapon.damage;
+    }
 }
 
-public class Lockable : MonoBehaviour
+public class Weapon : MonoBehaviour
 {
-    public bool locked = false;
-
-    public void Lock() { locked = true; }
-}
-
-[RequireComponent(typeof(Openable))]
-public class Window : MonoBehaviour
-{
-    // 잠금 기능 없음: Openable만 필요
+    public int damage = 1;
 }`,
  rules:[
-  has('Openable 컴포넌트',/\bclass\s+Openable\s*:\s*MonoBehaviour\b/,'여닫기를 담당하는 Openable 컴포넌트를 만들었어요.','class Openable : MonoBehaviour 를 만드세요.'),
-  inClass('Openable 내용','Openable',/\bisOpen\b[\s\S]*\bOpen\s*\(|\bOpen\s*\([\s\S]*\bisOpen\b/,'Openable이 isOpen과 Open을 가지고 있어요.','Openable에 isOpen 필드와 Open 메서드를 넣으세요.'),
-  has('Lockable 컴포넌트',/\bclass\s+Lockable\s*:\s*MonoBehaviour\b/,'잠금을 담당하는 Lockable 컴포넌트를 만들었어요.','class Lockable : MonoBehaviour 를 만드세요.'),
-  inClass('Lockable 내용','Lockable',/\blocked\b[\s\S]*\bLock\s*\(|\bLock\s*\([\s\S]*\blocked\b/,'Lockable이 locked와 Lock을 가지고 있어요.','Lockable에 locked 필드와 Lock 메서드를 넣으세요.'),
-  no('Interactable 제거',/\bclass\s+Interactable\b/,'Interactable 클래스를 없앴어요.','Interactable 클래스를 없애고 기능을 Openable과 Lockable로 나누세요.'),
-  no('MonoBehaviour 외 상속 금지',/\bclass\s+\w+\s*:\s*(?!MonoBehaviour\b)\w+/,'모든 클래스가 MonoBehaviour만 상속해요.','다른 클래스를 상속하지 마세요. 필요한 기능은 컴포넌트를 함께 붙여서 조합합니다.'),
-  has('Window는 Openable 요구',/\[RequireComponent\(\s*typeof\(\s*Openable\s*\)\s*\)\]\s*(?:public\s+)?class\s+Window\b/,'Window가 Openable을 요구해요.','Window 위에 [RequireComponent(typeof(Openable))] 를 붙여 여닫기가 필요하다고 선언하세요.'),
-  notInClass('Window에 잠금 없음','Window',/\b(?:locked|Lock|Lockable)\b/,'Window에는 잠금 관련 코드가 없어요.','Window는 잠그지 않으니 locked, Lock, Lockable을 갖지 않아야 해요.'),
-  notInClass('Openable은 Lockable을 모름','Openable',/\bLockable\b/,'Openable이 Lockable을 참조하지 않아요.','Openable과 Lockable은 서로 독립이어야 재사용하기 좋아요.'),
-  notInClass('Lockable은 Openable을 모름','Lockable',/\bOpenable\b/,'Lockable이 Openable을 참조하지 않아요.','Openable과 Lockable은 서로 독립이어야 재사용하기 좋아요.')
+  has('Weapon 클래스',/class\s+Weapon\s*:\s*MonoBehaviour/,'Weapon 컴포넌트를 만들었어요.','class Weapon : MonoBehaviour 를 만들고 damage 필드를 두세요.'),
+  inClass('Weapon에 damage','Weapon',/\bint\s+damage\b/,'Weapon에 damage가 있어요.','Weapon에 public int damage = 1; 을 두세요.'),
+  inClass('Attacker에 weapon 필드','Attacker',/\bWeapon\s+weapon\b/,'Attacker가 Weapon을 가졌어요.','Attacker에 public Weapon weapon; 필드를 두세요.'),
+  notInClass('무기 문자열 비교 금지','Attacker',/==\s*"(?:sword|bow)"|"(?:sword|bow)"\s*==/,'무기 종류를 문자열로 비교하지 않아요.','무기별 if를 없애고 weapon.damage를 읽으세요.')
  ],
- hints:['"무엇이다" 대신 "무엇을 가졌다"로 생각해 보세요. 창문은 여닫기만, 금고는 여닫기와 잠금을 가졌어요.','여닫기 관련을 모은 클래스 하나, 잠금 관련을 모은 클래스 하나를 MonoBehaviour로 만드세요.','Window에는 필요한 컴포넌트만 [RequireComponent]로 선언해요.'],
- why:'기능이 둘 이상 섞인 부모 클래스는 "일부만 필요한 자식"을 만들 때마다 불편해져요. 기능별 컴포넌트로 나눠 두면 사물함처럼 새로운 조합도 코드 수정 없이 붙여서 만들 수 있어요.',
- concepts:[['단일 책임','클래스 하나는 한 가지 역할만 맡게 한다. 여닫기와 잠금은 별개의 역할이다.']]});
+ test:(api,ok)=>{
+  api.set('weapon',{damage:7});
+  let r1,e1=null;try{r1=api.call('Attack')}catch(e){e1=e}
+  ok('무기 데미지',!e1&&r1===7,'가진 무기의 damage(7)를 반환해요.',e1?'에러가 나요.':`Attack()이 ${r1} 입니다. weapon.damage인 7이어야 해요.`);
+  api.set('weapon',{damage:20});
+  ok('무기 교체',api.call('Attack')===20,'무기를 갈아 끼우면 데미지가 바뀌어요.','다른 Weapon으로 바꾸면 그 damage가 반환되어야 해요.');
+  api.set('weapon',null);
+  let r3,e3=null;try{r3=api.call('Attack')}catch(e){e3=e}
+  ok('무기 없음',!e3&&r3===0,'무기가 없으면 0이에요.','weapon이 null일 때 에러가 나거나 0이 아니에요.');
+ },
+ hints:['무기마다 달라지는 값(damage)은 Attacker가 아니라 무기가 가지고 있어야 해요.','Attacker는 Weapon 필드 하나만 가지고, 그 값을 읽기만 하면 돼요.','무기가 비어 있을 때를 위해 null을 확인하세요.'],
+ why:'종류별 if/문자열 분기는 새 종류가 생길 때마다 기존 코드를 고쳐야 해요. 달라지는 부분을 컴포넌트로 분리하고 "가진 것을 쓴다"로 바꾸면, 새 무기는 새 데이터만 추가하면 됩니다.',
+ concepts:[['has-a 설계','달라지는 부분을 별도 컴포넌트로 분리해 가지게 하면 교체가 쉽다.'],['분기 제거','종류에 따른 if 대신 데이터를 가진 객체를 갈아 끼운다.']]});
 
 QB({id:'x71',cat:'components',stage:1,level:3,title:'상속보다 조합: Actor 쪼개기',
  story:'상인, 슬라임, 용사가 모두 Actor를 상속하고 있어요. 그런데 상인은 싸우지 않는데도 hp와 TakeDamage를 물려받았고, 슬라임은 돈을 가질 필요가 없는데도 gold와 Earn을 물려받았어요. 기능별 컴포넌트로 나누어 필요한 것만 붙여서 조합해 주세요.',
