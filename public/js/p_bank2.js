@@ -697,449 +697,6 @@ public class Merchant : MonoBehaviour
  concepts:[['has-a 설계','"무엇이다" 대신 "무엇을 가졌다"로 설계해 필요한 컴포넌트만 붙인다.']]});
 
 /* ---- 디버그 1단계 ---- */
-QB({id:'x73',cat:'debug',stage:1,level:1,title:'NullReferenceException: anim이 비어 있다',
- story:'피격 시 Hurt()를 부르면 콘솔에 NullReferenceException이 떠요.\n  at Mob.Hurt (Mob.cs:10)\n10번째 줄은 anim.SetTrigger("Hurt") 예요. anim 필드는 선언만 했을 뿐 값을 넣은 적이 없습니다.',
- goals:['Awake에서 Animator 컴포넌트를 가져와 anim에 저장한다','Hurt()는 anim.SetTrigger("Hurt")를 한 번 부른다'],
- limits:['Hurt 안에서 GetComponent를 호출하지 않는다 (Awake에서 한 번만)'],
- api:'GetComponent<Animator>(), anim.SetTrigger',
- starter:C`
-using UnityEngine;
-
-public class Mob : MonoBehaviour
-{
-    private Animator anim;
-
-    void Awake()
-    {
-    }
-
-    public void Hurt()
-    {
-        anim.SetTrigger("Hurt");
-    }
-}`,
- solution:C`
-using UnityEngine;
-
-public class Mob : MonoBehaviour
-{
-    private Animator anim;
-
-    void Awake()
-    {
-        anim = GetComponent<Animator>();
-    }
-
-    public void Hurt()
-    {
-        anim.SetTrigger("Hurt");
-    }
-}`,
- rules:[
-  inFn('Awake에서 캐싱','Awake',/\banim\s*=\s*GetComponent\s*<\s*Animator\s*>\s*\(\s*\)|TryGetComponent\s*(?:<\s*Animator\s*>)?\s*\(\s*out\s+anim\b/,'Awake에서 anim을 가져와요.','Awake에서 anim = GetComponent<Animator>(); 로 채워 주세요.'),
-  notIn('Hurt에서 GetComponent 금지','Hurt',/GetComponent/,'Hurt에서 GetComponent를 호출하지 않아요.','매번 GetComponent를 부르지 말고 Awake에서 한 번만 가져오세요.')
- ],
- test:(api,ok)=>{
-  const anim=api.mk.anim();api.env.components.Animator=anim;
-  let err=null;
-  try{api.call('Awake');api.call('Hurt')}catch(e){err=e}
-  ok('에러 없이 실행',!err,'NullReference 없이 실행돼요.','anim이 비어 있어서 에러가 나요. Awake에서 anim에 컴포넌트를 넣어 주세요.');
-  ok('트리거 실행',anim.log.filter(x=>x[0]==='SetTrigger'&&x[1]==='Hurt').length===1,'Hurt 트리거를 한 번 켰어요.','Hurt()가 anim.SetTrigger("Hurt")를 한 번 불러야 해요.');
- },
- hints:['스택 트레이스의 줄에서 점(.) 앞의 변수가 비어 있다는 뜻이에요.','anim은 선언만 되어 있고 어디서도 값이 채워지지 않았어요.','Awake에서 GetComponent<Animator>()의 결과를 anim에 넣으세요.'],
- why:'NullReference는 "점 앞의 변수가 비어 있다"는 신호예요. 그 변수가 어디서 채워져야 했는지 찾으면 대부분 해결됩니다. 컴포넌트는 Awake에서 한 번 가져와 캐싱하세요.',
- concepts:[['NullReferenceException','값이 없는(null) 참조를 통해 멤버에 접근했을 때 발생한다. 스택 트레이스의 줄에서 점 앞의 변수를 의심한다.']]});
-
-QB({id:'x74',cat:'debug',stage:1,level:1,title:'NullReferenceException: 점프에서 rb가 비어 있다',
- story:'점프 키를 누르면 이런 에러가 나고 캐릭터가 뛰지 않아요.\nNullReferenceException: Object reference not set to an instance of an object\n  at Hopper.Jump (Hopper.cs:11)\n11번째 줄은 rb.velocity = ... 예요. rb에는 아직 아무것도 들어 있지 않아요.',
- goals:['Awake에서 Rigidbody2D를 가져와 rb에 저장한다','Jump()는 x 속도는 그대로 두고 y 속도만 jumpSpeed(8)로 바꾼다'],
- limits:['Jump 안에서 GetComponent를 호출하지 않는다'],
- api:'rb.velocity, new Vector2(x, y)',
- starter:C`
-using UnityEngine;
-
-public class Hopper : MonoBehaviour
-{
-    private Rigidbody2D rb;
-    public float jumpSpeed = 8f;
-
-    void Awake()
-    {
-    }
-
-    public void Jump()
-    {
-        rb.velocity = new Vector2(rb.velocity.x, jumpSpeed);
-    }
-}`,
- solution:C`
-using UnityEngine;
-
-public class Hopper : MonoBehaviour
-{
-    private Rigidbody2D rb;
-    public float jumpSpeed = 8f;
-
-    void Awake()
-    {
-        rb = GetComponent<Rigidbody2D>();
-    }
-
-    public void Jump()
-    {
-        rb.velocity = new Vector2(rb.velocity.x, jumpSpeed);
-    }
-}`,
- rules:[
-  inFn('Awake에서 캐싱','Awake',/\brb\s*=\s*GetComponent\s*<\s*Rigidbody2D\s*>\s*\(\s*\)|TryGetComponent\s*(?:<\s*Rigidbody2D\s*>)?\s*\(\s*out\s+rb\b/,'Awake에서 rb를 가져와요.','Awake에서 rb = GetComponent<Rigidbody2D>(); 로 채워 주세요.'),
-  notIn('Jump에서 GetComponent 금지','Jump',/GetComponent/,'Jump에서 GetComponent를 호출하지 않아요.','Awake에서 한 번만 가져오세요.')
- ],
- test:(api,ok)=>{
-  const rb=api.mk.rb();rb.velocity={x:3,y:0};api.env.components.Rigidbody2D=rb;
-  let err=null;
-  try{api.call('Awake');api.call('Jump')}catch(e){err=e}
-  ok('에러 없이 실행',!err,'NullReference 없이 실행돼요.','rb가 비어 있어서 에러가 나요. Awake에서 rb에 컴포넌트를 넣어 주세요.');
-  ok('점프 속도',!err&&rb.velocity.y===8&&rb.velocity.x===3,'x 속도는 유지하고 y 속도만 8이 됐어요.','x는 그대로(3), y만 8이 되어야 해요.');
- },
- hints:['에러 줄의 점 앞 변수 rb가 비어 있어요.','rb에 값을 넣는 곳이 없어요. 어디서 채울지 생각해 보세요.','Awake에서 rb = GetComponent<Rigidbody2D>(); 를 추가하세요.'],
- why:'같은 NullReference라도 원인은 늘 "채워지지 않은 변수"예요. 선언과 대입은 다른 일이라는 점을 기억하세요.',
- concepts:[['필드 초기화 시점','private 필드는 선언만으로 채워지지 않는다. Awake/Start에서 GetComponent로 채워야 한다.']]});
-
-QB({id:'x75',cat:'debug',stage:1,level:1,title:'NullReferenceException: 정지시키려는데 rb가 없다',
- story:'Freeze()를 부르면 NullReferenceException이 떠요.\n  at Trap.Freeze (Trap.cs:10)\n10번째 줄은 rb.velocity = Vector2.zero 예요. 이번에는 Start가 아닌 Awake에서 채워야 다른 스크립트가 일찍 불러도 안전해요.',
- goals:['Awake에서 Rigidbody2D를 가져와 rb에 저장한다','Freeze()는 속도를 Vector2.zero로 만든다'],
- limits:['Freeze 안에서 GetComponent를 호출하지 않는다'],
- api:'rb.velocity, Vector2.zero',
- starter:C`
-using UnityEngine;
-
-public class Trap : MonoBehaviour
-{
-    private Rigidbody2D rb;
-
-    void Awake()
-    {
-    }
-
-    public void Freeze()
-    {
-        rb.velocity = Vector2.zero;
-    }
-}`,
- solution:C`
-using UnityEngine;
-
-public class Trap : MonoBehaviour
-{
-    private Rigidbody2D rb;
-
-    void Awake()
-    {
-        rb = GetComponent<Rigidbody2D>();
-    }
-
-    public void Freeze()
-    {
-        rb.velocity = Vector2.zero;
-    }
-}`,
- rules:[
-  inFn('Awake에서 캐싱','Awake',/\brb\s*=\s*GetComponent\s*<\s*Rigidbody2D\s*>\s*\(\s*\)|TryGetComponent\s*(?:<\s*Rigidbody2D\s*>)?\s*\(\s*out\s+rb\b/,'Awake에서 rb를 가져와요.','Awake에서 rb = GetComponent<Rigidbody2D>(); 로 채워 주세요.'),
-  notIn('Freeze에서 GetComponent 금지','Freeze',/GetComponent/,'Freeze에서 GetComponent를 호출하지 않아요.','Awake에서 한 번만 가져오세요.')
- ],
- test:(api,ok)=>{
-  const rb=api.mk.rb();rb.velocity={x:4,y:-2};api.env.components.Rigidbody2D=rb;
-  let err=null;
-  try{api.call('Awake');api.call('Freeze')}catch(e){err=e}
-  ok('에러 없이 실행',!err,'NullReference 없이 실행돼요.','rb가 비어 있어서 에러가 나요. Awake에서 rb에 컴포넌트를 넣어 주세요.');
-  ok('정지',!err&&rb.velocity.x===0&&rb.velocity.y===0,'속도가 (0, 0)이 됐어요.','Freeze()는 속도를 Vector2.zero로 만들어야 해요.');
- },
- hints:['에러 줄의 점 앞 변수가 비어 있다는 뜻이에요.','rb에 컴포넌트를 담는 줄이 어디에도 없어요.','Awake에서 GetComponent<Rigidbody2D>()를 rb에 넣으세요.'],
- why:'NullReference를 만나면 "점 앞 변수 → 어디서 채워야 하나" 순서로 추적하세요. 컴포넌트는 Awake에서 캐싱하는 것이 정석이에요.',
- concepts:[['NullReferenceException','값이 없는(null) 참조를 통해 멤버에 접근했을 때 발생한다.']]});
-
-QB({id:'x76',cat:'debug',stage:1,level:2,title:'MissingReferenceException: 파괴된 목표를 위로 쫓는다',
- story:'비행 적이 아이템을 y축으로 쫓다가, 아이템이 Destroy되면 에러가 쏟아져요.\nMissingReferenceException: The object of type \'Transform\' has been destroyed but you are still trying to access it.\n  at Drone.Update (Drone.cs:10)\n목표가 사라졌는지 확인하세요.',
- goals:['target이 null이면 아무것도 하지 않고 반환한다','target이 있으면 y 방향으로 speed × Time.deltaTime 만큼 target 쪽으로 이동한다 (target.y가 더 크면 +, 더 작으면 −)'],
- limits:['Destroy된 오브젝트는 == null 비교로 true가 된다'],
- api:'transform.position, Time.deltaTime',
- starter:C`
-using UnityEngine;
-
-public class Drone : MonoBehaviour
-{
-    public Transform target;
-    public float speed = 2f;
-
-    void Update()
-    {
-        Vector3 pos = transform.position;
-        float dir = target.position.y > pos.y ? 1f : -1f;
-        pos.y += dir * speed * Time.deltaTime;
-        transform.position = pos;
-    }
-}`,
- solution:C`
-using UnityEngine;
-
-public class Drone : MonoBehaviour
-{
-    public Transform target;
-    public float speed = 2f;
-
-    void Update()
-    {
-        if (target == null) return;
-        Vector3 pos = transform.position;
-        float dir = target.position.y > pos.y ? 1f : -1f;
-        pos.y += dir * speed * Time.deltaTime;
-        transform.position = pos;
-    }
-}`,
- rules:[inFn('null 검사','Update',/target\s*==\s*null|!\s*target\b|target\s*!=\s*null|target\s+is\s+(?:not\s+)?null/,'target이 없으면 건너뛰어요.','Update 맨 앞에서 if (target == null) return; 으로 사라진 목표를 처리하세요.')],
- test:(api,ok)=>{
-  api.env.Time.deltaTime=0.5;api.transform.position={x:0,y:0};
-  api.set('target',{position:{x:0,y:10}});
-  api.call('Update');
-  ok('목표 쫓기',Math.abs(api.transform.position.y-1)<1e-6,'목표가 있으면 위로 쫓아가요 (speed 2 × 0.5초 = 1).',`위치 y가 ${api.transform.position.y} 입니다. 1이어야 해요.`);
-  api.set('target',null);
-  let err=null;try{api.call('Update')}catch(e){err=e}
-  ok('목표 소멸',!err&&Math.abs(api.transform.position.y-1)<1e-6,'목표가 사라지면 에러 없이 멈춰요.','목표가 null일 때 에러가 나거나 계속 움직여요.');
- },
- hints:['"파괴된 오브젝트에 접근했다"가 핵심이에요.','Unity는 Destroy된 오브젝트를 null과 같게 취급해요.','Update 맨 앞에서 target이 없으면 return 하세요.'],
- why:'참조하던 오브젝트가 사라질 수 있다면 사용 전에 null 가드가 필요해요. 가드절로 위험한 경우를 먼저 걸러 내면 나머지 코드가 단순해집니다.',
- concepts:[['MissingReferenceException','Destroy된 오브젝트의 참조를 계속 사용하면 발생한다. 사용 전 == null 검사로 막는다.'],['가드절(Guard Clause)','함수 맨 앞에서 비정상 조건을 검사해 일찍 return하는 방식.']]});
-
-QB({id:'x77',cat:'debug',stage:1,level:2,title:'MissingReferenceException: 사라진 목표와의 거리',
- story:'포탑이 목표와의 거리를 재는 Distance()가 목표가 파괴된 뒤에도 불려서 에러가 나요.\n  at Turret.Distance (Turret.cs:8)\n목표가 없으면 거리 대신 0을 돌려주도록 고쳐 주세요.',
- goals:['target이 null이면 0을 반환한다','target이 있으면 target과 이 오브젝트의 x 좌표 차이의 절댓값을 반환한다'],
- limits:['Unity에서 Destroy된 오브젝트는 == null 이 true가 된다'],
- api:'Mathf.Abs, transform.position.x',
- starter:C`
-using UnityEngine;
-
-public class Turret : MonoBehaviour
-{
-    public Transform target;
-
-    public float Distance()
-    {
-        return Mathf.Abs(target.position.x - transform.position.x);
-    }
-}`,
- solution:C`
-using UnityEngine;
-
-public class Turret : MonoBehaviour
-{
-    public Transform target;
-
-    public float Distance()
-    {
-        if (target == null) return 0f;
-        return Mathf.Abs(target.position.x - transform.position.x);
-    }
-}`,
- rules:[inFn('null 검사','Distance',/target\s*==\s*null|!\s*target\b|target\s*!=\s*null|target\s+is\s+(?:not\s+)?null/,'target이 없으면 먼저 처리해요.','Distance 맨 앞에서 if (target == null) return 0f; 를 쓰세요.')],
- test:(api,ok)=>{
-  api.transform.position={x:2,y:0};
-  api.set('target',{position:{x:7,y:0}});
-  let d,e1=null;try{d=api.call('Distance')}catch(e){e1=e}
-  ok('거리 계산',!e1&&Math.abs(d-5)<1e-6,'목표가 있으면 거리 5를 돌려줘요.',`거리가 ${d} 입니다. 5여야 해요.`);
-  api.set('target',null);
-  let r,e2=null;try{r=api.call('Distance')}catch(e){e2=e}
-  ok('목표 소멸',!e2&&r===0,'목표가 사라지면 에러 없이 0을 돌려줘요.','목표가 null일 때 에러가 나요. 먼저 null을 검사하고 0을 반환하세요.');
- },
- hints:['에러 줄에서 target을 쓰고 있어요. target이 null이면 어떻게 될까요?','사용하기 전에 target == null 인지 확인하세요.','null이면 0f를 반환하고 나머지는 그대로 두세요.'],
- why:'값을 돌려주는 함수에서도 가드절은 똑같이 유효해요. "없을 때 무엇을 돌려줄지"를 정해 두면 호출하는 쪽이 안전해집니다.',
- concepts:[['MissingReferenceException','Destroy된 오브젝트의 참조를 계속 사용하면 발생한다.'],['가드절(Guard Clause)','함수 맨 앞에서 비정상 조건을 검사해 일찍 return하는 방식.']]});
-
-QB({id:'x78',cat:'debug',stage:1,level:2,title:'MissingReferenceException: 죽은 플레이어를 따라가는 카메라',
- story:'카메라가 플레이어의 x 좌표를 따라가는데, 플레이어가 죽어 Destroy되면 카메라 스크립트가 에러를 뿜어요.\n  at CamFollow.LateUpdate (CamFollow.cs:9)\n플레이어가 없으면 카메라는 그 자리에 가만히 있어야 해요.',
- goals:['target이 null이면 아무것도 하지 않고 반환한다','target이 있으면 이 오브젝트의 x 좌표를 target의 x 좌표로 맞춘다 (y는 그대로)'],
- limits:['Destroy된 오브젝트는 == null 비교로 true가 된다'],
- api:'transform.position',
- starter:C`
-using UnityEngine;
-
-public class CamFollow : MonoBehaviour
-{
-    public Transform target;
-
-    void LateUpdate()
-    {
-        Vector3 pos = transform.position;
-        pos.x = target.position.x;
-        transform.position = pos;
-    }
-}`,
- solution:C`
-using UnityEngine;
-
-public class CamFollow : MonoBehaviour
-{
-    public Transform target;
-
-    void LateUpdate()
-    {
-        if (target == null) return;
-        Vector3 pos = transform.position;
-        pos.x = target.position.x;
-        transform.position = pos;
-    }
-}`,
- rules:[inFn('null 검사','LateUpdate',/target\s*==\s*null|!\s*target\b|target\s*!=\s*null|target\s+is\s+(?:not\s+)?null/,'target이 없으면 건너뛰어요.','LateUpdate 맨 앞에서 if (target == null) return; 으로 처리하세요.')],
- test:(api,ok)=>{
-  api.transform.position={x:0,y:3};
-  api.set('target',{position:{x:6,y:0}});
-  api.call('LateUpdate');
-  ok('따라가기',api.transform.position.x===6&&api.transform.position.y===3,'x는 목표를 따라가고 y는 그대로예요.',`위치가 (${api.transform.position.x}, ${api.transform.position.y}) 입니다. (6, 3)이어야 해요.`);
-  api.set('target',null);
-  let err=null;try{api.call('LateUpdate')}catch(e){err=e}
-  ok('목표 소멸',!err&&api.transform.position.x===6,'목표가 사라지면 에러 없이 멈춰요.','목표가 null일 때 에러가 나요. 먼저 null을 검사하세요.');
- },
- hints:['"파괴된 오브젝트 접근"이 핵심이에요.','target을 쓰기 전에 존재하는지 확인하세요.','맨 앞에 if (target == null) return; 을 넣으세요.'],
- why:'카메라, 추적 UI처럼 다른 오브젝트를 참조하는 코드는 참조 대상이 사라질 가능성을 항상 염두에 둬야 해요.',
- concepts:[['MissingReferenceException','Destroy된 오브젝트의 참조를 계속 사용하면 발생한다.'],['가드절(Guard Clause)','함수 맨 앞에서 비정상 조건을 검사해 일찍 return하는 방식.']]});
-
-QB({id:'x79',cat:'debug',stage:1,level:3,title:'IndexOutOfRangeException: 마지막 칸을 읽으려다',
- story:'점수 기록 배열에서 마지막 값을 꺼내는 LastX()가 에러를 내요.\nIndexOutOfRangeException: Index was outside the bounds of the array.\n  at Track.LastX (Track.cs:8)\n배열의 마지막 인덱스는 Length가 아니라 Length - 1 이에요. 배열이 비어 있을 때도 안전해야 해요.',
- goals:['LastX(): 배열 xs의 마지막 값을 반환한다','배열이 비어 있으면 에러 없이 0을 반환한다'],
- limits:['xs.Length - 1 을 마지막 인덱스로 사용한다'],
- api:'xs.Length',
- starter:C`
-using UnityEngine;
-
-public class Track : MonoBehaviour
-{
-    public float[] xs;
-
-    public float LastX()
-    {
-        return xs[xs.Length];
-    }
-}`,
- solution:C`
-using UnityEngine;
-
-public class Track : MonoBehaviour
-{
-    public float[] xs;
-
-    public float LastX()
-    {
-        if (xs == null || xs.Length == 0) return 0f;
-        return xs[xs.Length - 1];
-    }
-}`,
- rules:[],
- test:(api,ok)=>{
-  api.set('xs',[10,20,30]);
-  let r,err=null;try{r=api.call('LastX')}catch(e){err=e}
-  ok('마지막 값',!err&&r===30,'마지막 값 30을 돌려줘요.',err?'인덱스가 범위를 벗어나요. 마지막 인덱스는 Length - 1 이에요.':`반환값이 ${r} 입니다. 30이어야 해요.`);
-  api.set('xs',[]);
-  let r2,err2=null;try{r2=api.call('LastX')}catch(e){err2=e}
-  ok('빈 배열',!err2&&r2===0,'배열이 비어 있으면 0을 돌려줘요.','빈 배열에서 에러가 나요. 길이가 0이면 먼저 0을 반환하세요.');
- },
- hints:['길이가 3인 배열의 유효한 인덱스는 0, 1, 2 예요.','마지막 인덱스는 Length - 1 이에요.','길이가 0이면 어떤 인덱스도 유효하지 않으니 먼저 처리하세요.'],
- why:'배열 접근은 항상 0 ≤ index < Length 여야 해요. "마지막 = Length − 1"과 "빈 배열 먼저 처리"는 경계 조건의 기본이에요.',
- concepts:[['IndexOutOfRangeException','배열·리스트의 유효 범위(0 ~ Length−1)를 벗어난 인덱스로 접근했을 때 발생한다.']]});
-
-QB({id:'x80',cat:'debug',stage:1,level:3,title:'IndexOutOfRangeException: 거꾸로 도는 순찰',
- story:'순찰 지점을 거꾸로 도는 PrevX()가 처음 호출에서 에러를 내요.\n  at Patrol.PrevX (Patrol.cs:9)\n지점이 3개면 0→2→1→0→2→… 로 돌아야 해요. index를 줄이다 −1이 되면 안 돼요.',
- goals:['PrevX(): 현재 index의 지점 x 좌표를 반환하고 index를 한 칸 뒤로 옮긴다','index가 0에서 줄어들면 마지막 칸으로 돌아간다 (순환)','지점이 하나도 없으면 에러 없이 0을 반환한다'],
- limits:['(index - 1 + Length) % Length 로 음수를 피하세요'],
- api:'xs.Length, % (나머지)',
- starter:C`
-using UnityEngine;
-
-public class Patrol : MonoBehaviour
-{
-    public float[] xs;
-    private int index;
-
-    public float PrevX()
-    {
-        float x = xs[index];
-        index--;
-        return x;
-    }
-}`,
- solution:C`
-using UnityEngine;
-
-public class Patrol : MonoBehaviour
-{
-    public float[] xs;
-    private int index;
-
-    public float PrevX()
-    {
-        if (xs == null || xs.Length == 0) return 0f;
-        float x = xs[index];
-        index = (index - 1 + xs.Length) % xs.Length;
-        return x;
-    }
-}`,
- rules:[],
- test:(api,ok)=>{
-  api.set('xs',[10,20,30]);api.set('index',0);
-  const got=[];let err=null;
-  try{for(let i=0;i<7;i++)got.push(api.call('PrevX'))}catch(e){err=e}
-  ok('거꾸로 순환',!err&&got.join()==='10,30,20,10,30,20,10','10, 30, 20 을 거꾸로 돌아요.',err?'index가 −1이 되어 에러가 나요. 0에서 줄이면 마지막 칸으로 가야 해요.':`반환 순서: ${got.join(', ')}. 10, 30, 20, 10, 30, 20, 10 이어야 해요.`);
-  api.set('xs',[]);api.set('index',0);
-  let r,err2=null;try{r=api.call('PrevX')}catch(e){err2=e}
-  ok('빈 배열',!err2&&r===0,'지점이 없으면 0을 반환해요.','지점이 하나도 없을 때 에러가 나요. 길이가 0이면 먼저 반환하세요.');
- },
- hints:['index가 0일 때 1을 빼면 −1이 되어 배열 밖이에요.','음수가 되지 않도록 Length를 더한 뒤 % Length 를 해요.','길이가 0이면 가장 먼저 반환하세요.'],
- why:'순환 인덱스는 앞으로든 뒤로든 % Length 로 한 번에 처리해요. 뒤로 갈 때는 음수가 안 되게 Length를 먼저 더하는 것이 요령이에요.',
- concepts:[['IndexOutOfRangeException','배열·리스트의 유효 범위를 벗어난 인덱스로 접근했을 때 발생한다.'],['순환 인덱스','(index ± 1 + Length) % Length 로 처음과 끝을 이어 붙인다.']]});
-
-QB({id:'x81',cat:'debug',stage:1,level:3,title:'IndexOutOfRangeException: 슬롯 번호가 범위를 넘는다',
- story:'스폰 지점 배열에서 번호로 좌표를 꺼내는 GetX(slot)가, 기획자가 큰 번호를 넣으면 에러를 내요.\n  at Spawner.GetX (Spawner.cs:8)\n범위를 벗어난 번호는 가장 가까운 유효한 칸(0 또는 마지막)으로 맞춰 주세요.',
- goals:['GetX(slot): xs[slot]을 반환한다','slot이 0보다 작으면 0번 칸, 길이 이상이면 마지막 칸의 값을 반환한다','지점이 하나도 없으면 에러 없이 0을 반환한다'],
- limits:['Mathf.Clamp(slot, 0, xs.Length - 1) 을 사용하면 간단해요'],
- api:'Mathf.Clamp, xs.Length',
- starter:C`
-using UnityEngine;
-
-public class Spawner : MonoBehaviour
-{
-    public float[] xs;
-
-    public float GetX(int slot)
-    {
-        return xs[slot];
-    }
-}`,
- solution:C`
-using UnityEngine;
-
-public class Spawner : MonoBehaviour
-{
-    public float[] xs;
-
-    public float GetX(int slot)
-    {
-        if (xs == null || xs.Length == 0) return 0f;
-        int i = Mathf.Clamp(slot, 0, xs.Length - 1);
-        return xs[i];
-    }
-}`,
- rules:[],
- test:(api,ok)=>{
-  api.set('xs',[10,20,30]);
-  const t=s=>{try{return api.call('GetX',s)}catch(e){return 'ERR'}};
-  ok('유효한 번호',t(1)===20,'1번 칸은 20이에요.',`GetX(1)이 ${t(1)} 입니다. 20이어야 해요.`);
-  ok('큰 번호',t(9)===30,'큰 번호는 마지막 칸(30)으로 맞춰져요.',`GetX(9)이 ${t(9)} 입니다. 마지막 값 30이어야 해요.`);
-  ok('음수 번호',t(-4)===10,'음수는 0번 칸(10)으로 맞춰져요.',`GetX(-4)가 ${t(-4)} 입니다. 0번 값 10이어야 해요.`);
-  api.set('xs',[]);
-  ok('빈 배열',t(0)===0,'지점이 없으면 0을 반환해요.','빈 배열에서 에러가 나요. 길이가 0이면 먼저 0을 반환하세요.');
- },
- hints:['slot이 Length 이상이거나 음수면 배열 밖이에요.','Mathf.Clamp로 범위 안으로 끌어오세요.','길이가 0이면 Clamp의 최댓값이 −1이 되니 먼저 따로 처리해야 해요.'],
- why:'바깥에서 들어온 번호는 믿지 말고 범위를 맞춰 쓰세요. Clamp는 한 줄로 "너무 작으면 최솟값, 너무 크면 최댓값"을 처리해 줍니다.',
- concepts:[['IndexOutOfRangeException','유효 범위(0 ~ Length−1)를 벗어난 인덱스로 접근했을 때 발생한다.'],['Mathf.Clamp','값을 최솟값과 최댓값 사이로 제한한다.']]});
-
 /* ---- 수학 1단계 ---- */
 QB({id:'x82',cat:'math',stage:1,level:1,title:'A에서 B로 향하는 방향 벡터',
  story:'투사체가 발사 지점에서 목표 지점으로 날아가려면 "방향만 담은" 벡터가 필요해요. 두 점의 차이를 구한 뒤 길이를 1로 맞춰서(정규화) 반환합니다. 두 점이 같으면 방향이 없으니 (0, 0)을 돌려주세요.',
@@ -3149,3 +2706,453 @@ Vector2 MoveRight(Vector2 p, float d)
  hints:['struct 를 매개변수로 넘기면 복사본이 전달돼요.','복사본을 고쳐도 호출한 쪽의 원본은 그대로예요.','고친 값을 return 해서 호출한 쪽이 받아 쓰게 하세요.'],
  why:'값 형식(Vector2, int 등)은 메서드에 넘길 때 복사돼요. 결과를 밖으로 전달하려면 반환값을 쓰는 것이 가장 단순한 방법이에요.',
  concepts:[['값 형식의 전달','struct 를 매개변수로 넘기면 복사본이 전달되어 원본은 바뀌지 않는다.'],['반환값으로 결과 전달','수정한 값을 return 해서 호출한 쪽이 받아 쓴다.']]});
+
+QB({id:'x73',cat:'debug',stage:1,level:1,title:'NullReferenceException: 로그 목록을 만들지 않았다',
+ story:'전투 기록을 남기는 Write() 를 처음 부르면 이런 에러가 나요:\nNullReferenceException: Object reference not set to an instance of an object\n  at Battle.Write (Battle.cs:8)\n8번째 줄은 log.Add(...) 예요. log 는 List<string> 으로 선언만 했을 뿐 실제 목록을 만든 적이 없어요.',
+ goals:['log 를 실제 빈 목록으로 만든다','Write(text)는 목록에 문장을 추가한다','Count()는 기록된 문장 수를 반환한다'],
+ limits:['Write 안에서 매번 새 목록을 만들지 않는다 (기록이 사라져요)'],
+ api:'new List<string>(), list.Add, list.Count',
+ starter:C`
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Battle : MonoBehaviour
+{
+    private List<string> log;
+
+    public void Write(string text)
+    {
+        log.Add(text);
+    }
+
+    public int Count()
+    {
+        return log.Count;
+    }
+}`,
+ solution:C`
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Battle : MonoBehaviour
+{
+    private List<string> log = new List<string>();
+
+    public void Write(string text)
+    {
+        log.Add(text);
+    }
+
+    public int Count()
+    {
+        return log.Count;
+    }
+}`,
+ rules:[no('Write 안에서 새로 만들기 금지',/\bWrite\s*\([^)]*\)\s*\{[^}]*new\s+List/,'Write 안에서 새로 만들지 않았어요.','목록은 필드를 선언할 때 한 번만 만드세요.')],
+ test:(api,ok)=>{
+  let err=null;try{api.call('Write','공격');api.call('Write','방어')}catch(e){err=e}
+  ok('에러 없이 기록',!err,'NullReference 없이 기록돼요.','log 가 비어 있어서 에러가 나요. 목록을 new List<string>() 으로 만드세요.');
+  ok('기록 누적',!err&&api.call('Count')===2,'두 문장이 쌓였어요.',`Count 가 ${err?'-':api.call('Count')} 입니다. 2 여야 해요.`);
+ },
+ hints:['List<string> log; 는 "목록을 담을 칸"만 만든 거예요. 칸은 비어 있어서(null) 쓰면 에러가 나요.','칸에 실제 목록을 넣어 줘야 해요: log = new List<string>();','필드 선언과 같은 줄에서 바로 만들면 가장 간단해요.'],
+ why:'참조 형식 변수는 선언만으로는 null 이에요. 컬렉션은 반드시 new 로 만들어 칸에 넣어야 쓸 수 있어요. 필드 선언에서 바로 만들어 두는 것이 가장 안전해요.',
+ concepts:[['NullReferenceException','값이 없는(null) 참조를 통해 멤버에 접근했을 때 발생한다.'],['컬렉션 초기화','List 같은 컬렉션은 선언만 하면 null 이다. new 로 만들어야 한다.']]});
+
+QB({id:'x74',cat:'debug',stage:1,level:1,title:'NullReferenceException: 이름이 비어 있는 캐릭터',
+ story:'캐릭터 이름 길이를 구하는 NameLength() 를 부르면 이런 에러가 나요:\nNullReferenceException: Object reference not set to an instance of an object\n  at Profile.NameLength (Profile.cs:6)\n이름을 아직 입력하지 않으면 playerName 은 null 이에요. 이름이 없을 때도 안전하게 동작하게 해 주세요.',
+ goals:['NameLength(): 이름의 글자 수를 반환한다','이름이 null 이거나 빈 문자열이면 0을 반환한다'],
+ limits:['string.IsNullOrEmpty 로 확인한다'],
+ api:'string.IsNullOrEmpty(s), s.Length',
+ starter:C`
+using UnityEngine;
+
+public class Profile : MonoBehaviour
+{
+    public string playerName;
+
+    public int NameLength()
+    {
+        return playerName.Length;
+    }
+}`,
+ solution:C`
+using UnityEngine;
+
+public class Profile : MonoBehaviour
+{
+    public string playerName;
+
+    public int NameLength()
+    {
+        if (string.IsNullOrEmpty(playerName)) return 0;
+        return playerName.Length;
+    }
+}`,
+ rules:[inFn('IsNullOrEmpty 사용','NameLength',/string\s*\.\s*IsNullOrEmpty\s*\(\s*playerName\s*\)|playerName\s*==\s*null/,'이름이 비어 있는지 확인해요.','string.IsNullOrEmpty(playerName) 으로 확인하세요.')],
+ test:(api,ok)=>{
+  api.set('playerName','민우');
+  ok('이름 있음',api.call('NameLength')===2,'"민우" 는 2글자예요.',`결과 ${api.call('NameLength')} 입니다. 2 여야 해요.`);
+  api.set('playerName',null);let r,e=null;try{r=api.call('NameLength')}catch(x){e=x}
+  ok('이름 null',!e&&r===0,'이름이 null 이어도 0을 반환해요.','이름이 null 일 때 에러가 나요. 먼저 확인하세요.');
+  api.set('playerName','');
+  ok('빈 이름',api.call('NameLength')===0,'빈 문자열은 0이에요.','빈 문자열은 0을 반환해야 해요.');
+ },
+ hints:['string 도 참조 형식이라 값을 넣지 않으면 null 이에요.','null 에 .Length 를 쓰면 NullReference 예요.','string.IsNullOrEmpty(s) 는 null 이나 "" 이면 true 를 줘요.'],
+ why:'문자열도 null 일 수 있어요. Inspector 에서 비워 두거나 아직 입력받지 않은 경우를 위해 string.IsNullOrEmpty 로 한 번에 확인하는 습관을 들이세요.',
+ concepts:[['NullReferenceException','null 인 참조의 멤버에 접근하면 발생한다.'],['string.IsNullOrEmpty','null 과 빈 문자열을 한 번에 검사한다.']]});
+
+QB({id:'x75',cat:'debug',stage:1,level:1,title:'NullReferenceException: 구독자가 없는 이벤트',
+ story:'적이 죽을 때 onDie 이벤트를 부르는데, 아무도 구독하지 않은 상태에서 Die() 를 부르면 에러가 나요:\nNullReferenceException: Object reference not set to an instance of an object\n  at Enemy.Die (Enemy.cs:9)\n구독자가 없는 델리게이트는 null 이에요. 안전하게 호출하도록 고쳐 주세요.',
+ goals:['Die(): dead 를 true 로 만들고 onDie 이벤트를 호출한다','구독자가 없어도 에러가 나지 않는다'],
+ limits:['onDie 를 호출하기 전에 null 인지 확인하거나 ?.Invoke() 를 사용한다'],
+ api:'?.Invoke(), Action',
+ starter:C`
+using System;
+using UnityEngine;
+
+public class Enemy : MonoBehaviour
+{
+    public event Action onDie;
+    public bool dead;
+
+    public void Die()
+    {
+        dead = true;
+        onDie();
+    }
+}`,
+ solution:C`
+using System;
+using UnityEngine;
+
+public class Enemy : MonoBehaviour
+{
+    public event Action onDie;
+    public bool dead;
+
+    public void Die()
+    {
+        dead = true;
+        onDie?.Invoke();
+    }
+}`,
+ rules:[inFn('안전한 호출','Die',/onDie\s*\?\.\s*Invoke\s*\(|onDie\s*!=\s*null|if\s*\(\s*onDie\s*\)/,'구독자가 없는 경우를 확인하고 호출해요.','onDie?.Invoke(); 로 호출하세요.')],
+ test:(api,ok)=>{
+  let e=null;try{api.call('Die')}catch(x){e=x}
+  ok('구독자 없음',!e&&api.get('dead')===true,'구독자가 없어도 에러 없이 죽어요.','구독자가 없을 때 에러가 나요. null 이면 호출하지 마세요.');
+ },
+ hints:['이벤트(델리게이트)는 구독자가 하나도 없으면 null 이에요.','null 인 델리게이트를 호출하면 NullReference 예요.','onDie?.Invoke(); 는 null 이면 아무 일도 하지 않아요.'],
+ why:'이벤트는 구독자가 없을 수 있으니 호출 전에 null 확인이 필요해요. ?.Invoke() 한 줄로 안전하게 처리할 수 있어서 거의 항상 이 형태를 써요.',
+ concepts:[['NullReferenceException','null 인 참조를 호출하거나 멤버에 접근하면 발생한다.'],['?.Invoke()','델리게이트가 null 이면 호출하지 않고 넘어간다.']]});
+
+QB({id:'x76',cat:'debug',stage:1,level:2,title:'파괴된 적이 남은 목록을 훑을 때',
+ story:'경보가 울리면 목록의 모든 적에게 경계 상태를 알려요. 그런데 이미 파괴되어 비어 버린 적이 목록에 남아 있어서 이런 에러가 나요:\nMissingReferenceException: The object of type \'Enemy\' has been destroyed but you are still trying to access it.\n  at Alarm.Raise (Alarm.cs:9)\n비어 있는 칸은 건너뛰고, 살아 있는 적만 알려 주세요.',
+ goals:['Raise(): 목록의 살아 있는 적마다 alert 를 true 로 만든다','파괴되어 비어 있는 칸은 건너뛴다','반환값은 알림을 받은 적의 수이다'],
+ limits:['Unity에서는 파괴된 오브젝트가 == null 비교에서 true 가 된다'],
+ starter:C`
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Alarm : MonoBehaviour
+{
+    public List<Enemy> enemies = new List<Enemy>();
+
+    public int Raise()
+    {
+        int n = 0;
+        foreach (Enemy e in enemies)
+        {
+            e.alert = true;
+            n++;
+        }
+        return n;
+    }
+}
+
+public class Enemy : MonoBehaviour
+{
+    public bool alert;
+}`,
+ solution:C`
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Alarm : MonoBehaviour
+{
+    public List<Enemy> enemies = new List<Enemy>();
+
+    public int Raise()
+    {
+        int n = 0;
+        foreach (Enemy e in enemies)
+        {
+            if (e == null) continue;
+            e.alert = true;
+            n++;
+        }
+        return n;
+    }
+}
+
+public class Enemy : MonoBehaviour
+{
+    public bool alert;
+}`,
+ rules:[inFn('null 검사','Raise',/\be\s*==\s*null|\be\s*!=\s*null|!\s*e\b/,'비어 있는 칸을 건너뛰어요.','e == null 이면 continue 하세요.')],
+ test:(api,ok)=>{
+  const a={alert:false},b={alert:false};
+  api.set('enemies',[a,null,b]);
+  let r,e=null;try{r=api.call('Raise')}catch(x){e=x}
+  ok('살아 있는 적만',!e&&a.alert===true&&b.alert===true&&r===2,'살아 있는 두 마리에게만 알렸어요.',e?'비어 있는 칸에서 에러가 나요.':`알림 수 ${r} 입니다. 2 여야 해요.`);
+ },
+ hints:['목록에는 파괴된 오브젝트의 빈 칸이 남아 있을 수 있어요.','빈 칸의 멤버를 쓰면 에러가 나요.','반복 안에서 e == null 이면 continue 로 건너뛰세요.'],
+ why:'다른 곳에서 Destroy 한 오브젝트는 내 목록에 빈 칸으로 남아요. 목록을 훑을 때마다 null 확인을 하거나, 파괴될 때 목록에서 빼 주는 습관이 필요해요.',
+ concepts:[['MissingReferenceException','파괴된 오브젝트를 계속 사용하면 발생한다.'],['continue','반복에서 이번 칸만 건너뛰고 다음으로 넘어간다.']]});
+
+QB({id:'x77',cat:'debug',stage:1,level:2,title:'죽는 처리가 두 번 일어난다',
+ story:'적이 한 프레임에 두 번 맞으면 Die() 가 두 번 호출되어 점수가 두 번 올라가고 Destroy 도 두 번 요청돼요. 이미 죽은 뒤의 호출은 무시되어야 해요.',
+ goals:['Die(): 처음 호출되었을 때만 score 를 reward 만큼 올리고 Destroy(gameObject) 를 요청한다','이미 죽었다면 아무 일도 하지 않는다 (가드절)'],
+ limits:['dead 플래그를 이용해 한 번만 실행한다'],
+ starter:C`
+using UnityEngine;
+
+public class Enemy : MonoBehaviour
+{
+    public int reward = 100;
+    public int score;
+    private bool dead;
+
+    public void Die()
+    {
+        dead = true;
+        score += reward;
+        Destroy(gameObject);
+    }
+}`,
+ solution:C`
+using UnityEngine;
+
+public class Enemy : MonoBehaviour
+{
+    public int reward = 100;
+    public int score;
+    private bool dead;
+
+    public void Die()
+    {
+        if (dead) return;
+        dead = true;
+        score += reward;
+        Destroy(gameObject);
+    }
+}`,
+ rules:[inFn('가드절','Die',/if\s*\(\s*dead\s*\)\s*return|if\s*\(\s*!\s*dead\s*\)|dead\s*==\s*true/,'이미 죽었으면 바로 돌아가요.','맨 앞에서 if (dead) return; 으로 중복 호출을 막으세요.')],
+ test:(api,ok)=>{
+  api.call('Die');api.call('Die');api.call('Die');
+  ok('점수는 한 번',api.get('score')===100,'점수는 한 번만 올라요.',`score 가 ${api.get('score')} 입니다. 100 이어야 해요.`);
+  ok('Destroy 는 한 번',api.env.destroyed.length===1,'Destroy 는 한 번만 요청돼요.',`Destroy 가 ${api.env.destroyed.length}번 요청됐어요. 1번이어야 해요.`);
+ },
+ hints:['같은 함수가 여러 번 불려도 한 번만 일하게 하려면 "이미 했는가" 표시가 필요해요.','dead 플래그를 확인해서 이미 죽었으면 바로 return 하세요.','플래그는 처리 시작 직후에 true 로 바꾸세요.'],
+ why:'이벤트나 충돌은 같은 프레임에 여러 번 올 수 있어요. 한 번만 일어나야 하는 처리는 플래그와 가드절로 중복을 막으세요. 파괴 관련 오류의 흔한 원인이에요.',
+ concepts:[['가드절(Guard Clause)','함수 맨 앞에서 조건을 검사해 일찍 return 하는 방식.'],['중복 호출 방지','플래그로 한 번만 실행되게 한다.']]});
+
+QB({id:'x78',cat:'debug',stage:1,level:2,title:'쫓던 플레이어가 사라지면 다시 찾기',
+ story:'적이 Player 를 쫓는 중에 플레이어가 죽어서 파괴되면 에러가 나요:\nMissingReferenceException: The object of type \'Player\' has been destroyed but you are still trying to access it.\n  at Chaser.Update (Chaser.cs:10)\n플레이어가 사라졌다면 씬에서 새 플레이어를 찾아보고, 그래도 없으면 가만히 있어야 해요.',
+ goals:['player 가 비어 있으면 FindObjectOfType<Player>() 로 다시 찾는다','그래도 없으면 아무것도 하지 않고 돌아간다','있으면 player.x 쪽으로 x 방향으로 speed × Time.deltaTime 만큼 이동한다'],
+ limits:['Unity에서는 파괴된 오브젝트가 == null 비교에서 true 가 된다'],
+ starter:C`
+using UnityEngine;
+
+public class Chaser : MonoBehaviour
+{
+    public Player player;
+    public float speed = 2f;
+
+    void Update()
+    {
+        Vector3 pos = transform.position;
+        float dir = player.x > pos.x ? 1f : -1f;
+        pos.x += dir * speed * Time.deltaTime;
+        transform.position = pos;
+    }
+}
+
+public class Player : MonoBehaviour
+{
+    public float x;
+}`,
+ solution:C`
+using UnityEngine;
+
+public class Chaser : MonoBehaviour
+{
+    public Player player;
+    public float speed = 2f;
+
+    void Update()
+    {
+        if (player == null)
+        {
+            player = FindObjectOfType<Player>();
+            if (player == null) return;
+        }
+        Vector3 pos = transform.position;
+        float dir = player.x > pos.x ? 1f : -1f;
+        pos.x += dir * speed * Time.deltaTime;
+        transform.position = pos;
+    }
+}
+
+public class Player : MonoBehaviour
+{
+    public float x;
+}`,
+ rules:[inFn('null 검사','Update',/player\s*==\s*null|!\s*player\b|player\s*!=\s*null/,'player 가 비었는지 확인해요.','Update 에서 player == null 인지 확인하세요.'),inFn('다시 찾기','Update',/FindObjectOfType\s*<\s*Player\s*>/,'비었으면 다시 찾아요.','player == null 이면 FindObjectOfType<Player>() 로 다시 찾으세요.')],
+ test:(api,ok)=>{
+  api.env.Time.deltaTime=0.5;api.transform.position={x:0,y:0};
+  api.set('player',null);delete api.env.components.Player;
+  let e=null;try{api.call('Update')}catch(x){e=x}
+  ok('아무도 없음',!e&&api.transform.position.x===0,'플레이어가 없으면 가만히 있어요.','플레이어가 없을 때 에러가 나거나 움직여요. 다시 찾아도 없으면 return 하세요.');
+  api.env.components.Player={x:10};
+  let e2=null;try{api.call('Update')}catch(x){e2=x}
+  ok('새로 찾아 쫓기',!e2&&Math.abs(api.transform.position.x-1)<1e-6,'새 플레이어를 찾아 쫓아가요 (2 × 0.5 = 1).',e2?'에러가 나요.':`위치 x 가 ${api.transform.position.x} 입니다. 1 이어야 해요.`);
+ },
+ hints:['파괴된 플레이어의 참조는 비어 있는 것처럼 취급돼요.','비었을 때는 다시 찾아서 채워 볼 수 있어요.','다시 찾아도 없으면 return 하고, 있으면 쫓아가세요.'],
+ why:'참조가 사라질 수 있으면 "비었는지 확인 → 다시 찾기 → 그래도 없으면 쉬기"의 순서로 대응하세요. 단순히 건너뛰기보다 복구를 시도하면 게임이 더 안정적이에요.',
+ concepts:[['MissingReferenceException','파괴된 오브젝트를 사용하면 발생한다. 사용 전 null 확인이 필요하다.'],['참조 복구','비어 있으면 다시 찾아 채우고, 못 찾으면 안전하게 멈춘다.']]});
+
+QB({id:'x79',cat:'debug',stage:1,level:3,title:'IndexOutOfRangeException: 반복이 한 칸 더 간다',
+ story:'점수 배열의 합을 구하는 Sum() 이 에러를 내요:\nIndexOutOfRangeException: Index was outside the bounds of the array.\n  at Report.Sum (Report.cs:8)\n반복 조건이 i <= scores.Length 라서 마지막에 존재하지 않는 칸을 읽어요. 고쳐 주세요.',
+ goals:['Sum(scores): 배열의 모든 값을 더해 반환한다','빈 배열이면 0을 반환한다'],
+ limits:['반복 조건에서 마지막 인덱스는 Length - 1 이다'],
+ starter:C`
+int Sum(int[] scores)
+{
+    int total = 0;
+    for (int i = 0; i <= scores.Length; i++)
+    {
+        total += scores[i];
+    }
+    return total;
+}`,
+ solution:C`
+int Sum(int[] scores)
+{
+    int total = 0;
+    for (int i = 0; i < scores.Length; i++)
+    {
+        total += scores[i];
+    }
+    return total;
+}`,
+ rules:[],
+ test:(api,ok)=>{
+  let r,e=null;try{r=api.call('Sum',[10,20,30])}catch(x){e=x}
+  ok('합계',!e&&r===60,'[10, 20, 30] 의 합은 60 이에요.',e?'마지막에 배열 범위를 벗어나요. <= 대신 < 를 쓰세요.':`결과 ${r} 입니다. 60 이어야 해요.`);
+  let r2,e2=null;try{r2=api.call('Sum',[])}catch(x){e2=x}
+  ok('빈 배열',!e2&&r2===0,'빈 배열은 0이에요.','빈 배열에서 에러가 나요.');
+ },
+ hints:['길이가 3인 배열의 인덱스는 0, 1, 2 예요. 3 은 범위 밖이에요.','반복 조건이 i <= scores.Length 면 i 가 3 일 때도 실행돼요.','i < scores.Length 로 바꾸세요.'],
+ why:'인덱스는 0부터 시작하므로 마지막 인덱스는 Length - 1 이에요. 반복 조건의 < 와 <= 한 글자 차이로 생기는 "한 칸 초과(off-by-one)" 오류는 가장 흔한 버그 중 하나예요.',
+ concepts:[['IndexOutOfRangeException','유효 범위(0 ~ Length−1)를 벗어난 인덱스 접근.'],['off-by-one 오류','반복 범위가 하나 많거나 적게 잡히는 흔한 실수.']]});
+
+QB({id:'x80',cat:'debug',stage:1,level:3,title:'ArgumentOutOfRangeException: 빈 가방에서 꺼내기',
+ story:'가방에서 마지막으로 넣은 아이템을 꺼내는 Pop() 이 가방이 비었을 때 에러를 내요:\nArgumentOutOfRangeException: Index was out of range.\n  at Bag.Pop (Bag.cs:9)\n비었을 때는 에러 없이 "없음" 표시로 빈 문자열을 돌려주세요.',
+ goals:['Push(item): 가방 맨 뒤에 아이템을 넣는다','Pop(): 마지막 아이템을 반환하고 가방에서 뺀다','가방이 비어 있으면 에러 없이 "" 를 반환한다'],
+ limits:['마지막 인덱스는 Count - 1 이다'],
+ starter:C`
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Bag : MonoBehaviour
+{
+    private List<string> items = new List<string>();
+
+    public void Push(string item)
+    {
+        items.Add(item);
+    }
+
+    public string Pop()
+    {
+        string last = items[items.Count - 1];
+        items.RemoveAt(items.Count - 1);
+        return last;
+    }
+}`,
+ solution:C`
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Bag : MonoBehaviour
+{
+    private List<string> items = new List<string>();
+
+    public void Push(string item)
+    {
+        items.Add(item);
+    }
+
+    public string Pop()
+    {
+        if (items.Count == 0) return "";
+        string last = items[items.Count - 1];
+        items.RemoveAt(items.Count - 1);
+        return last;
+    }
+}`,
+ rules:[],
+ test:(api,ok)=>{
+  api.call('Push','검');api.call('Push','방패');
+  ok('마지막부터',api.call('Pop')==='방패'&&api.call('Pop')==='검','마지막에 넣은 것부터 꺼내요.','방패, 검 순서로 나와야 해요.');
+  let r,e=null;try{r=api.call('Pop')}catch(x){e=x}
+  ok('빈 가방',!e&&r==='','비었을 때 ""를 반환해요.',e?'빈 가방에서 에러가 나요. Count 가 0 이면 먼저 반환하세요.':`비었을 때 "${r}" 를 반환했어요. "" 여야 해요.`);
+ },
+ hints:['비어 있으면 Count - 1 은 −1 이라 유효하지 않은 인덱스예요.','꺼내기 전에 Count 가 0 인지 확인하세요.','0 이면 바로 "" 를 return 하세요.'],
+ why:'List 의 인덱스 오류는 ArgumentOutOfRangeException 으로 나타나요. "꺼내기/읽기 전에 비었는지 확인"은 컬렉션을 다루는 가장 기본적인 방어예요.',
+ concepts:[['ArgumentOutOfRangeException','List 에서 유효하지 않은 인덱스를 사용했을 때 발생한다.'],['경계 검사','접근 전에 Count 를 확인해 범위를 지킨다.']]});
+
+QB({id:'x81',cat:'debug',stage:1,level:3,title:'격자 바깥 칸을 읽으려다',
+ story:'타일 맵을 1차원 배열 grid 에 저장하고 있어요 (가로 width, 세로 height). GetTile(x, y) 로 칸을 읽는데, 맵 가장자리에서 이웃 칸을 조사하다 범위를 벗어나 에러가 나요:\nIndexOutOfRangeException\n  at Map.GetTile (Map.cs:8)\n범위 밖 좌표는 −1 을 반환하도록 고쳐 주세요.',
+ goals:['GetTile(x, y): 좌표 (x, y) 의 값 grid[y * width + x] 를 반환한다','x 나 y 가 맵 범위 밖이면 −1 을 반환한다'],
+ limits:['x 가 0 이상 width 미만, y 가 0 이상 height 미만일 때만 읽는다'],
+ starter:C`
+using UnityEngine;
+
+public class Map : MonoBehaviour
+{
+    public int width = 3;
+    public int height = 2;
+    public int[] grid = new int[] { 1, 2, 3, 4, 5, 6 };
+
+    public int GetTile(int x, int y)
+    {
+        return grid[y * width + x];
+    }
+}`,
+ solution:C`
+using UnityEngine;
+
+public class Map : MonoBehaviour
+{
+    public int width = 3;
+    public int height = 2;
+    public int[] grid = new int[] { 1, 2, 3, 4, 5, 6 };
+
+    public int GetTile(int x, int y)
+    {
+        if (x < 0 || x >= width || y < 0 || y >= height) return -1;
+        return grid[y * width + x];
+    }
+}`,
+ rules:[],
+ test:(api,ok)=>{
+  const t=(x,y)=>{try{return api.call('GetTile',x,y)}catch(e){return 'ERR'}};
+  ok('범위 안',t(0,0)===1&&t(2,1)===6&&t(1,1)===5,'범위 안 칸은 값을 돌려줘요.',`(0,0)=${t(0,0)}, (2,1)=${t(2,1)}, (1,1)=${t(1,1)}. 1, 6, 5 여야 해요.`);
+  ok('가로 밖',t(3,0)===-1&&t(-1,0)===-1,'가로 범위 밖은 −1 이에요.',`(3,0)=${t(3,0)}, (−1,0)=${t(-1,0)}. −1 이어야 해요. 가로 경계를 확인하세요.`);
+  ok('세로 밖',t(0,2)===-1&&t(0,-1)===-1,'세로 범위 밖은 −1 이에요.',`(0,2)=${t(0,2)}, (0,−1)=${t(0,-1)}. −1 이어야 해요. 세로 경계를 확인하세요.`);
+  ok('가로가 넘치는 함정',t(3,0)!==4,'(3,0) 이 다음 줄의 칸으로 잘못 읽히지 않아요.','x 가 width 이상일 때 다음 줄 값(4)이 읽혀요. x 범위도 따로 확인하세요.');
+ },
+ hints:['배열 전체 범위만 보면 부족해요. x 와 y 각각의 범위가 있어요.','x 가 width 이상이면 계산된 인덱스가 다음 줄의 칸을 가리켜 틀린 값을 읽어요.','네 가지 경우(x<0, x>=width, y<0, y>=height) 중 하나라도 맞으면 −1 을 반환하세요.'],
+ why:'2차원을 1차원으로 펴서 저장할 때는 인덱스 계산이 맞아도 x, y 각각의 범위를 따로 검사해야 해요. 경계 검사는 격자·타일·보드 게임에서 항상 필요해요.',
+ concepts:[['경계 검사','접근 전에 좌표가 범위 안인지 확인한다.'],['1차원으로 편 격자','인덱스 = y × width + x. x 가 width 를 넘으면 다음 줄로 넘어가 버린다.']]});
