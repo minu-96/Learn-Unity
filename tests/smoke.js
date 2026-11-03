@@ -117,7 +117,7 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
  await pg.waitForSelector('#aerr:not([hidden])');
  ok(true,'잘못된 비밀번호는 거부');
  await pg.fill('#apw','pw1234');await pg.click('#ago');
- await pg.waitForSelector('.tbl');
+ await pg.waitForSelector('.tblwrap .tbl');
  ok((await pg.textContent('.who')).includes('운영진'),'운영진 표시');
  const names=await pg.$$eval('.tblwrap tbody tr td:first-child b',e=>e.map(x=>x.textContent));
  ok(names.length===4&&names.includes('김가나')&&names.includes('<b>해커</b>'),'부원 4명 표시, 이름의 HTML은 이스케이프: '+names.join('/'));
@@ -128,6 +128,15 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
  ok(await pg.$$eval('.dtbl',e=>e.length)===1,'전체 날짜별 표가 있고 부원 상세는 아직 안 열림');
  await pg.click('[data-sel]:has(b:text-is("김가나"))');
  ok(await pg.$$eval('#adetail .dtbl',e=>e.length)===1&&(await pg.textContent('#adetail')).includes('문제 사전 해결 4문제'),'부원을 누르면 그 사람의 문제 사전·복습·날짜별 상세가 열림');
+ {const a=await pg.$$eval('#adetail .tblwrap thead th',e=>e.map(x=>x.textContent)),b=await pg.$$eval('#alist thead th, .card:not(#adetail) > .tblwrap thead th',e=>e.map(x=>x.textContent));ok(a.join('|')===b.slice(1).join('|'),'상세 표 항목이 부원 표와 같음: '+a.join('/'));}
+ ok(await pg.$$eval('#adetail .dtbl tbody tr',e=>e.length)===7,'상세 날짜별 표는 월~일 7줄');
+ ok((await pg.textContent('#adetail .dtbl tbody tr:first-child td:first-child')).includes('(월)'),'주는 월요일부터');
+ { const [dl]=await Promise.all([pg.waitForEvent('download'),pg.click('#adcsv')]); const txt=fs.readFileSync(await dl.path(),'utf8');ok(txt.includes('김가나')&&txt.includes('문제 사전 해결,4')&&txt.includes('날짜,학습,문제 사전,복습,합계'),'상세 CSV에 요약·날짜별 활동이 들어 있음'); }
+ await pg.click('#adetail [data-wkm="-1"]');
+ ok(/지난주/.test(await pg.textContent('#adetail .wknav')),'이전 주로 이동');
+ ok(await pg.$eval('#adetail [data-wkm="1"]',e=>!e.disabled),'다음 주 버튼 활성');
+ await pg.click('#adetail [data-wkm="1"]');
+ ok(await pg.$eval('#adetail [data-wkm="1"]',e=>e.disabled),'이번 주에서는 다음 주 버튼 비활성');
  await pg.click('#aclose');
  ok(await pg.$('#adetail')===null,'상세 닫기');
  ok(await pg.$$eval('details.rep',e=>e.length)===1,'신고 목록 1건');
