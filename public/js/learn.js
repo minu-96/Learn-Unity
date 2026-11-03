@@ -65,6 +65,7 @@ function renderHome(){
  const lead=today>=DAILY_GOAL?'오늘 목표를 채웠어요. 더 해도 좋고, 여기서 마무리해도 좋아요.':today>0?`오늘 ${today}개 했어요. ${DAILY_GOAL-today}개만 더 하면 목표예요.`:'하루 3개, 15분이면 충분해요. 아래에서 하나만 골라 시작해 보세요.';
  const act=(cls,kick,title,meta,label,go)=>`<div class="act ${cls}"><div class="act-t"><span class="kick">${kick}</span><b>${esc(title)}</b><span class="note">${meta}</span></div><button class="btn" data-go="${go}">${label}</button></div>`;
  const acts=[];
+ if(typeof introHomeCard==='function'&&sm.solved<3){const ic=introHomeCard();if(ic)acts.push(ic)}
  const wk=wkHTML();if(wk)acts.push(wk);
  if(due.length)acts.push(act('rev','복습',`복습할 문제 ${due.length}개`,`약 ${Math.max(3,Math.min(due.length,6)*3)}분 · 잊기 전에 한 번 더 풀면 오래 남아요`,'복습 시작','review'));
  if(wip&&(!nx||wip.id!==nx.id))acts.push(act('wip','이어서 하기',wip.title,esc(stageLabel(wip)),'이어서 쓰기','open:'+wip.id));
@@ -127,10 +128,12 @@ function renderLearn(){
  $('#main').innerHTML=`<div class="learn">
   <div class="tt-row" role="tablist" aria-label="학습 구간">${tabs}</div>
   <div class="tier-head tier-${V.tier}"><div><h2>${t.name}</h2><p>${esc(t.desc)}</p></div><div class="tier-need"><span class="note">수료까지</span><b>${esc(tierNeed(x))}</b></div></div>
+  ${V.tier==='intro'&&typeof introDone==='function'?`<button class="introlink" id="tointro"><span class="kick">${introDone()?'다시 보기':'먼저 읽어 보세요'}</span><b>코딩이란? 코드를 쓰기 전에 알아 두면 좋은 이야기</b><span class="note">5장 · 약 5분 · 진도에는 들어가지 않아요</span></button>`:''}
   <div class="scgrid">${cards}</div>
   <div class="note">순서대로 하지 않아도 돼요. "추천" 표시는 지금 풀 차례인 단계예요. 수료 기준은 구간 문제의 ${PASS_SOLVED*100}% 해결, 푼 문제의 ${PASS_SELF*100}% 이상은 정답을 보지 않고 풀기예요.</div>
  </div>`;
  $('#main').querySelectorAll('[data-tier]').forEach(b=>b.onclick=()=>{V.tier=b.dataset.tier;renderLearn()});
+ const ti=$('#tointro');if(ti)ti.onclick=()=>{IN.i=0;gotoTab('intro')};
  $('#main').querySelectorAll('.sc').forEach(b=>b.onclick=()=>{V.stage={cat:b.dataset.c,stage:+b.dataset.s};render();window.scrollTo(0,0)});
 }
 

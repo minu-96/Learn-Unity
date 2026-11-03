@@ -31,7 +31,7 @@ function normalize(d){
  d=d||{};
  /* 예전 객관식 버전의 진행도는 문제가 달라져서 이어받지 않고, 개념 사전만 가져온다 */
  const fresh=d.v===VER;
- return {v:VER,solved:fresh?(d.solved||{}):{},dict:d.dict||{},custom:fresh?sanitizeCustom(d.custom):[],drafts:fresh?(d.drafts||{}):{},review:fresh?(d.review||{}):{},practice:d.practice||{},act:d.act||{},notes:d.notes||{},diag:migDiag(d.diag)};
+ return {v:VER,solved:fresh?(d.solved||{}):{},dict:d.dict||{},custom:fresh?sanitizeCustom(d.custom):[],drafts:fresh?(d.drafts||{}):{},review:fresh?(d.review||{}):{},practice:d.practice||{},act:d.act||{},notes:d.notes||{},diag:migDiag(d.diag),intro:d.intro||null};
 }
 const lsKey=()=>me?LS+'-'+me.uid:LS;
 function loadLocal(){
@@ -135,6 +135,7 @@ function render(){
  else if(V.tab==='admin'&&me&&me.admin)renderAdmin();
  else if(V.tab==='learn')V.stage?renderStage():renderLearn();
  else if(V.tab==='bank')V.bankStage?renderBankStage():renderBank();
+ else if(V.tab==='intro')renderIntro();
  else renderHome();
  const lo=$('#logout');if(lo)lo.onclick=()=>Store.signOut();
  const sn=$('#snd');if(sn)sn.onclick=()=>{Fx.setOn(!Fx.isOn());sn.setAttribute('aria-pressed',String(Fx.isOn()));sn.textContent=Fx.isOn()?'♪ 켬':'♪ 끔'};
