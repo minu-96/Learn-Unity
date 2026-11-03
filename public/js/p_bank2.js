@@ -1980,3 +1980,289 @@ public class Spawner : MonoBehaviour
  hints:['slot이 Length 이상이거나 음수면 배열 밖이에요.','Mathf.Clamp로 범위 안으로 끌어오세요.','길이가 0이면 Clamp의 최댓값이 −1이 되니 먼저 따로 처리해야 해요.'],
  why:'바깥에서 들어온 번호는 믿지 말고 범위를 맞춰 쓰세요. Clamp는 한 줄로 "너무 작으면 최솟값, 너무 크면 최댓값"을 처리해 줍니다.',
  concepts:[['IndexOutOfRangeException','유효 범위(0 ~ Length−1)를 벗어난 인덱스로 접근했을 때 발생한다.'],['Mathf.Clamp','값을 최솟값과 최댓값 사이로 제한한다.']]});
+
+/* ---- 수학 1단계 ---- */
+QB({id:'x82',cat:'math',stage:1,level:1,title:'A에서 B로 향하는 방향 벡터',
+ story:'투사체가 발사 지점에서 목표 지점으로 날아가려면 "방향만 담은" 벡터가 필요해요. 두 점의 차이를 구한 뒤 길이를 1로 맞춰서(정규화) 반환합니다. 두 점이 같으면 방향이 없으니 (0, 0)을 돌려주세요.',
+ goals:['Direction(ax, ay, bx, by): A에서 B로 향하는 길이 1의 방향 벡터를 반환한다','두 점이 같은 위치이면 (0, 0)을 반환한다 (NaN이 나오면 안 돼요)'],
+ limits:['반환값은 new Vector2(x, y)'],
+ api:'Mathf.Sqrt(x), new Vector2(x, y)',
+ starter:C`
+Vector2 Direction(float ax, float ay, float bx, float by)
+{
+    return new Vector2(bx - ax, by - ay);
+}`,
+ solution:C`
+Vector2 Direction(float ax, float ay, float bx, float by)
+{
+    float dx = bx - ax;
+    float dy = by - ay;
+    float len = Mathf.Sqrt(dx * dx + dy * dy);
+    if (len == 0f) return new Vector2(0f, 0f);
+    return new Vector2(dx / len, dy / len);
+}`,
+ rules:[],
+ test:(api,ok)=>{
+  const d=(a,b,c,e)=>{const r=api.call('Direction',a,b,c,e);return {x:r.x,y:r.y,len:Math.hypot(r.x,r.y)}};
+  let r=d(0,0,3,4);
+  ok('길이 1',Math.abs(r.len-1)<1e-4,'방향 벡터의 길이가 1이에요.',`길이가 ${r.len.toFixed(2)} 입니다. 1이어야 해요 (정규화 필요).`);
+  ok('방향',Math.abs(r.x-0.6)<1e-4&&Math.abs(r.y-0.8)<1e-4,'(0,0)에서 (3,4)는 (0.6, 0.8) 방향이에요.',`결과가 (${r.x.toFixed(2)}, ${r.y.toFixed(2)}) 입니다. (0.6, 0.8)이어야 해요.`);
+  r=d(5,5,5,-5);
+  ok('아래 방향',Math.abs(r.x)<1e-6&&Math.abs(r.y+1)<1e-6,'아래쪽으로는 (0, −1)이에요.',`결과가 (${r.x}, ${r.y}) 입니다. (0, −1)이어야 해요.`);
+  r=d(2,2,2,2);
+  ok('같은 위치',r.x===0&&r.y===0,'같은 위치이면 (0, 0)이에요.','같은 위치에서 NaN이 나와요. 길이가 0이면 나누지 마세요.');
+ },
+ hints:['두 점의 차이 (bx − ax, by − ay)가 A→B 방향이에요.','길이는 √(dx² + dy²). 각 성분을 길이로 나누면 길이 1이 돼요.','길이가 0일 때는 나누기 전에 먼저 반환하세요.'],
+ why:'방향과 거리를 분리해 두면 속도를 곱하기만 해서 같은 방향으로 어떤 속도든 낼 수 있어요. 정규화는 길이 0을 먼저 처리하는 습관과 한 쌍입니다.',
+ concepts:[['정규화(Normalize)','벡터를 길이 1로 만들어 방향만 남기는 연산. 길이 0일 때는 나눌 수 없다.'],['벡터의 길이(크기)','√(x² + y²).']]});
+
+QB({id:'x83',cat:'math',stage:1,level:1,title:'속도 상한을 넘지 않게',
+ story:'폭발에 휘말린 캐릭터의 속도가 한없이 커지는 문제가 있어요. 속도 벡터의 길이가 최대 속도를 넘으면 방향은 그대로 두고 길이만 최대 속도로 줄여 주세요. 최대 속도보다 느리면 그대로 둡니다.',
+ goals:['LimitSpeed(vx, vy, max): 속도 벡터의 길이가 max를 넘으면 길이를 max로 줄여 반환한다','방향은 그대로 유지한다','길이가 max 이하이면 입력 그대로 반환한다 (0일 때 NaN이 나오면 안 돼요)'],
+ limits:['반환값은 new Vector2(x, y)'],
+ api:'Mathf.Sqrt(x), new Vector2(x, y)',
+ starter:C`
+Vector2 LimitSpeed(float vx, float vy, float max)
+{
+    return new Vector2(vx, vy);
+}`,
+ solution:C`
+Vector2 LimitSpeed(float vx, float vy, float max)
+{
+    float len = Mathf.Sqrt(vx * vx + vy * vy);
+    if (len > max)
+    {
+        vx = vx / len * max;
+        vy = vy / len * max;
+    }
+    return new Vector2(vx, vy);
+}`,
+ rules:[],
+ test:(api,ok)=>{
+  const m=(x,y,s)=>{const r=api.call('LimitSpeed',x,y,s);return {x:r.x,y:r.y,len:Math.hypot(r.x,r.y)}};
+  let r=m(30,40,10);
+  ok('상한 적용',Math.abs(r.len-10)<1e-4,'너무 빠르면 길이가 10으로 줄어요.',`속도 크기가 ${r.len.toFixed(2)} 입니다. 10이어야 해요.`);
+  ok('방향 유지',Math.abs(r.x-6)<1e-4&&Math.abs(r.y-8)<1e-4,'방향은 그대로 (6, 8)이에요.',`결과가 (${r.x.toFixed(2)}, ${r.y.toFixed(2)}) 입니다. (6, 8)이어야 해요.`);
+  r=m(3,4,10);
+  ok('느리면 그대로',Math.abs(r.x-3)<1e-6&&Math.abs(r.y-4)<1e-6,'상한보다 느리면 그대로예요.',`(3, 4)가 (${r.x}, ${r.y}) 로 바뀌었어요. 상한 이하일 때는 건드리지 마세요.`);
+  r=m(0,0,10);
+  ok('정지 상태',r.x===0&&r.y===0,'멈춰 있으면 (0, 0)이에요.','(0, 0) 입력에서 NaN이 나와요.');
+ },
+ hints:['속도 벡터의 길이는 √(vx² + vy²) 예요.','길이가 max보다 클 때만 줄이면 돼요. 각 성분에 max/길이를 곱하세요.','"넘을 때만" 처리하면 길이 0에서의 나눗셈도 자연스럽게 피할 수 있어요.'],
+ why:'길이 제한(clamp)은 이동 속도, 힘, 카메라 이동 등에서 흔히 써요. 방향은 두고 크기만 조절하는 것이 핵심이에요. Unity에는 Vector2.ClampMagnitude가 같은 일을 해 줍니다.',
+ concepts:[['벡터의 길이(크기)','√(x² + y²). 크기를 바꿔도 방향은 그대로 둘 수 있다.'],['정규화(Normalize)','길이 1로 맞춰 방향만 남기는 연산.']]});
+
+QB({id:'x84',cat:'math',stage:1,level:1,title:'대시: 입력이 없으면 앞으로',
+ story:'대시 스킬은 누르고 있는 방향으로 일정 거리를 순간 이동해요. 대각선으로 눌러도 거리가 같아야 하고, 아무 방향도 누르지 않았다면 바라보는 방향(오른쪽)으로 대시해요.',
+ goals:['DashOffset(h, v, dist): 입력 (h, v) 방향으로 dist만큼 이동하는 변위를 반환한다','대각선이어도 이동 거리는 dist 로 같다','입력이 (0, 0)이면 오른쪽 (dist, 0)으로 이동한다'],
+ limits:['반환값은 new Vector2(x, y)'],
+ api:'Mathf.Sqrt(x), new Vector2(x, y)',
+ starter:C`
+Vector2 DashOffset(float h, float v, float dist)
+{
+    return new Vector2(h * dist, v * dist);
+}`,
+ solution:C`
+Vector2 DashOffset(float h, float v, float dist)
+{
+    float len = Mathf.Sqrt(h * h + v * v);
+    if (len == 0f) return new Vector2(dist, 0f);
+    return new Vector2(h / len * dist, v / len * dist);
+}`,
+ rules:[],
+ test:(api,ok)=>{
+  const m=(h,v,d)=>{const r=api.call('DashOffset',h,v,d);return {x:r.x,y:r.y,len:Math.hypot(r.x,r.y)}};
+  let r=m(1,1,6);
+  ok('대각선 거리',Math.abs(r.len-6)<1e-4,'대각선으로 대시해도 거리가 6이에요.',`이동 거리가 ${r.len.toFixed(2)} 입니다. 6이어야 해요.`);
+  r=m(0,-1,6);
+  ok('아래 방향',Math.abs(r.x)<1e-6&&Math.abs(r.y+6)<1e-6,'아래로 누르면 (0, −6)이에요.',`결과가 (${r.x}, ${r.y}) 입니다. (0, −6)이어야 해요.`);
+  r=m(0.3,0,6);
+  ok('약한 입력도 같은 거리',Math.abs(r.x-6)<1e-4,'살짝 눌러도 대시 거리는 6이에요.',`(0.3, 0) 입력의 결과가 (${r.x}, ${r.y}) 입니다. (6, 0)이어야 해요. 입력 크기가 아니라 방향만 쓰세요.`);
+  r=m(0,0,6);
+  ok('입력 없음',Math.abs(r.x-6)<1e-6&&r.y===0,'입력이 없으면 오른쪽으로 6이에요.','입력이 없을 때 (6, 0)이 되어야 해요. NaN이 나오지 않게 하세요.');
+ },
+ hints:['방향만 필요하니 입력 벡터를 길이 1로 정규화하세요.','정규화한 방향에 dist를 곱하면 항상 같은 거리가 돼요.','길이가 0이면 나누지 말고 오른쪽 (dist, 0)을 바로 반환하세요.'],
+ why:'방향(정규화)과 크기(dist)를 분리하면 입력이 얼마나 기울었든 일정한 거리를 낼 수 있어요. 길이 0은 "기본 방향"으로 대체하는 패턴도 자주 씁니다.',
+ concepts:[['정규화(Normalize)','벡터를 길이 1로 만들어 방향만 남기는 연산. 길이 0일 때는 나눌 수 없다.'],['방향과 크기의 분리','방향 벡터 × 크기로 이동량을 만들면 크기를 자유롭게 조절할 수 있다.']]});
+
+QB({id:'x85',cat:'math',stage:1,level:2,title:'등 뒤에 있나? (내적의 부호)',
+ story:'암살 스킬은 적의 등 뒤에서만 발동돼요. 적이 바라보는 방향 (fx, fy)과 적에서 플레이어로 향하는 벡터 (tx, ty)의 내적이 0보다 작으면 플레이어는 적의 뒤쪽에 있는 거예요.',
+ goals:['IsBehind(fx, fy, tx, ty): 대상이 바라보는 방향의 뒤쪽에 있으면 true','내적이 0보다 작으면 뒤쪽이다','옆 (내적 0)이나 앞쪽은 false'],
+ limits:['각도를 구하는 Atan2나 Acos 는 쓰지 않고 내적으로 판정한다'],
+ api:'내적 = fx × tx + fy × ty',
+ starter:C`
+bool IsBehind(float fx, float fy, float tx, float ty)
+{
+    return false;
+}`,
+ solution:C`
+bool IsBehind(float fx, float fy, float tx, float ty)
+{
+    float dot = fx * tx + fy * ty;
+    return dot < 0f;
+}`,
+ rules:[no('Atan2/Acos 금지',/Atan2|Acos/,'각도를 구하지 않고 내적으로 판정해요.','Atan2/Acos 대신 내적의 부호로 판정하세요.')],
+ test:(api,ok)=>{
+  const b=(tx,ty)=>api.call('IsBehind',1,0,tx,ty);
+  ok('바로 뒤',b(-3,0)===true,'바로 뒤는 true예요.','바로 뒤(−3, 0)는 뒤쪽이에요.');
+  ok('앞쪽',b(4,1)===false,'앞쪽은 false예요.','앞(4, 1)은 뒤쪽이 아니에요.');
+  ok('비스듬한 뒤',b(-2,5)===true,'비스듬히 뒤에 있어도 true예요.','(−2, 5)는 x가 뒤쪽이라 뒤쪽 반평면이에요.');
+  ok('정확히 옆',b(0,5)===false,'정확히 옆은 뒤가 아니에요.','내적이 0이면 뒤가 아니라 옆이에요.');
+  ok('회전한 정면',api.call('IsBehind',0,1,0,-2)===true&&api.call('IsBehind',0,1,0,2)===false,'위를 보는 경우에도 맞게 판정해요.','정면이 (0, 1)이면 (0, −2)가 뒤쪽이에요.');
+ },
+ hints:['두 벡터의 내적은 성분 곱의 합이에요.','내적이 양수면 같은 쪽, 음수면 반대쪽, 0이면 직각이에요.','내적이 0보다 작을 때 true를 반환하세요.'],
+ why:'내적의 부호만으로도 "앞/뒤" 판정이 돼요. 각도 계산 없이 곱셈과 덧셈뿐이라 빠르고, 백스탭·피격 방향·컬링 등에 널리 써요.',
+ concepts:[['내적(Dot Product)','두 벡터 성분 곱의 합. 양수면 같은 쪽, 음수면 반대쪽, 0이면 수직.'],['앞/뒤 판정','정면 방향과 대상 벡터의 내적 부호로 앞뒤를 가른다.']]});
+
+QB({id:'x86',cat:'math',stage:1,level:2,title:'시야각과 사거리를 함께',
+ story:'경비병은 시야각 안에 있고, 또 사거리 안에 있을 때만 플레이어를 발견해요. 방향은 내적과 cos로, 거리는 벡터 길이로 판정합니다.',
+ goals:['Sees(fx, fy, tx, ty, halfAngle, range): (fx, fy)는 바라보는 방향(길이 1), (tx, ty)는 대상까지의 벡터','대상까지의 거리가 range 이하이고','정규화한 방향의 내적 ≥ cos(halfAngle) 이면 true (halfAngle 은 도 단위)','대상 벡터가 (0, 0)이면 false'],
+ limits:['각도를 구하는 Atan2나 Acos 는 쓰지 않고 내적으로 판정한다','도 → 라디안 변환: Mathf.Deg2Rad'],
+ api:'Mathf.Cos, Mathf.Deg2Rad, Mathf.Sqrt',
+ starter:C`
+bool Sees(float fx, float fy, float tx, float ty, float halfAngle, float range)
+{
+    return true;
+}`,
+ solution:C`
+bool Sees(float fx, float fy, float tx, float ty, float halfAngle, float range)
+{
+    float len = Mathf.Sqrt(tx * tx + ty * ty);
+    if (len == 0f || len > range) return false;
+    float dot = (fx * tx + fy * ty) / len;
+    return dot >= Mathf.Cos(halfAngle * Mathf.Deg2Rad);
+}`,
+ rules:[no('Atan2/Acos 금지',/Atan2|Acos/,'각도를 구하지 않고 내적으로 판정해요.','Atan2/Acos 대신 내적과 Mathf.Cos 비교로 판정하세요.')],
+ test:(api,ok)=>{
+  const s=(tx,ty)=>api.call('Sees',1,0,tx,ty,30,10);
+  ok('가까운 정면',s(5,0)===true,'사거리 안 정면은 보여요.','사거리 안 정면(5, 0)은 보여야 해요.');
+  ok('멀면 안 보임',s(15,0)===false,'사거리 밖이면 안 보여요.','정면이어도 거리 15는 사거리 10 밖이에요.');
+  ok('시야각 밖',s(0,5)===false&&s(-5,0)===false,'시야각 밖은 안 보여요.','옆(0, 5)이나 뒤(−5, 0)는 시야각 30° 밖이에요.');
+  ok('경계 안쪽',s(8,2)===true,'약 14°는 시야 안이에요.','약 14°(8, 2)는 시야각 30° 안이고 거리도 사거리 안이에요.');
+  ok('경계 바깥',s(6,6)===false,'45°는 시야 밖이에요.','45°(6, 6)는 시야각 30° 밖이에요.');
+  ok('겹침',s(0,0)===false,'같은 위치이면 false예요.','길이 0인 벡터는 방향이 없어서 false로 처리하세요.');
+ },
+ hints:['두 조건(거리, 각도)을 모두 만족해야 해요.','거리는 벡터 길이 √(tx² + ty²). 각도는 정규화한 내적과 cos(반각)을 비교해요.','길이가 0이거나 range보다 크면 먼저 false를 반환하세요.'],
+ why:'시야 판정은 "거리 조건 + 방향 조건"의 조합이에요. 거리부터 걸러 내면 불필요한 계산도 줄어듭니다.',
+ concepts:[['내적(Dot Product)','단위 벡터끼리는 사잇각의 코사인 값이다.'],['시야각 판정','정규화한 대상 방향과 정면 방향의 내적을 cos(반각)과 비교한다.']]});
+
+QB({id:'x87',cat:'math',stage:1,level:2,title:'목표 방향으로 얼마나 빠른가 (투영)',
+ story:'미사일이 목표를 향해 날아가는데, 속도 벡터 (vx, vy)가 목표 방향 (dx, dy)으로 얼마나 기여하는지 알고 싶어요. 방향 벡터를 정규화한 뒤 속도와 내적하면 "그 방향 속도 성분"이 나옵니다. 목표에서 멀어지면 음수가 돼요.',
+ goals:['ApproachSpeed(vx, vy, dx, dy): 속도 (vx, vy)의 (dx, dy) 방향 성분을 반환한다','(dx, dy)를 정규화한 뒤 내적한다','(dx, dy)가 (0, 0)이면 0을 반환한다'],
+ limits:['각도를 구하는 Atan2나 Acos 는 쓰지 않고 내적으로 판정한다'],
+ api:'Mathf.Sqrt',
+ starter:C`
+float ApproachSpeed(float vx, float vy, float dx, float dy)
+{
+    return 0f;
+}`,
+ solution:C`
+float ApproachSpeed(float vx, float vy, float dx, float dy)
+{
+    float len = Mathf.Sqrt(dx * dx + dy * dy);
+    if (len == 0f) return 0f;
+    return (vx * dx + vy * dy) / len;
+}`,
+ rules:[no('Atan2/Acos 금지',/Atan2|Acos/,'각도를 구하지 않고 내적으로 구해요.','Atan2/Acos 대신 정규화한 내적을 쓰세요.')],
+ test:(api,ok)=>{
+  const a=(vx,vy,dx,dy)=>api.call('ApproachSpeed',vx,vy,dx,dy);
+  ok('정면 접근',Math.abs(a(5,0,10,0)-5)<1e-4,'목표 쪽으로 곧장 가면 속도 그대로예요.',`(5,0)을 (10,0) 방향으로: ${a(5,0,10,0)}. 5여야 해요.`);
+  ok('멀어짐',Math.abs(a(-3,0,10,0)+3)<1e-4,'멀어지면 음수예요.',`(−3,0)을 (10,0) 방향으로: ${a(-3,0,10,0)}. −3이어야 해요.`);
+  ok('수직',Math.abs(a(0,4,10,0))<1e-4,'수직으로 가면 0이에요.',`(0,4)를 (10,0) 방향으로: ${a(0,4,10,0)}. 0이어야 해요.`);
+  ok('비스듬',Math.abs(a(3,4,0,100)-4)<1e-4,'(3, 4)의 위쪽 성분은 4예요.',`(3,4)를 (0,100) 방향으로: ${a(3,4,0,100)}. 4여야 해요. 방향 벡터를 정규화하세요.`);
+  ok('방향 없음',a(3,4,0,0)===0,'방향이 없으면 0이에요.','방향 벡터가 (0, 0)일 때 NaN이 나와요. 0을 반환하세요.');
+ },
+ hints:['"그 방향 성분"은 정규화한 방향 벡터와 속도 벡터의 내적이에요.','방향 벡터의 길이로 나눠야 거리에 상관없이 같은 값이 나와요.','길이가 0이면 나누기 전에 0을 반환하세요.'],
+ why:'정규화한 방향과의 내적은 "그 방향으로 얼마나 가는가"를 알려 줘요. 접근 속도, 경사면 위 속도 성분, 그림자 길이 등 활용도가 넓습니다.',
+ concepts:[['내적(Dot Product)','단위 벡터와 내적하면 그 방향 성분(투영)이 된다.'],['정규화(Normalize)','길이 1로 맞춘 방향 벡터. 길이 0은 먼저 처리한다.']]});
+
+QB({id:'x88',cat:'math',stage:1,level:3,title:'가까운 쪽으로 조금씩 돌기',
+ story:'포탑이 현재 각도에서 목표 각도로 프레임마다 최대 maxStep도씩 돌아요. 350도에서 10도로 갈 때는 340도를 거꾸로 도는 것이 아니라 가까운 쪽(+20도)으로 돌아야 합니다. 결과는 0 이상 360 미만으로 맞춰 주세요.',
+ goals:['TurnToward(current, target, maxStep): 최단 방향으로 최대 maxStep도 회전한 새 각도를 반환한다','남은 각도가 maxStep 이하이면 목표 각도에 정확히 도착한다','결과는 0 이상 360 미만으로 맞춘다'],
+ limits:['Mathf.MoveTowardsAngle 을 쓰지 않고 직접 구현한다 (Mathf.Repeat, Mathf.Clamp 사용)'],
+ api:'Mathf.Repeat(값, 길이), Mathf.Clamp(값, 최소, 최대)',
+ starter:C`
+float TurnToward(float current, float target, float maxStep)
+{
+    return current + Mathf.Clamp(target - current, -maxStep, maxStep);
+}`,
+ solution:C`
+float TurnToward(float current, float target, float maxStep)
+{
+    float diff = Mathf.Repeat(target - current + 180f, 360f) - 180f;
+    float step = Mathf.Clamp(diff, -maxStep, maxStep);
+    return Mathf.Repeat(current + step, 360f);
+}`,
+ rules:[no('MoveTowardsAngle 금지',/MoveTowardsAngle/,'직접 구현했어요.','MoveTowardsAngle 대신 직접 계산해 보세요.')],
+ test:(api,ok)=>{
+  const t=(c,g,s)=>api.call('TurnToward',c,g,s);
+  const near=(a,b)=>Math.abs(a-b)<1e-3||Math.abs(Math.abs(a-b)-360)<1e-3;
+  ok('0도 경계 넘기',near(t(350,10,5),355)&&near(t(10,350,5),5),'350→10은 355로, 10→350은 5로 가요.',`350→10: ${t(350,10,5)}, 10→350: ${t(10,350,5)}. 각각 355, 5여야 해요.`);
+  ok('도착',near(t(350,10,50),10)&&near(t(0,30,30),30),'남은 각도가 작으면 목표에 도착해요.',`350→10(최대 50): ${t(350,10,50)}. 10이어야 해요.`);
+  ok('일반 회전',near(t(0,90,30),30)&&near(t(90,0,30),60),'일반 회전도 최대 30도씩 돌아요.',`0→90: ${t(0,90,30)}, 90→0: ${t(90,0,30)}. 각각 30, 60이어야 해요.`);
+  let in360=true;for(let i=0;i<50;i++){const r=t(Math.random()*720-360,Math.random()*720-360,Math.random()*60);if(r<-1e-6||r>=360+1e-6)in360=false}
+  ok('0 ~ 360',in360,'결과가 항상 0 ~ 360 범위예요.','결과가 0 이상 360 미만이어야 해요. Mathf.Repeat 로 감싸 주세요.');
+ },
+ hints:['먼저 두 각도의 최단 차이(−180 ~ 180)를 구하세요.','그 차이를 −maxStep ~ maxStep 으로 제한하면 이번 프레임에 돌 각도예요.','더한 뒤 Mathf.Repeat(…, 360)으로 0 ~ 360에 맞추세요.'],
+ why:'각도 차이를 먼저 최단으로 만들고 그다음 한계를 걸면 어느 방향이든 자연스럽게 돌아요. 포탑, 카메라, 캐릭터 회전 모두 이 패턴입니다. 실전에서는 Mathf.MoveTowardsAngle이 같은 일을 해요.',
+ concepts:[['각도의 순환성','각도는 360도마다 같은 방향이라 차이를 −180 ~ 180으로 감싸야 최단 회전이 된다.'],['Mathf.Clamp','값을 최솟값과 최댓값 사이로 제한한다.']]});
+
+QB({id:'x89',cat:'math',stage:1,level:3,title:'조준이 맞았나? (각도 오차)',
+ story:'사격 게임에서 현재 조준 각도가 목표 각도에서 tolerance도 이내이면 "조준 완료"예요. 359도와 1도처럼 0도를 사이에 둔 경우에도 가깝다고 판정해야 해요.',
+ goals:['IsAimed(angle, target, tolerance): 최단 각도 차이의 절댓값이 tolerance 이하이면 true','359 ↔ 1 은 2도 차이이다','360도를 넘거나 음수인 각도도 같은 방향으로 처리한다'],
+ limits:['Mathf.DeltaAngle 을 쓰지 않고 직접 구현한다 (Mathf.Repeat 사용)'],
+ api:'Mathf.Repeat(값, 길이), Mathf.Abs',
+ starter:C`
+bool IsAimed(float angle, float target, float tolerance)
+{
+    return Mathf.Abs(target - angle) <= tolerance;
+}`,
+ solution:C`
+bool IsAimed(float angle, float target, float tolerance)
+{
+    float diff = Mathf.Repeat(target - angle + 180f, 360f) - 180f;
+    return Mathf.Abs(diff) <= tolerance;
+}`,
+ rules:[no('DeltaAngle 금지',/DeltaAngle/,'직접 구현했어요.','DeltaAngle 대신 직접 계산해 보세요.')],
+ test:(api,ok)=>{
+  const a=(x,y,t)=>api.call('IsAimed',x,y,t);
+  ok('0도 경계',a(359,1,5)===true&&a(1,359,5)===true,'359°와 1°는 가까워요.','359와 1은 2도 차이예요. 360 순환을 고려하세요.');
+  ok('멀면 false',a(0,90,10)===false&&a(350,20,10)===false,'멀리 떨어지면 false예요.','0과 90, 350과 20(30도 차이)은 tolerance 10 밖이에요.');
+  ok('일반 값',a(100,105,5)===true&&a(100,106,5)===false,'경계 5도 이내만 true예요.','100과 105는 5도 이내, 106은 밖이에요.');
+  ok('범위 밖 입력',a(720,10,10)===true&&a(-10,350,1)===true,'360을 넘거나 음수인 각도도 처리해요.','720은 0도와 같고, −10은 350도와 같아요.');
+ },
+ hints:['단순 뺄셈은 0도를 넘는 경우를 놓쳐요.','최단 각도 차이는 Mathf.Repeat(b − a + 180, 360) − 180 으로 구해요.','그 차이의 절댓값을 tolerance와 비교하세요.'],
+ why:'각도 비교는 항상 "최단 차이" 위에서 해야 해요. 한 번 정리해 두면 조준, 시야, 회전 완료 판정에 그대로 재사용됩니다.',
+ concepts:[['각도의 순환성','각도는 360도마다 같은 방향이라 차이를 −180 ~ 180으로 감싸야 한다.'],['Mathf.Repeat','값을 0 이상 길이 미만으로 순환시킨다.']]});
+
+QB({id:'x90',cat:'math',stage:1,level:3,title:'어느 쪽으로 돌아야 빠를까 (회전 방향)',
+ story:'AI가 목표 각도를 향해 돌 때 시계 방향인지 반시계 방향인지 정해야 해요. 최단 각도 차이가 양수면 반시계(+1), 음수면 시계(−1), 같으면 0이에요. 350도에서 10도로 가려면 반시계(+1)가 가깝습니다.',
+ goals:['TurnDir(current, target): 최단 각도 차이가 양수이면 1, 음수이면 −1, 0이면 0을 반환한다','350 → 10 은 1, 10 → 350 은 −1','360도를 넘는 각도도 처리한다'],
+ limits:['정확히 반대편(180도)처럼 애매한 경우는 테스트하지 않는다'],
+ api:'Mathf.Repeat(값, 길이)',
+ starter:C`
+int TurnDir(float current, float target)
+{
+    if (target > current) return 1;
+    if (target < current) return -1;
+    return 0;
+}`,
+ solution:C`
+int TurnDir(float current, float target)
+{
+    float diff = Mathf.Repeat(target - current + 180f, 360f) - 180f;
+    if (diff > 0f) return 1;
+    if (diff < 0f) return -1;
+    return 0;
+}`,
+ rules:[],
+ test:(api,ok)=>{
+  const d=(a,b)=>api.call('TurnDir',a,b);
+  ok('0도 경계 넘기',d(350,10)===1&&d(10,350)===-1,'350→10은 +1, 10→350은 −1이에요.',`350→10: ${d(350,10)}, 10→350: ${d(10,350)}. 각각 1, −1이어야 해요.`);
+  ok('일반 값',d(0,90)===1&&d(90,0)===-1&&d(45,45)===0,'0→90은 +1, 90→0은 −1, 같으면 0이에요.',`0→90: ${d(0,90)}, 90→0: ${d(90,0)}, 45→45: ${d(45,45)}`);
+  ok('범위 밖 입력',d(720,10)===1&&d(-10,370)===1&&d(30,30+360)===0,'360을 넘는 입력도 처리해요.',`720→10: ${d(720,10)}. +1이어야 하고, 30과 390은 같은 각도라 0이에요.`);
+  ok('큰 차이도 최단',d(10,200)===-1&&d(200,10)===1,'200°는 10°에서 시계 방향이 더 가까워요.',`10→200: ${d(10,200)}, 200→10: ${d(200,10)}. 각각 −1, 1이어야 해요.`);
+ },
+ hints:['단순 비교는 0도를 넘는 경우에 틀려요.','최단 차이는 Mathf.Repeat(b − a + 180, 360) − 180 이에요.','그 차이의 부호로 방향을 정하세요.'],
+ why:'방향 결정에도 "최단 각도 차이"가 기준이 돼요. 부호만 필요하다면 그 값을 한 번 구해서 양수·음수·0으로 나누면 끝입니다.',
+ concepts:[['각도의 순환성','차이를 −180 ~ 180으로 감싸야 최단 회전 방향을 알 수 있다.'],['Mathf.Repeat','값을 0 이상 길이 미만으로 순환시킨다.']]});
