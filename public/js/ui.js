@@ -58,12 +58,23 @@ function probMap(){
  for(const p of PROBLEMS.concat(BANK)){const r=S.solved[p.id];if(!r||!(r.tries||r.ok))continue;o[p.id]=[r.ok?(r.via==='auto'?(r.clean?1:2):3):0,r.tries||0]}
  return o;
 }
+/* 운영진 화면용 활동 통계: 문제 사전 해결, 복습, 최근 60일 날짜별 횟수([학습,사전,복습]) */
+function userStats(){
+ const d={},g=k=>d[k]||(d[k]=[0,0,0]);
+ const cut=dayKey(Date.now()-59*DAY);
+ const bk={solved:0,self:0,tries:0};
+ for(const p of BANK){const r=S.solved[p.id];if(!r)continue;bk.tries+=r.tries||0;if(r.ok){bk.solved++;if(r.via==='auto'&&r.clean)bk.self++}}
+ for(const p of PROBLEMS.concat(BANK)){const r=S.solved[p.id];if(r&&r.ok&&r.at){const k=dayKey(r.at);if(k>=cut)g(k)[p.bank?1:0]++}}
+ Object.entries(S.rlog||{}).forEach(([k,o])=>{if(k>=cut)g(k)[2]=o.n||0});
+ const es=Object.entries(S.review||{}).filter(([id])=>byId(id));
+ return {bank:bk,rev:{done:es.reduce((a,[,r])=>a+(r.reps||0),0),kinds:es.filter(([,r])=>(r.reps||0)>0).length,due:dueList().length},days:d};
+}
 function setSync(t){const e=$('#sync');if(e)e.textContent=t}
 async function flush(){
  if(!me||saving||!dirty)return;
  saving=true;dirty=false;
  try{
-  await Store.save({v:VER,solved:S.solved,dict:S.dict,review:S.review,practice:S.practice,act:S.act,rlog:S.rlog,notes:S.notes,diag:S.diag},{custom:S.custom,drafts:S.drafts},summarize(PROBLEMS,S.solved,S.review),probMap());
+  await Store.save({v:VER,solved:S.solved,dict:S.dict,review:S.review,practice:S.practice,act:S.act,rlog:S.rlog,notes:S.notes,diag:S.diag},{custom:S.custom,drafts:S.drafts},Object.assign(summarize(PROBLEMS,S.solved,S.review),{stats:userStats()}),probMap());
   setSync('저장됨');
  }catch(e){dirty=true;setSync('저장 실패 · 다시 시도 중');clearTimeout(saveTimer);saveTimer=setTimeout(flush,15000)}
  saving=false;if(dirty&&!saveTimer)saveTimer=setTimeout(flush,4000);

@@ -62,39 +62,6 @@ function statsHTML(sl){
     <div class="statrow sm">${st(sb.solved+'<small> / '+sb.total+'</small>','해결')}${st(sb.self,'정답 안 보고')}${st(sb.tries,'채점')}${st(rt(br),'복습 유지')}</div></section>
   </div></div>`;
 }
-/* 날짜별 기록: 풀이는 해결 시각(at)에서, 복습은 복습 로그(rlog)에서 모은다 */
-function dailyStats(){
- const m={};const g=k=>m[k]||(m[k]={l:0,b:0,r:0,rok:0});
- Object.entries(S.solved).forEach(([id,r])=>{const p=byId(id);if(!p||!r||!r.ok||!r.at)return;g(dayKey(r.at))[p.bank?'b':'l']++});
- Object.entries(S.rlog||{}).forEach(([k,o])=>{const x=g(k);x.r=o.n||0;x.rok=o.ok||0});
- return m;
-}
-function historyHTML(){
- const m=dailyStats(),days=Object.keys(m).sort();
- const tot=k=>{const x=m[k];return x?x.l+x.b+x.r:0};
- const wk=[...Array(7)].map((_,i)=>dayKey(Date.now()-i*DAY)).reduce((a,k)=>a+tot(k),0);
- const best=days.reduce((a,k)=>Math.max(a,tot(k)),0);
- const st=(v,l)=>`<div class="stat"><b>${v}</b><span>${l}</span></div>`;
- const N=14,names=['일','월','화','수','목','금','토'];
- const rows=[...Array(N)].map((_,i)=>{const t=Date.now()-i*DAY,k=dayKey(t),x=m[k]||{l:0,b:0,r:0,rok:0},sum=x.l+x.b+x.r;
-  const w=best?sum/best*100:0,seg=n=>sum?n/sum*w:0;
-  return `<tr class="${sum?'':'zero'}"><td>${k.slice(5).replace('-','/')} (${names[new Date(t).getDay()]})${i===0?' · 오늘':''}</td><td><div class="splitbar tri" role="img" aria-label="${sum}번"><i class="sl" style="width:${seg(x.l)}%"></i><i class="sb" style="width:${seg(x.b)}%"></i><i class="sr" style="width:${seg(x.r)}%"></i></div></td><td class="num">${x.l||'-'}</td><td class="num">${x.b||'-'}</td><td class="num">${x.r||'-'}</td><td class="num"><b>${sum||'-'}</b></td></tr>`}).join('');
- return `<div class="card" id="history" style="gap:10px"><div class="row"><b>날짜별 기록</b><span class="note">새로 해결한 문제와 복습 횟수 · 최근 ${N}일</span></div>
-  <div class="statrow sm">${st(tot(dayKey()),'오늘')}${st(wk,'최근 7일')}${st(days.length,'공부한 날')}${st(streak(),'연속 일수')}</div>
-  <div class="legend"><span><i class="sl"></i>학습</span><span><i class="sb"></i>문제 사전</span><span><i class="sr"></i>복습</span></div>
-  <div class="tblwrap"><table class="tbl"><thead><tr><th>날짜</th><th></th><th class="num">학습</th><th class="num">사전</th><th class="num">복습</th><th class="num">합계</th></tr></thead><tbody>${rows}</tbody></table></div>
-  <div class="note">학습·문제 사전은 처음 해결한 날, 복습은 복습 문제를 채점한 날로 세요. 복습 날짜 기록은 이 기능이 생긴 뒤부터 쌓여요.</div></div>`;
-}
-function reviewStatsHTML(){
- const es=Object.entries(S.review||{}).filter(([id])=>byId(id));
- const done=es.reduce((a,[,r])=>a+(r.reps||0),0),kinds=es.filter(([,r])=>(r.reps||0)>0).length;
- const bk=es.filter(([id,r])=>byId(id).bank&&(r.reps||0)>0).length;
- const due=dueList().length,deep=es.filter(([,r])=>(r.box||0)>=3).length;
- const todayR=(S.rlog[dayKey()]||{}).n||0;
- const st=(v,l)=>`<div class="stat"><b>${v}</b><span>${l}</span></div>`;
- return `<section class="card" id="revstats" style="gap:10px"><div class="row"><b>복습</b><span class="note">학습 ${kinds-bk}문제 · 문제 사전 ${bk}문제를 복습했어요</span></div>
-  <div class="statrow mid">${st(done,'복습 채점 횟수')}${st(kinds,'복습해 본 문제')}${st(todayR,'오늘 복습')}${st(due,'지금 복습할 문제')}${st(deep,'오래 기억 중')}</div></section>`;
-}
 function bankLogHTML(){
  const sets=bankSets(),open=sets.filter(x=>bankOpen(x.s.cat.id,x.s.si,x.l)).length;
  const rows=bankAllStages().map(s=>{
@@ -118,8 +85,6 @@ function renderMe(){
  const redo=PROBLEMS.concat(BANK).map(p=>({p,r:S.solved[p.id]})).filter(o=>o.r&&((!o.r.ok&&(o.r.tries||0)>=2)||(o.r.ok&&o.r.via==='auto'&&!o.r.clean)||(o.r.ok&&o.r.via==='ai'))).sort((a,b)=>(b.r.tries||0)-(a.r.tries||0)).slice(0,6);
  $('#main').innerHTML=`<div style="display:flex;flex-direction:column;gap:20px">
   ${statsHTML(sm)}
-  ${historyHTML()}
-  ${reviewStatsHTML()}
   <div class="card" style="gap:10px"><div class="row"><b>레벨</b><span class="note">풀이·복습·메모로 경험치가 쌓여요</span></div>${(()=>{const li=Fx.levelInfo(S);return `<div class="lvstrip"><span class="big">Lv.${li.lv}</span><span class="tt2">${li.title}</span><span class="lvbar"><i style="width:${li.pct}%"></i></span><span class="note">${li.xp} XP · 다음 레벨까지 ${li.need}</span></div>`})()}<b>배지 ${Fx.earned(S).length} / ${Fx.BADGES.length}</b>${badgesHTML(Fx.BADGES)}</div>
   <div class="tiergrid">${cards}</div>
   <div class="note">수료 기준: 구간 문제의 ${PASS_SOLVED*100}% 이상을 해결하고, 푼 문제 중 ${PASS_SELF*100}% 이상은 정답을 보지 않고 풀기. 복습 유지율은 복습한 문제 중 기억이 이어지고 있는 비율이에요.</div>
@@ -130,12 +95,12 @@ function renderMe(){
 }
 
 /* ---------- 운영진 ---------- */
-let AD={users:[],reports:[],q:'',sort:'last',idle:false,wkLeft:false};
+let AD={users:[],reports:[],q:'',sort:'last',idle:false,wkLeft:false,sel:null};
 function csvCell(v){v=String(v==null?'':v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
 function adminCsv(rows){
- const head=['이름','이메일','마지막 접속','해결','자력','입문 해결','기초 해결','응용 해결','심화 해결','복습 유지율','이번 주 과제'];
+ const head=['이름','이메일','마지막 접속','해결','자력','입문 해결','기초 해결','응용 해결','심화 해결','문제 사전 해결','복습 횟수','최근 7일 활동','복습 유지율','이번 주 과제'];
  const lines=[head].concat(rows.map(u=>{const s=u.summary||{tier:{},solved:0,self:0};const t=s.tier||{};
-  return [u.name,u.email,u.lastActive?new Date(u.lastActive).toLocaleString('ko-KR'):'',s.solved||0,s.self||0,(t.intro||{}).solved||0,(t.basic||{}).solved||0,(t.app||{}).solved||0,(t.adv||{}).solved||0,s.retain==null?'':s.retain,WK&&wkProblems(WK).length?wkDone(u)+'/'+wkProblems(WK).length:'']}));
+  return [u.name,u.email,u.lastActive?new Date(u.lastActive).toLocaleString('ko-KR'):'',s.solved||0,s.self||0,(t.intro||{}).solved||0,(t.basic||{}).solved||0,(t.app||{}).solved||0,(t.adv||{}).solved||0,s.stats?s.stats.bank.solved:'',s.stats?s.stats.rev.done:'',s.stats?adminWeek(s.stats.days):'',s.retain==null?'':s.retain,WK&&wkProblems(WK).length?wkDone(u)+'/'+wkProblems(WK).length:'']}));
  const blob=new Blob(['﻿'+lines.map(r=>r.map(csvCell).join(',')).join('\n')],{type:'text/csv;charset=utf-8'});
  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='learn-unity-progress.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
 }
@@ -161,6 +126,33 @@ function wkAdminHTML(rows){
    ${groups}
    <div class="row"><button class="btn" id="wksave">과제 저장</button><button class="btn ghost" id="wkclear">과제 내리기</button><span class="note" id="wkmsg" role="status"></span></div></div></details></div>`;
 }
+/* 부원별 활동 통계(summary.stats): 날짜별 [학습, 문제 사전, 복습] */
+const DAYNAMES=['일','월','화','수','목','금','토'];
+const adminWeek=days=>[...Array(7)].reduce((a,_,i)=>a+((days||{})[dayKey(Date.now()-i*DAY)]||[0,0,0]).reduce((x,y)=>x+y,0),0);
+function adminDaysHTML(st,n){
+ if(!st)return '<div class="note">아직 활동 통계가 없어요. 부원이 다시 접속하면 채워져요.</div>';
+ n=n||14;
+ const rows=[...Array(n)].map((_,i)=>{const t=Date.now()-i*DAY,x=st.days[dayKey(t)]||[0,0,0],sum=x[0]+x[1]+x[2];
+  return `<tr class="${sum?'':'zero'}"><td>${dayKey(t).slice(5).replace('-','/')} (${DAYNAMES[new Date(t).getDay()]})</td><td class="num">${x[0]||'-'}</td><td class="num">${x[1]||'-'}</td><td class="num">${x[2]||'-'}</td><td class="num"><b>${sum||'-'}</b></td></tr>`}).join('');
+ const b=st.bank,r=st.rev;
+ return `<div class="note" style="margin-top:4px">문제 사전 해결 ${b.solved}문제(자력 ${b.self}, 채점 ${b.tries}회) · 복습 ${r.done}회(${r.kinds}문제), 지금 복습할 문제 ${r.due}개</div>
+  <table class="tbl dtbl"><thead><tr><th>최근 ${n}일</th><th class="num">학습</th><th class="num">사전</th><th class="num">복습</th><th class="num">합계</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+function adminClubDays(us){
+ const sum={};let any=false;
+ us.forEach(u=>{const st=u.summary&&u.summary.stats;if(!st)return;any=true;Object.entries(st.days).forEach(([k,v])=>{const o=sum[k]||(sum[k]={a:0,v:[0,0,0]});o.a++;v.forEach((x,i)=>o.v[i]+=x)})});
+ if(!any)return '';
+ const rows=[...Array(14)].map((_,i)=>{const t=Date.now()-i*DAY,o=sum[dayKey(t)]||{a:0,v:[0,0,0]};
+  return `<tr class="${o.a?'':'zero'}"><td>${dayKey(t).slice(5).replace('-','/')} (${DAYNAMES[new Date(t).getDay()]})</td><td class="num">${o.a||'-'}</td><td class="num">${o.v[0]||'-'}</td><td class="num">${o.v[1]||'-'}</td><td class="num">${o.v[2]||'-'}</td></tr>`}).join('');
+ return `<div class="card" style="gap:8px"><b>날짜별 전체 활동</b><div class="note">부원 모두의 최근 14일 합계예요. 활동한 인원 · 새로 해결한 학습·문제 사전 · 복습 횟수.</div>
+  <div style="overflow-x:auto"><table class="tbl dtbl"><thead><tr><th>날짜</th><th class="num">활동 인원</th><th class="num">학습</th><th class="num">사전</th><th class="num">복습</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+}
+function adminDetailHTML(){
+ const u=AD.sel&&AD.users.find(x=>x.uid===AD.sel);if(!u)return '';
+ const s=u.summary||{},st=s.stats||null;
+ return `<div class="card" id="adetail" style="gap:8px"><div class="row"><b>${esc(u.name||'(이름 없음)')}</b><span class="note">${esc(u.email||'')} · ${ago(u.lastActive)}</span><span style="flex:1"></span><button class="btn ghost sm" id="aclose">닫기</button></div>
+  <div class="note">학습 ${s.solved||0}문제 해결(자력 ${s.self||0}) · 복습 유지율 ${s.retain==null?'-':s.retain+'%'}</div>${adminDaysHTML(st)}</div>`;
+}
 function drawAdmin(){
  const now=Date.now(),us=AD.users,tot=PROBLEMS.length;
  const empty=summarize(PROBLEMS,{},{});
@@ -173,7 +165,8 @@ function drawAdmin(){
  rows.sort((a,b)=>{const x=key[AD.sort](a),y=key[AD.sort](b);return x<y?-1:x>y?1:0});
  const tcell=(s,id)=>{const x=(s.tier||{})[id]||{total:0,solved:0,passed:false};return `<td>${meter(x.solved,x.total,x.passed?'good':'')}<span class="note">${x.solved}/${x.total}${x.passed?' 수료':''}</span></td>`};
  const body=rows.map(u=>{const s=sm(u),idle=!u.lastActive||now-u.lastActive>=14*DAYMS;
-  return `<tr><td><b>${esc(u.name||'(이름 없음)')}</b><div class="note">${esc(u.email||'')}</div></td><td class="${idle?'warnc':''}">${ago(u.lastActive)}</td>${tcell(s,'intro')}${tcell(s,'basic')}${tcell(s,'app')}${tcell(s,'adv')}${WK&&wkProblems(WK).length?(()=>{const n=wkDone(u),t=wkProblems(WK).length;return `<td>${meter(n,t,n>=t?'good':'')}<span class="note">${n}/${t}</span></td>`})():''}<td class="num">${s.solved?pct(s.self,s.solved)+'%':'-'}</td><td class="num">${s.retain==null?'-':s.retain+'%'}</td></tr>`}).join('')||'<tr><td colspan="8" class="note">조건에 맞는 부원이 없어요.</td></tr>';
+  const stt=s.stats||null,w7=stt?adminWeek(stt.days):0;
+  return `<tr><td><button class="linkbtn" data-sel="${esc(u.uid||'')}"><b>${esc(u.name||'(이름 없음)')}</b></button><div class="note">${esc(u.email||'')}</div></td><td class="${idle?'warnc':''}">${ago(u.lastActive)}</td>${tcell(s,'intro')}${tcell(s,'basic')}${tcell(s,'app')}${tcell(s,'adv')}${WK&&wkProblems(WK).length?(()=>{const n=wkDone(u),t=wkProblems(WK).length;return `<td>${meter(n,t,n>=t?'good':'')}<span class="note">${n}/${t}</span></td>`})():''}<td class="num">${stt?stt.bank.solved:'-'}</td><td class="num">${stt?stt.rev.done:'-'}</td><td class="num">${stt?w7:'-'}</td><td class="num">${s.solved?pct(s.self,s.solved)+'%':'-'}</td><td class="num">${s.retain==null?'-':s.retain+'%'}</td></tr>`}).join('')||'<tr><td colspan="11" class="note">조건에 맞는 부원이 없어요.</td></tr>';
  /* 문제별 집계: prob = {문제id:[상태코드(0시도중 1자력 2참고 3AI), 채점횟수]} */
  const agg={};
  us.forEach(u=>Object.entries(u.prob||{}).forEach(([id,v])=>{const a=agg[id]||(agg[id]={n:0,ok:0,peek:0,tries:0});a.n++;a.tries+=v[1]||0;if(v[0]>0)a.ok++;if(v[0]===2||v[0]===3)a.peek++}));
@@ -185,8 +178,10 @@ function drawAdmin(){
  $('#main').innerHTML=`<div style="display:flex;flex-direction:column;gap:20px">
   <div class="statrow"><div class="stat"><b>${us.length}</b><span>가입 부원</span></div><div class="stat"><b>${active7}</b><span>최근 7일 활동</span></div><div class="stat"><b>${idle14}</b><span>14일 이상 미활동</span></div>${pass.map(p=>`<div class="stat"><b>${p.n}</b><span>${p.t.name} 수료</span></div>`).join('')}</div>
   ${wkAdminHTML(rows)}
+  ${adminDetailHTML()}
+  ${adminClubDays(us)}
   <div class="card" style="gap:10px"><div class="row"><b>부원 현황</b><span style="flex:1"></span><input type="text" id="aq" placeholder="이름·이메일 검색" value="${esc(AD.q)}" style="max-width:200px"><select id="as" aria-label="정렬"><option value="last" ${AD.sort==='last'?'selected':''}>최근 접속순</option><option value="solved" ${AD.sort==='solved'?'selected':''}>해결 많은 순</option><option value="name" ${AD.sort==='name'?'selected':''}>이름순</option></select><label class="chk"><input type="checkbox" id="ai" ${AD.idle?'checked':''}> 14일 미활동만</label>${WK&&wkProblems(WK).length?`<label class="chk"><input type="checkbox" id="aw" ${AD.wkLeft?'checked':''}> 과제 미완료만</label>`:''}<button class="btn ghost sm" id="acsv">CSV</button></div>
-  <div class="tblwrap"><table class="tbl"><thead><tr><th>부원</th><th>마지막 접속</th><th>입문</th><th>기초</th><th>응용</th><th>심화</th>${WK&&wkProblems(WK).length?'<th>과제</th>':''}<th class="num">자력</th><th class="num">유지율</th></tr></thead><tbody>${body}</tbody></table></div>
+  <div class="tblwrap"><table class="tbl"><thead><tr><th>부원</th><th>마지막 접속</th><th>입문</th><th>기초</th><th>응용</th><th>심화</th>${WK&&wkProblems(WK).length?'<th>과제</th>':''}<th class="num">사전</th><th class="num">복습</th><th class="num">7일</th><th class="num">자력</th><th class="num">유지율</th></tr></thead><tbody>${body}</tbody></table></div>
   <div class="note">자력은 해결한 문제 중 정답을 보지 않고 푼 비율, 유지율은 복습한 문제 중 기억이 이어지는 비율이에요. 수료는 구간 문제의 ${PASS_SOLVED*100}% 해결 + 자력 ${PASS_SELF*100}% 이상.</div></div>
   <div class="card" style="gap:8px"><b>많이 막히는 문제</b>${hardHtml}</div>
   <div class="card" style="gap:8px"><b>채점 오류 신고</b>${rep}</div></div>`;
@@ -194,6 +189,8 @@ function drawAdmin(){
  $('#as').onchange=e=>{AD.sort=e.target.value;drawAdmin()};
  $('#ai').onchange=e=>{AD.idle=e.target.checked;drawAdmin()};
  $('#acsv').onclick=()=>adminCsv(rows);
+ document.querySelectorAll('[data-sel]').forEach(b=>b.onclick=()=>{AD.sel=b.dataset.sel;drawAdmin();const d=$('#adetail');if(d)d.scrollIntoView({block:'nearest'})});
+ const ac=$('#aclose');if(ac)ac.onclick=()=>{AD.sel=null;drawAdmin()};
  const aw=$('#aw');if(aw)aw.onchange=e=>{AD.wkLeft=e.target.checked;drawAdmin()};
  const ws=$('#wksave');
  if(ws){

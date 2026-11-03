@@ -571,5 +571,8 @@ kbd{font-family:var(--font-mono);font-size:11px;padding:1px 6px;border:1px solid
 
 .splitbar i.sr,.legend i.sr{background:var(--ok,#2e9d6b)}
 .splitbar.tri{min-width:80px;height:8px}
-#history .tbl tr.zero td{color:var(--muted)}
-#history .tbl td:nth-child(2){width:36%;vertical-align:middle}
+.dtbl{margin-top:6px;font-size:13px}
+.dtbl td,.dtbl th{padding:4px 6px}
+.dtbl tr.zero td{color:var(--muted)}
+.linkbtn{background:none;border:0;padding:0;font:inherit;color:var(--accent,#3b6ef5);cursor:pointer;text-align:left}
+.linkbtn:hover{text-decoration:underline}
