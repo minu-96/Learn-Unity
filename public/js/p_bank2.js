@@ -1494,3 +1494,489 @@ public class Merchant : MonoBehaviour
  hints:['"무엇이다" 대신 "무엇을 가졌다"로 생각해 보세요. 상인은 돈만, 용사는 체력과 돈을 가졌어요.','체력 관련을 모은 클래스 하나, 돈 관련을 모은 클래스 하나를 MonoBehaviour로 만드세요.','Merchant에는 필요한 컴포넌트만 [RequireComponent]로 선언해요.'],
  why:'기능이 달라지는 지점이 늘 "누가 무엇을 갖는가"예요. 상속으로 묶으면 안 필요한 것까지 따라오지만, 조합하면 용사 = Health + Wallet, 슬라임 = Health, 상인 = Wallet처럼 필요한 만큼만 붙일 수 있어요.',
  concepts:[['has-a 설계','"무엇이다" 대신 "무엇을 가졌다"로 설계해 필요한 컴포넌트만 붙인다.']]});
+
+QB({id:'x72',cat:'csharp',stage:1,level:1,title:'체크포인트는 도달 여부를 읽기만',
+ story:'체크포인트의 부활 대기 시간은 기획자가 Inspector에서 조절하고 싶어요. 도달했는지(Reached)는 UI 스크립트가 읽기만 해야 하고, 도달 처리는 Reach 메서드에서만 이뤄져야 해요.',
+ goals:['respawnDelay(float, 기본값 2)를 Inspector에서 수정할 수 있게 선언한다','Reached(bool)는 밖에서 읽기만 가능한 프로퍼티로 만든다','Reach()는 Reached를 true로 만든다'],
+ limits:['respawnDelay는 public으로 선언하지 않는다','Reached를 바꾸는 곳은 이 클래스 안에서만이다'],
+ starter:C`
+using UnityEngine;
+
+public class Checkpoint : MonoBehaviour
+{
+    // TODO: respawnDelay 선언
+
+    // TODO: Reached 선언 (밖에서는 읽기만 가능)
+
+    public void Reach()
+    {
+        // TODO: 도달 처리
+    }
+}`,
+ solution:C`
+using UnityEngine;
+
+public class Checkpoint : MonoBehaviour
+{
+    [SerializeField] private float respawnDelay = 2f;
+    public bool Reached { get; private set; }
+
+    public void Reach()
+    {
+        Reached = true;
+    }
+}`,
+ rules:[
+  has('respawnDelay 선언',/\[SerializeField\]\s*(?:private\s+)?float\s+respawnDelay\s*=\s*2(?:\.0*)?f?\s*;/,'respawnDelay를 [SerializeField] private float로 선언했어요.','respawnDelay는 [SerializeField]를 붙인 float 필드로 만들고 기본값을 2f로 두세요.'),
+  no('public 필드 금지',/\bpublic\s+float\s+respawnDelay\b/,'대기 시간을 public으로 열어 두지 않았어요.','public 필드는 모든 클래스가 값을 바꿀 수 있어요. [SerializeField] private을 쓰세요.'),
+  has('읽기 전용 Reached',/\bpublic\s+bool\s+Reached\s*(?:\{\s*get;\s*(?:private|protected)\s+set;\s*\}|=>\s*\w+\s*;)/,'Reached를 밖에서는 읽기만 되는 프로퍼티로 공개했어요.','public bool Reached { get; private set; } 처럼 set을 private으로 막으세요.'),
+  no('Reached 직접 공개 금지',/\bpublic\s+bool\s+reached\s*[;=]/,'도달 여부 필드를 직접 공개하지 않았어요.','public bool reached; 는 밖에서 덮어쓸 수 있어요. 프로퍼티로 바꾸세요.'),
+  inFn('Reach에서 true','Reach',/\bReached\s*=\s*true\s*;/,'Reach에서 Reached를 true로 바꿨어요.','Reach() 안에서 Reached = true; 를 실행하세요.')
+ ],
+ hints:['Inspector에는 보이지만 외부는 접근 못 하게 하는 조합은 [SerializeField] + private이에요.','밖에서 읽기만 가능하게 하려면 { get; private set; } 프로퍼티를 써요.','Reach 안에서는 private set 이어도 값을 바꿀 수 있어요.'],
+ why:'조절할 값은 [SerializeField], 코드로만 바꿀 상태는 private set 프로퍼티로 나누는 것이 캡슐화의 기본이에요.',
+ concepts:[['접근 제한자와 캡슐화','public/private으로 공개 범위를 정해 다른 클래스가 내부 값을 마음대로 바꾸지 못하게 한다.']]});
+
+/* ---- 디버그 1단계 ---- */
+QB({id:'x73',cat:'debug',stage:1,level:1,title:'NullReferenceException: anim이 비어 있다',
+ story:'피격 시 Hurt()를 부르면 콘솔에 NullReferenceException이 떠요.\n  at Mob.Hurt (Mob.cs:10)\n10번째 줄은 anim.SetTrigger("Hurt") 예요. anim 필드는 선언만 했을 뿐 값을 넣은 적이 없습니다.',
+ goals:['Awake에서 Animator 컴포넌트를 가져와 anim에 저장한다','Hurt()는 anim.SetTrigger("Hurt")를 한 번 부른다'],
+ limits:['Hurt 안에서 GetComponent를 호출하지 않는다 (Awake에서 한 번만)'],
+ api:'GetComponent<Animator>(), anim.SetTrigger',
+ starter:C`
+using UnityEngine;
+
+public class Mob : MonoBehaviour
+{
+    private Animator anim;
+
+    void Awake()
+    {
+    }
+
+    public void Hurt()
+    {
+        anim.SetTrigger("Hurt");
+    }
+}`,
+ solution:C`
+using UnityEngine;
+
+public class Mob : MonoBehaviour
+{
+    private Animator anim;
+
+    void Awake()
+    {
+        anim = GetComponent<Animator>();
+    }
+
+    public void Hurt()
+    {
+        anim.SetTrigger("Hurt");
+    }
+}`,
+ rules:[
+  inFn('Awake에서 캐싱','Awake',/\banim\s*=\s*GetComponent\s*<\s*Animator\s*>\s*\(\s*\)|TryGetComponent\s*(?:<\s*Animator\s*>)?\s*\(\s*out\s+anim\b/,'Awake에서 anim을 가져와요.','Awake에서 anim = GetComponent<Animator>(); 로 채워 주세요.'),
+  notIn('Hurt에서 GetComponent 금지','Hurt',/GetComponent/,'Hurt에서 GetComponent를 호출하지 않아요.','매번 GetComponent를 부르지 말고 Awake에서 한 번만 가져오세요.')
+ ],
+ test:(api,ok)=>{
+  const anim=api.mk.anim();api.env.components.Animator=anim;
+  let err=null;
+  try{api.call('Awake');api.call('Hurt')}catch(e){err=e}
+  ok('에러 없이 실행',!err,'NullReference 없이 실행돼요.','anim이 비어 있어서 에러가 나요. Awake에서 anim에 컴포넌트를 넣어 주세요.');
+  ok('트리거 실행',anim.log.filter(x=>x[0]==='SetTrigger'&&x[1]==='Hurt').length===1,'Hurt 트리거를 한 번 켰어요.','Hurt()가 anim.SetTrigger("Hurt")를 한 번 불러야 해요.');
+ },
+ hints:['스택 트레이스의 줄에서 점(.) 앞의 변수가 비어 있다는 뜻이에요.','anim은 선언만 되어 있고 어디서도 값이 채워지지 않았어요.','Awake에서 GetComponent<Animator>()의 결과를 anim에 넣으세요.'],
+ why:'NullReference는 "점 앞의 변수가 비어 있다"는 신호예요. 그 변수가 어디서 채워져야 했는지 찾으면 대부분 해결됩니다. 컴포넌트는 Awake에서 한 번 가져와 캐싱하세요.',
+ concepts:[['NullReferenceException','값이 없는(null) 참조를 통해 멤버에 접근했을 때 발생한다. 스택 트레이스의 줄에서 점 앞의 변수를 의심한다.']]});
+
+QB({id:'x74',cat:'debug',stage:1,level:1,title:'NullReferenceException: 점프에서 rb가 비어 있다',
+ story:'점프 키를 누르면 이런 에러가 나고 캐릭터가 뛰지 않아요.\nNullReferenceException: Object reference not set to an instance of an object\n  at Hopper.Jump (Hopper.cs:11)\n11번째 줄은 rb.velocity = ... 예요. rb에는 아직 아무것도 들어 있지 않아요.',
+ goals:['Awake에서 Rigidbody2D를 가져와 rb에 저장한다','Jump()는 x 속도는 그대로 두고 y 속도만 jumpSpeed(8)로 바꾼다'],
+ limits:['Jump 안에서 GetComponent를 호출하지 않는다'],
+ api:'rb.velocity, new Vector2(x, y)',
+ starter:C`
+using UnityEngine;
+
+public class Hopper : MonoBehaviour
+{
+    private Rigidbody2D rb;
+    public float jumpSpeed = 8f;
+
+    void Awake()
+    {
+    }
+
+    public void Jump()
+    {
+        rb.velocity = new Vector2(rb.velocity.x, jumpSpeed);
+    }
+}`,
+ solution:C`
+using UnityEngine;
+
+public class Hopper : MonoBehaviour
+{
+    private Rigidbody2D rb;
+    public float jumpSpeed = 8f;
+
+    void Awake()
+    {
+        rb = GetComponent<Rigidbody2D>();
+    }
+
+    public void Jump()
+    {
+        rb.velocity = new Vector2(rb.velocity.x, jumpSpeed);
+    }
+}`,
+ rules:[
+  inFn('Awake에서 캐싱','Awake',/\brb\s*=\s*GetComponent\s*<\s*Rigidbody2D\s*>\s*\(\s*\)|TryGetComponent\s*(?:<\s*Rigidbody2D\s*>)?\s*\(\s*out\s+rb\b/,'Awake에서 rb를 가져와요.','Awake에서 rb = GetComponent<Rigidbody2D>(); 로 채워 주세요.'),
+  notIn('Jump에서 GetComponent 금지','Jump',/GetComponent/,'Jump에서 GetComponent를 호출하지 않아요.','Awake에서 한 번만 가져오세요.')
+ ],
+ test:(api,ok)=>{
+  const rb=api.mk.rb();rb.velocity={x:3,y:0};api.env.components.Rigidbody2D=rb;
+  let err=null;
+  try{api.call('Awake');api.call('Jump')}catch(e){err=e}
+  ok('에러 없이 실행',!err,'NullReference 없이 실행돼요.','rb가 비어 있어서 에러가 나요. Awake에서 rb에 컴포넌트를 넣어 주세요.');
+  ok('점프 속도',!err&&rb.velocity.y===8&&rb.velocity.x===3,'x 속도는 유지하고 y 속도만 8이 됐어요.','x는 그대로(3), y만 8이 되어야 해요.');
+ },
+ hints:['에러 줄의 점 앞 변수 rb가 비어 있어요.','rb에 값을 넣는 곳이 없어요. 어디서 채울지 생각해 보세요.','Awake에서 rb = GetComponent<Rigidbody2D>(); 를 추가하세요.'],
+ why:'같은 NullReference라도 원인은 늘 "채워지지 않은 변수"예요. 선언과 대입은 다른 일이라는 점을 기억하세요.',
+ concepts:[['필드 초기화 시점','private 필드는 선언만으로 채워지지 않는다. Awake/Start에서 GetComponent로 채워야 한다.']]});
+
+QB({id:'x75',cat:'debug',stage:1,level:1,title:'NullReferenceException: 정지시키려는데 rb가 없다',
+ story:'Freeze()를 부르면 NullReferenceException이 떠요.\n  at Trap.Freeze (Trap.cs:10)\n10번째 줄은 rb.velocity = Vector2.zero 예요. 이번에는 Start가 아닌 Awake에서 채워야 다른 스크립트가 일찍 불러도 안전해요.',
+ goals:['Awake에서 Rigidbody2D를 가져와 rb에 저장한다','Freeze()는 속도를 Vector2.zero로 만든다'],
+ limits:['Freeze 안에서 GetComponent를 호출하지 않는다'],
+ api:'rb.velocity, Vector2.zero',
+ starter:C`
+using UnityEngine;
+
+public class Trap : MonoBehaviour
+{
+    private Rigidbody2D rb;
+
+    void Awake()
+    {
+    }
+
+    public void Freeze()
+    {
+        rb.velocity = Vector2.zero;
+    }
+}`,
+ solution:C`
+using UnityEngine;
+
+public class Trap : MonoBehaviour
+{
+    private Rigidbody2D rb;
+
+    void Awake()
+    {
+        rb = GetComponent<Rigidbody2D>();
+    }
+
+    public void Freeze()
+    {
+        rb.velocity = Vector2.zero;
+    }
+}`,
+ rules:[
+  inFn('Awake에서 캐싱','Awake',/\brb\s*=\s*GetComponent\s*<\s*Rigidbody2D\s*>\s*\(\s*\)|TryGetComponent\s*(?:<\s*Rigidbody2D\s*>)?\s*\(\s*out\s+rb\b/,'Awake에서 rb를 가져와요.','Awake에서 rb = GetComponent<Rigidbody2D>(); 로 채워 주세요.'),
+  notIn('Freeze에서 GetComponent 금지','Freeze',/GetComponent/,'Freeze에서 GetComponent를 호출하지 않아요.','Awake에서 한 번만 가져오세요.')
+ ],
+ test:(api,ok)=>{
+  const rb=api.mk.rb();rb.velocity={x:4,y:-2};api.env.components.Rigidbody2D=rb;
+  let err=null;
+  try{api.call('Awake');api.call('Freeze')}catch(e){err=e}
+  ok('에러 없이 실행',!err,'NullReference 없이 실행돼요.','rb가 비어 있어서 에러가 나요. Awake에서 rb에 컴포넌트를 넣어 주세요.');
+  ok('정지',!err&&rb.velocity.x===0&&rb.velocity.y===0,'속도가 (0, 0)이 됐어요.','Freeze()는 속도를 Vector2.zero로 만들어야 해요.');
+ },
+ hints:['에러 줄의 점 앞 변수가 비어 있다는 뜻이에요.','rb에 컴포넌트를 담는 줄이 어디에도 없어요.','Awake에서 GetComponent<Rigidbody2D>()를 rb에 넣으세요.'],
+ why:'NullReference를 만나면 "점 앞 변수 → 어디서 채워야 하나" 순서로 추적하세요. 컴포넌트는 Awake에서 캐싱하는 것이 정석이에요.',
+ concepts:[['NullReferenceException','값이 없는(null) 참조를 통해 멤버에 접근했을 때 발생한다.']]});
+
+QB({id:'x76',cat:'debug',stage:1,level:2,title:'MissingReferenceException: 파괴된 목표를 위로 쫓는다',
+ story:'비행 적이 아이템을 y축으로 쫓다가, 아이템이 Destroy되면 에러가 쏟아져요.\nMissingReferenceException: The object of type \'Transform\' has been destroyed but you are still trying to access it.\n  at Drone.Update (Drone.cs:10)\n목표가 사라졌는지 확인하세요.',
+ goals:['target이 null이면 아무것도 하지 않고 반환한다','target이 있으면 y 방향으로 speed × Time.deltaTime 만큼 target 쪽으로 이동한다 (target.y가 더 크면 +, 더 작으면 −)'],
+ limits:['Destroy된 오브젝트는 == null 비교로 true가 된다'],
+ api:'transform.position, Time.deltaTime',
+ starter:C`
+using UnityEngine;
+
+public class Drone : MonoBehaviour
+{
+    public Transform target;
+    public float speed = 2f;
+
+    void Update()
+    {
+        Vector3 pos = transform.position;
+        float dir = target.position.y > pos.y ? 1f : -1f;
+        pos.y += dir * speed * Time.deltaTime;
+        transform.position = pos;
+    }
+}`,
+ solution:C`
+using UnityEngine;
+
+public class Drone : MonoBehaviour
+{
+    public Transform target;
+    public float speed = 2f;
+
+    void Update()
+    {
+        if (target == null) return;
+        Vector3 pos = transform.position;
+        float dir = target.position.y > pos.y ? 1f : -1f;
+        pos.y += dir * speed * Time.deltaTime;
+        transform.position = pos;
+    }
+}`,
+ rules:[inFn('null 검사','Update',/target\s*==\s*null|!\s*target\b|target\s*!=\s*null|target\s+is\s+(?:not\s+)?null/,'target이 없으면 건너뛰어요.','Update 맨 앞에서 if (target == null) return; 으로 사라진 목표를 처리하세요.')],
+ test:(api,ok)=>{
+  api.env.Time.deltaTime=0.5;api.transform.position={x:0,y:0};
+  api.set('target',{position:{x:0,y:10}});
+  api.call('Update');
+  ok('목표 쫓기',Math.abs(api.transform.position.y-1)<1e-6,'목표가 있으면 위로 쫓아가요 (speed 2 × 0.5초 = 1).',`위치 y가 ${api.transform.position.y} 입니다. 1이어야 해요.`);
+  api.set('target',null);
+  let err=null;try{api.call('Update')}catch(e){err=e}
+  ok('목표 소멸',!err&&Math.abs(api.transform.position.y-1)<1e-6,'목표가 사라지면 에러 없이 멈춰요.','목표가 null일 때 에러가 나거나 계속 움직여요.');
+ },
+ hints:['"파괴된 오브젝트에 접근했다"가 핵심이에요.','Unity는 Destroy된 오브젝트를 null과 같게 취급해요.','Update 맨 앞에서 target이 없으면 return 하세요.'],
+ why:'참조하던 오브젝트가 사라질 수 있다면 사용 전에 null 가드가 필요해요. 가드절로 위험한 경우를 먼저 걸러 내면 나머지 코드가 단순해집니다.',
+ concepts:[['MissingReferenceException','Destroy된 오브젝트의 참조를 계속 사용하면 발생한다. 사용 전 == null 검사로 막는다.'],['가드절(Guard Clause)','함수 맨 앞에서 비정상 조건을 검사해 일찍 return하는 방식.']]});
+
+QB({id:'x77',cat:'debug',stage:1,level:2,title:'MissingReferenceException: 사라진 목표와의 거리',
+ story:'포탑이 목표와의 거리를 재는 Distance()가 목표가 파괴된 뒤에도 불려서 에러가 나요.\n  at Turret.Distance (Turret.cs:8)\n목표가 없으면 거리 대신 0을 돌려주도록 고쳐 주세요.',
+ goals:['target이 null이면 0을 반환한다','target이 있으면 target과 이 오브젝트의 x 좌표 차이의 절댓값을 반환한다'],
+ limits:['Unity에서 Destroy된 오브젝트는 == null 이 true가 된다'],
+ api:'Mathf.Abs, transform.position.x',
+ starter:C`
+using UnityEngine;
+
+public class Turret : MonoBehaviour
+{
+    public Transform target;
+
+    public float Distance()
+    {
+        return Mathf.Abs(target.position.x - transform.position.x);
+    }
+}`,
+ solution:C`
+using UnityEngine;
+
+public class Turret : MonoBehaviour
+{
+    public Transform target;
+
+    public float Distance()
+    {
+        if (target == null) return 0f;
+        return Mathf.Abs(target.position.x - transform.position.x);
+    }
+}`,
+ rules:[inFn('null 검사','Distance',/target\s*==\s*null|!\s*target\b|target\s*!=\s*null|target\s+is\s+(?:not\s+)?null/,'target이 없으면 먼저 처리해요.','Distance 맨 앞에서 if (target == null) return 0f; 를 쓰세요.')],
+ test:(api,ok)=>{
+  api.transform.position={x:2,y:0};
+  api.set('target',{position:{x:7,y:0}});
+  let d,e1=null;try{d=api.call('Distance')}catch(e){e1=e}
+  ok('거리 계산',!e1&&Math.abs(d-5)<1e-6,'목표가 있으면 거리 5를 돌려줘요.',`거리가 ${d} 입니다. 5여야 해요.`);
+  api.set('target',null);
+  let r,e2=null;try{r=api.call('Distance')}catch(e){e2=e}
+  ok('목표 소멸',!e2&&r===0,'목표가 사라지면 에러 없이 0을 돌려줘요.','목표가 null일 때 에러가 나요. 먼저 null을 검사하고 0을 반환하세요.');
+ },
+ hints:['에러 줄에서 target을 쓰고 있어요. target이 null이면 어떻게 될까요?','사용하기 전에 target == null 인지 확인하세요.','null이면 0f를 반환하고 나머지는 그대로 두세요.'],
+ why:'값을 돌려주는 함수에서도 가드절은 똑같이 유효해요. "없을 때 무엇을 돌려줄지"를 정해 두면 호출하는 쪽이 안전해집니다.',
+ concepts:[['MissingReferenceException','Destroy된 오브젝트의 참조를 계속 사용하면 발생한다.'],['가드절(Guard Clause)','함수 맨 앞에서 비정상 조건을 검사해 일찍 return하는 방식.']]});
+
+QB({id:'x78',cat:'debug',stage:1,level:2,title:'MissingReferenceException: 죽은 플레이어를 따라가는 카메라',
+ story:'카메라가 플레이어의 x 좌표를 따라가는데, 플레이어가 죽어 Destroy되면 카메라 스크립트가 에러를 뿜어요.\n  at CamFollow.LateUpdate (CamFollow.cs:9)\n플레이어가 없으면 카메라는 그 자리에 가만히 있어야 해요.',
+ goals:['target이 null이면 아무것도 하지 않고 반환한다','target이 있으면 이 오브젝트의 x 좌표를 target의 x 좌표로 맞춘다 (y는 그대로)'],
+ limits:['Destroy된 오브젝트는 == null 비교로 true가 된다'],
+ api:'transform.position',
+ starter:C`
+using UnityEngine;
+
+public class CamFollow : MonoBehaviour
+{
+    public Transform target;
+
+    void LateUpdate()
+    {
+        Vector3 pos = transform.position;
+        pos.x = target.position.x;
+        transform.position = pos;
+    }
+}`,
+ solution:C`
+using UnityEngine;
+
+public class CamFollow : MonoBehaviour
+{
+    public Transform target;
+
+    void LateUpdate()
+    {
+        if (target == null) return;
+        Vector3 pos = transform.position;
+        pos.x = target.position.x;
+        transform.position = pos;
+    }
+}`,
+ rules:[inFn('null 검사','LateUpdate',/target\s*==\s*null|!\s*target\b|target\s*!=\s*null|target\s+is\s+(?:not\s+)?null/,'target이 없으면 건너뛰어요.','LateUpdate 맨 앞에서 if (target == null) return; 으로 처리하세요.')],
+ test:(api,ok)=>{
+  api.transform.position={x:0,y:3};
+  api.set('target',{position:{x:6,y:0}});
+  api.call('LateUpdate');
+  ok('따라가기',api.transform.position.x===6&&api.transform.position.y===3,'x는 목표를 따라가고 y는 그대로예요.',`위치가 (${api.transform.position.x}, ${api.transform.position.y}) 입니다. (6, 3)이어야 해요.`);
+  api.set('target',null);
+  let err=null;try{api.call('LateUpdate')}catch(e){err=e}
+  ok('목표 소멸',!err&&api.transform.position.x===6,'목표가 사라지면 에러 없이 멈춰요.','목표가 null일 때 에러가 나요. 먼저 null을 검사하세요.');
+ },
+ hints:['"파괴된 오브젝트 접근"이 핵심이에요.','target을 쓰기 전에 존재하는지 확인하세요.','맨 앞에 if (target == null) return; 을 넣으세요.'],
+ why:'카메라, 추적 UI처럼 다른 오브젝트를 참조하는 코드는 참조 대상이 사라질 가능성을 항상 염두에 둬야 해요.',
+ concepts:[['MissingReferenceException','Destroy된 오브젝트의 참조를 계속 사용하면 발생한다.'],['가드절(Guard Clause)','함수 맨 앞에서 비정상 조건을 검사해 일찍 return하는 방식.']]});
+
+QB({id:'x79',cat:'debug',stage:1,level:3,title:'IndexOutOfRangeException: 마지막 칸을 읽으려다',
+ story:'점수 기록 배열에서 마지막 값을 꺼내는 LastX()가 에러를 내요.\nIndexOutOfRangeException: Index was outside the bounds of the array.\n  at Track.LastX (Track.cs:8)\n배열의 마지막 인덱스는 Length가 아니라 Length - 1 이에요. 배열이 비어 있을 때도 안전해야 해요.',
+ goals:['LastX(): 배열 xs의 마지막 값을 반환한다','배열이 비어 있으면 에러 없이 0을 반환한다'],
+ limits:['xs.Length - 1 을 마지막 인덱스로 사용한다'],
+ api:'xs.Length',
+ starter:C`
+using UnityEngine;
+
+public class Track : MonoBehaviour
+{
+    public float[] xs;
+
+    public float LastX()
+    {
+        return xs[xs.Length];
+    }
+}`,
+ solution:C`
+using UnityEngine;
+
+public class Track : MonoBehaviour
+{
+    public float[] xs;
+
+    public float LastX()
+    {
+        if (xs == null || xs.Length == 0) return 0f;
+        return xs[xs.Length - 1];
+    }
+}`,
+ rules:[],
+ test:(api,ok)=>{
+  api.set('xs',[10,20,30]);
+  let r,err=null;try{r=api.call('LastX')}catch(e){err=e}
+  ok('마지막 값',!err&&r===30,'마지막 값 30을 돌려줘요.',err?'인덱스가 범위를 벗어나요. 마지막 인덱스는 Length - 1 이에요.':`반환값이 ${r} 입니다. 30이어야 해요.`);
+  api.set('xs',[]);
+  let r2,err2=null;try{r2=api.call('LastX')}catch(e){err2=e}
+  ok('빈 배열',!err2&&r2===0,'배열이 비어 있으면 0을 돌려줘요.','빈 배열에서 에러가 나요. 길이가 0이면 먼저 0을 반환하세요.');
+ },
+ hints:['길이가 3인 배열의 유효한 인덱스는 0, 1, 2 예요.','마지막 인덱스는 Length - 1 이에요.','길이가 0이면 어떤 인덱스도 유효하지 않으니 먼저 처리하세요.'],
+ why:'배열 접근은 항상 0 ≤ index < Length 여야 해요. "마지막 = Length − 1"과 "빈 배열 먼저 처리"는 경계 조건의 기본이에요.',
+ concepts:[['IndexOutOfRangeException','배열·리스트의 유효 범위(0 ~ Length−1)를 벗어난 인덱스로 접근했을 때 발생한다.']]});
+
+QB({id:'x80',cat:'debug',stage:1,level:3,title:'IndexOutOfRangeException: 거꾸로 도는 순찰',
+ story:'순찰 지점을 거꾸로 도는 PrevX()가 처음 호출에서 에러를 내요.\n  at Patrol.PrevX (Patrol.cs:9)\n지점이 3개면 0→2→1→0→2→… 로 돌아야 해요. index를 줄이다 −1이 되면 안 돼요.',
+ goals:['PrevX(): 현재 index의 지점 x 좌표를 반환하고 index를 한 칸 뒤로 옮긴다','index가 0에서 줄어들면 마지막 칸으로 돌아간다 (순환)','지점이 하나도 없으면 에러 없이 0을 반환한다'],
+ limits:['(index - 1 + Length) % Length 로 음수를 피하세요'],
+ api:'xs.Length, % (나머지)',
+ starter:C`
+using UnityEngine;
+
+public class Patrol : MonoBehaviour
+{
+    public float[] xs;
+    private int index;
+
+    public float PrevX()
+    {
+        float x = xs[index];
+        index--;
+        return x;
+    }
+}`,
+ solution:C`
+using UnityEngine;
+
+public class Patrol : MonoBehaviour
+{
+    public float[] xs;
+    private int index;
+
+    public float PrevX()
+    {
+        if (xs == null || xs.Length == 0) return 0f;
+        float x = xs[index];
+        index = (index - 1 + xs.Length) % xs.Length;
+        return x;
+    }
+}`,
+ rules:[],
+ test:(api,ok)=>{
+  api.set('xs',[10,20,30]);api.set('index',0);
+  const got=[];let err=null;
+  try{for(let i=0;i<7;i++)got.push(api.call('PrevX'))}catch(e){err=e}
+  ok('거꾸로 순환',!err&&got.join()==='10,30,20,10,30,20,10','10, 30, 20 을 거꾸로 돌아요.',err?'index가 −1이 되어 에러가 나요. 0에서 줄이면 마지막 칸으로 가야 해요.':`반환 순서: ${got.join(', ')}. 10, 30, 20, 10, 30, 20, 10 이어야 해요.`);
+  api.set('xs',[]);api.set('index',0);
+  let r,err2=null;try{r=api.call('PrevX')}catch(e){err2=e}
+  ok('빈 배열',!err2&&r===0,'지점이 없으면 0을 반환해요.','지점이 하나도 없을 때 에러가 나요. 길이가 0이면 먼저 반환하세요.');
+ },
+ hints:['index가 0일 때 1을 빼면 −1이 되어 배열 밖이에요.','음수가 되지 않도록 Length를 더한 뒤 % Length 를 해요.','길이가 0이면 가장 먼저 반환하세요.'],
+ why:'순환 인덱스는 앞으로든 뒤로든 % Length 로 한 번에 처리해요. 뒤로 갈 때는 음수가 안 되게 Length를 먼저 더하는 것이 요령이에요.',
+ concepts:[['IndexOutOfRangeException','배열·리스트의 유효 범위를 벗어난 인덱스로 접근했을 때 발생한다.'],['순환 인덱스','(index ± 1 + Length) % Length 로 처음과 끝을 이어 붙인다.']]});
+
+QB({id:'x81',cat:'debug',stage:1,level:3,title:'IndexOutOfRangeException: 슬롯 번호가 범위를 넘는다',
+ story:'스폰 지점 배열에서 번호로 좌표를 꺼내는 GetX(slot)가, 기획자가 큰 번호를 넣으면 에러를 내요.\n  at Spawner.GetX (Spawner.cs:8)\n범위를 벗어난 번호는 가장 가까운 유효한 칸(0 또는 마지막)으로 맞춰 주세요.',
+ goals:['GetX(slot): xs[slot]을 반환한다','slot이 0보다 작으면 0번 칸, 길이 이상이면 마지막 칸의 값을 반환한다','지점이 하나도 없으면 에러 없이 0을 반환한다'],
+ limits:['Mathf.Clamp(slot, 0, xs.Length - 1) 을 사용하면 간단해요'],
+ api:'Mathf.Clamp, xs.Length',
+ starter:C`
+using UnityEngine;
+
+public class Spawner : MonoBehaviour
+{
+    public float[] xs;
+
+    public float GetX(int slot)
+    {
+        return xs[slot];
+    }
+}`,
+ solution:C`
+using UnityEngine;
+
+public class Spawner : MonoBehaviour
+{
+    public float[] xs;
+
+    public float GetX(int slot)
+    {
+        if (xs == null || xs.Length == 0) return 0f;
+        int i = Mathf.Clamp(slot, 0, xs.Length - 1);
+        return xs[i];
+    }
+}`,
+ rules:[],
+ test:(api,ok)=>{
+  api.set('xs',[10,20,30]);
+  const t=s=>{try{return api.call('GetX',s)}catch(e){return 'ERR'}};
+  ok('유효한 번호',t(1)===20,'1번 칸은 20이에요.',`GetX(1)이 ${t(1)} 입니다. 20이어야 해요.`);
+  ok('큰 번호',t(9)===30,'큰 번호는 마지막 칸(30)으로 맞춰져요.',`GetX(9)이 ${t(9)} 입니다. 마지막 값 30이어야 해요.`);
+  ok('음수 번호',t(-4)===10,'음수는 0번 칸(10)으로 맞춰져요.',`GetX(-4)가 ${t(-4)} 입니다. 0번 값 10이어야 해요.`);
+  api.set('xs',[]);
+  ok('빈 배열',t(0)===0,'지점이 없으면 0을 반환해요.','빈 배열에서 에러가 나요. 길이가 0이면 먼저 0을 반환하세요.');
+ },
+ hints:['slot이 Length 이상이거나 음수면 배열 밖이에요.','Mathf.Clamp로 범위 안으로 끌어오세요.','길이가 0이면 Clamp의 최댓값이 −1이 되니 먼저 따로 처리해야 해요.'],
+ why:'바깥에서 들어온 번호는 믿지 말고 범위를 맞춰 쓰세요. Clamp는 한 줄로 "너무 작으면 최솟값, 너무 크면 최댓값"을 처리해 줍니다.',
+ concepts:[['IndexOutOfRangeException','유효 범위(0 ~ Length−1)를 벗어난 인덱스로 접근했을 때 발생한다.'],['Mathf.Clamp','값을 최솟값과 최댓값 사이로 제한한다.']]});
