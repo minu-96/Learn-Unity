@@ -31,7 +31,7 @@ function normalize(d){
  d=d||{};
  /* 예전 객관식 버전의 진행도는 문제가 달라져서 이어받지 않고, 개념 사전만 가져온다 */
  const fresh=d.v===VER;
- return {v:VER,solved:fresh?(d.solved||{}):{},dict:d.dict||{},custom:fresh?sanitizeCustom(d.custom):[],drafts:fresh?(d.drafts||{}):{},review:fresh?(d.review||{}):{},practice:d.practice||{},act:d.act||{},notes:d.notes||{},diag:migDiag(d.diag),intro:d.intro||null};
+ return {v:VER,solved:fresh?(d.solved||{}):{},dict:d.dict||{},custom:fresh?sanitizeCustom(d.custom):[],drafts:fresh?(d.drafts||{}):{},review:fresh?(d.review||{}):{},practice:d.practice||{},act:d.act||{},notes:d.notes||{},diag:migDiag(d.diag),intro:d.intro||null,lsn:d.lsn||{}};
 }
 const lsKey=()=>me?LS+'-'+me.uid:LS;
 function loadLocal(){
@@ -156,7 +156,16 @@ function whoHTML(){
  if(Store.configured)return `<div class="who"><span class="note">게스트 · 이 브라우저에만 저장</span><button class="btn ghost sm" id="login">로그인</button></div>`;
  return `<div class="who"><span class="note">이 브라우저에만 저장돼요</span></div>`;
 }
-const openProblem=(id,mode)=>{const p=byId(id);V.pid=id;V.mode=mode||null;if(p&&mode==='review')V.tab='review';else if(p&&p.bank){V.tab='bank';V.bankStage={cat:p.cat,stage:p.stage}}else if(p){V.tab='learn';V.stage={cat:p.cat,stage:p.stage}}render();window.scrollTo(0,0)};
+/* 단계를 처음 시작할 때는 개념(이론)을 먼저 보게 한다. 이미 풀었거나 시도한 단계, 복습, 진단, 문제 사전은 건너뛴다 */
+const lessonNeeded=p=>{
+ if(!p||p.bank||p.custom||V.diag||typeof LESSONS==='undefined')return false;
+ const key=p.cat+':'+p.stage;if(!LESSONS[key]||S.lsn[key])return false;
+ return !stageProblems(p.cat,p.stage).some(q=>isSolved(q.id)||S.drafts[q.id]||(S.solved[q.id]&&S.solved[q.id].tries));
+};
+const markLesson=(cid,si)=>{const k=cid+':'+si;if(!S.lsn[k]){S.lsn[k]=Date.now();persist()}};
+const openProblem=(id,mode,force)=>{const p=byId(id);
+ if(p&&!mode&&!force&&lessonNeeded(p)){V.tab='learn';V.pid=null;V.mode=null;V.stage={cat:p.cat,stage:p.stage};V.bankStage=null;render();window.scrollTo(0,0);return}
+ V.pid=id;V.mode=mode||null;if(p&&mode==='review')V.tab='review';else if(p&&p.bank){V.tab='bank';V.bankStage={cat:p.cat,stage:p.stage}}else if(p){V.tab='learn';V.stage={cat:p.cat,stage:p.stage}}render();window.scrollTo(0,0)};
 
 /* ---------- 훈련 목록 ---------- */
 function stageInfo(p){

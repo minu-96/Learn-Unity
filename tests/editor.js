@@ -15,7 +15,7 @@ let fails=0;const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
  await ctx.route(/firebase-config\.js$/,r=>r.fulfill({body:"window.FIREBASE_CONFIG={apiKey:'k',authDomain:'a',projectId:'p',appId:'x'};",contentType:'text/javascript'}));
  const pg=await ctx.newPage();const errs=[];pg.on('pageerror',e=>errs.push(String(e)));
  await pg.goto(base+'/');await pg.waitForSelector('#g');await pg.click('#g');await pg.waitForSelector('.hero');
- await pg.evaluate(()=>openProblem('e1'));await pg.waitForSelector('#code');
+ await pg.evaluate(()=>openProblem('e1',null,true));await pg.waitForSelector('#code');
  const val=()=>pg.$eval('#code',e=>e.value);
  const reset=async(t,a,b)=>{await pg.$eval('#code',(e,[t,a,b])=>{e.value=t;e.focus();e.setSelectionRange(a===undefined?t.length:a,b===undefined?(a===undefined?t.length:a):b)},[t,a,b])};
  const key=k=>pg.keyboard.press(k);

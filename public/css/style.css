@@ -564,3 +564,7 @@ kbd{font-family:var(--font-mono);font-size:11px;padding:1px 6px;border:1px solid
 @media (prefers-reduced-motion:reduce){.shake,.inafter.show{animation:none}.bar i{transition:none}}
 .spot{box-sizing:border-box;min-width:0}
 .spot .bar{width:100%;box-sizing:border-box}
+
+/* 단계 처음: 개념을 먼저 읽도록 강조 */
+.lesson.gate{border:2px solid var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+.lesson.gate>summary b{color:var(--accent)}

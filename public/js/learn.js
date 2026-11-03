@@ -147,7 +147,8 @@ function renderStage(){
   return `<button class="prow ${k?'done':''}" data-p="${p.id}"><span class="lv lv${p.level}">${esc(LV[p.level])}</span><span class="pt2">${esc(p.title)}</span><span class="pmeta">${p.world?'<span class="badge sim">시뮬레이션</span>':''}${p.ai?'<span class="badge ai">AI 생성</span>':''}${statusBadge(p.id)}<span class="note">약 ${MIN_BY_LV[p.level]||8}분</span></span></button>`;
  };
  const pr=typeof PRACTICE!=='undefined'&&PRACTICE[key],done=S.practice[key]||[];
- const lesson=ls?`<details class="lesson" ${n===0?'open':''}><summary><span class="step">개념</span><b>핵심만 읽고 시작해요</b><span class="note">2분</span></summary>
+ const gate=!!ls&&!S.lsn[key]&&!ps.some(p=>isSolved(p.id)||S.drafts[p.id]||(S.solved[p.id]&&S.solved[p.id].tries));
+ const lesson=ls?`<details class="lesson ${gate?'gate':''}" ${n===0||gate?'open':''}><summary><span class="step">개념</span><b>${gate?'먼저 이 단계의 개념을 읽어 주세요':'핵심만 읽고 시작해요'}</b><span class="note">2분</span></summary>
    <p class="theory-p">${esc(st.theory)}</p>
    <ul class="points">${ls.points.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
    <div class="ex-h">예제 <span class="note">읽기만 하는 예시예요. 문제 정답과는 달라요.</span></div>
@@ -159,13 +160,14 @@ function renderStage(){
   <div class="crumbs"><button class="btn ghost sm" id="back">← 학습 지도</button><span class="note">${esc(tierName(tid))} › ${esc(cat.name)}</span></div>
   <header class="stage-h tier-${tid}"><div><span class="kick">${esc(cat.name)} · 단계 ${si}</span><h2>${esc(st.title)}</h2></div><div class="stage-p"><b>${n} / ${ps.length}</b><span class="note">해결</span>${meterHTML(n,ps.length,'t-'+tid)}</div></header>
   ${lesson}
-  <section class="plist"><div class="row sec-r"><span class="step">문제</span><h3 class="sec-h">직접 코드를 작성해요</h3>${first?`<span style="flex:1"></span><button class="btn" id="startnext">${n?'이어서 풀기':'첫 문제 시작'}</button>`:''}</div><div class="prows">${ps.map(row).join('')||'<div class="note">아직 문제가 없어요.</div>'}</div><div class="note" id="genmsg" role="status"></div></section>
+  <section class="plist"><div class="row sec-r"><span class="step">문제</span><h3 class="sec-h">직접 코드를 작성해요</h3>${first?`<span style="flex:1"></span><button class="btn" id="startnext">${n?'이어서 풀기':gate?'읽었어요, 첫 문제 시작':'첫 문제 시작'}</button>`:''}</div><div class="prows">${ps.map(row).join('')||'<div class="note">아직 문제가 없어요.</div>'}</div><div class="note" id="genmsg" role="status"></div></section>
   ${prac}
   <div class="stage-nav">${prv?`<button class="btn ghost" data-sn="${prv.cat.id}:${prv.si}">← ${esc(prv.st.title)}</button>`:'<span></span>'}${nxt?`<button class="btn ghost" data-sn="${nxt.cat.id}:${nxt.si}">${esc(nxt.st.title)} →</button>`:'<span></span>'}</div>
  </div>`;
  $('#back').onclick=()=>{V.stage=null;render();window.scrollTo(0,0)};
- $('#main').querySelectorAll('.prow').forEach(b=>b.onclick=()=>openProblem(b.dataset.p));
- const sn=$('#startnext');if(sn)sn.onclick=()=>openProblem(first.id);
+ const go=id=>{markLesson(cid,si);openProblem(id,null,true)};
+ $('#main').querySelectorAll('.prow').forEach(b=>b.onclick=()=>go(b.dataset.p));
+ const sn=$('#startnext');if(sn)sn.onclick=()=>go(first.id);
  $('#main').querySelectorAll('[data-sn]').forEach(b=>b.onclick=()=>{const [c,s]=b.dataset.sn.split(':');V.stage={cat:c,stage:+s};render();window.scrollTo(0,0)});
  bindPractice($('#main'));
 }

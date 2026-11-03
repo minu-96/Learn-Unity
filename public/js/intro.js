@@ -76,7 +76,7 @@ function renderIntro(){
  const dots=INTRO.map((_,i)=>`<span class="idot ${i===IN.i?'cur':''} ${IN.seen[i]?'ok':''}" aria-hidden="true"></span>`).join('');
  if(last){
   S.intro=S.intro||{at:Date.now()};persist();
-  $('#main').innerHTML=`<div class="intro"><section class="card introend"><span class="kick">준비 끝</span><h2 class="pt">이제 코드를 써 볼 차례예요</h2><p>코딩은 <b>순서대로, 정확하게, 값을 다루는 일</b>이에요. 처음엔 오류가 나는 게 정상이에요. 천천히 하나씩 해 봐요.</p><div class="tools"><button class="btn" id="istart">입문 첫 문제 시작</button><button class="btn ghost" id="istage">입문 단계 보기</button><button class="btn ghost" id="iagain">처음부터 다시 보기</button></div></section></div>`;
+  $('#main').innerHTML=`<div class="intro"><section class="card introend"><span class="kick">준비 끝</span><h2 class="pt">이제 코드를 써 볼 차례예요</h2><p>코딩은 <b>순서대로, 정확하게, 값을 다루는 일</b>이에요. 처음엔 오류가 나는 게 정상이에요. 천천히 하나씩 해 봐요.</p><div class="tools"><button class="btn" id="istart">입문 시작하기</button><button class="btn ghost" id="istage">입문 단계 보기</button><button class="btn ghost" id="iagain">처음부터 다시 보기</button></div></section></div>`;
   Fx.sfx('unlock');
   $('#istart').onclick=()=>{const p=PROBLEMS.find(x=>x.cat==='start'&&!isSolved(x.id))||PROBLEMS.find(x=>x.cat==='start');IN.i=0;openProblem(p.id)};
   $('#istage').onclick=()=>{IN.i=0;V.tier='intro';gotoTab('learn')};
