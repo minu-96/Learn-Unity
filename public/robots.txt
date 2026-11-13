@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://unity-learn-40887.web.app/sitemap.xml
