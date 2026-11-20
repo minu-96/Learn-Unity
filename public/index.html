@@ -15,23 +15,64 @@
 <body>
 <div class="wrap" id="app">
 <main class="land">
-<h1>유니티 훈련소</h1>
-<p class="lead">Unity와 C#을 문제로 배우는 코드 작성 연습장. 읽고 고르는 퀴즈가 아니라, 직접 코드를 써서 조건별로 채점받아요.</p>
-<p class="row"><button class="btn" id="start" type="button" style="padding:12px 22px">시작하기</button></p>
-<h2>이렇게 풀어요</h2>
-<ol>
-<li>상황과 통과 조건을 읽어요.</li>
-<li>C# 코드를 직접 작성해요.</li>
-<li>어느 조건이 왜 틀렸는지 조건별로 채점받아요.</li>
-<li>막히면 힌트를 한 단계씩 열고, 푼 문제는 복습으로 돌아와요.</li>
-</ol>
-<h2>학습 단계</h2>
-<p>입문(코딩 첫걸음) → 기초(C# 문법·Unity 구조) → 응용(컴포넌트·물리·애니메이션) → 심화(연출·설계·최적화)</p>
-<p class="note">설치 없이 브라우저에서 바로 쓸 수 있어요. 개발 동아리 스튜디오 바드의 Unity 스터디용으로 만들었고, 누구나 둘러볼 수 있어요. <a href="guide.html">서비스 소개 자세히 보기</a></p>
+<section class="lh">
+ <div class="lh-copy">
+  <h1>유니티 훈련소</h1>
+  <p class="lh-lead">고르는 퀴즈가 아니에요. C# 코드를 직접 쓰면, 어느 조건이 왜 틀렸는지 바로 알려 줘요.</p>
+  <p class="lh-act"><button class="btn lbtn" id="start" data-start type="button">시작하기</button><span class="note">설치 없이 브라우저에서 · 로그인 없이 둘러볼 수도 있어요</span></p>
+ </div>
+ <div class="demo" aria-label="문제 화면 예시">
+  <div class="demo-bar"><span>PlayerMove.cs</span><b>문제 화면 예시</b></div>
+  <p class="demo-ask">플레이어가 <b>초당 5</b>만큼 앞으로 가게 하세요.</p>
+  <pre class="dcode"><span class="dl"><i>1</i><code><em class="k">void</em> <em class="f">Update</em>()</code></span><span class="dl"><i>2</i><code>{</code></span><span class="dl"><i>3</i><code>    <em class="k">float</em> speed = <em class="n">5f</em>;</code></span><span class="dl bad" id="dl4"><i>4</i><code>    transform.<em class="f">Translate</em>(0, 0, speed<em id="dfix" hidden> * Time.deltaTime</em>);</code></span><span class="dl"><i>5</i><code>}</code></span></pre>
+  <div class="dres" aria-live="polite">
+   <p class="dsum"><b id="dcnt">2 / 3</b> 조건 통과</p>
+   <ul class="dcond">
+    <li class="ok"><s aria-hidden="true">✓</s><span><span class="sr">통과 </span>Update 안에서 움직여요</span></li>
+    <li class="ok"><s aria-hidden="true">✓</s><span><span class="sr">통과 </span>앞(z축) 방향으로 움직여요</span></li>
+    <li class="no" id="dc3"><s aria-hidden="true" id="dmark">✕</s><span><span class="sr" id="dsr">실패 </span>프레임 속도와 상관없이 초당 5만큼 움직여요<small id="dwhy">4번째 줄: Time.deltaTime을 곱하지 않아서, 프레임이 많은 컴퓨터일수록 더 빨리 움직여요.</small></span></li>
+   </ul>
+   <button class="btn ghost sm" id="dbtn" type="button">고쳐서 다시 채점</button>
+  </div>
+ </div>
+</section>
+
+<section class="lsec">
+ <h2>입문부터 심화까지, 내 위치에서 시작해요</h2>
+ <div class="ltier">
+  <div style="--c:var(--t-intro)"><b>입문</b><span>코딩이 뭔지부터. 변수·조건·반복·메서드</span></div>
+  <div style="--c:var(--t-basic)"><b>기초</b><span>C# 문법과 Unity의 기본 구조</span></div>
+  <div style="--c:var(--t-app)"><b>응용</b><span>컴포넌트·물리·애니메이션 다루기</span></div>
+  <div style="--c:var(--t-adv)"><b>심화</b><span>연출·설계·최적화를 엮는 종합 과제</span></div>
+ </div>
+ <p class="lnote">처음이라면 4문제짜리 진단으로 시작 위치를 찾을 수 있고, 푼 문제는 일정 간격으로 복습하러 돌아와요.</p>
+</section>
+
+<section class="lsec">
+ <h2>13개 분야</h2>
+ <ul class="lchips"><li>코딩 첫걸음</li><li>C# 문법</li><li>Unity 핵심</li><li>컴포넌트</li><li>물리·충돌</li><li>애니메이션</li><li>파티클·VFX</li><li>게임 주스</li><li>연출</li><li>설계</li><li>수학·벡터</li><li>디버깅</li><li>최적화</li></ul>
+</section>
+
+<section class="lend">
+ <div><h2>코딩이 처음이어도 괜찮아요</h2><p>입문 구간은 "코딩이 뭔지"를 5분짜리 체험으로 보여 주는 것부터 시작해요.</p></div>
+ <button class="btn lbtn" data-start type="button">시작하기</button>
+</section>
+<p class="lfoot">스튜디오 바드 Unity 스터디용으로 만들었고, 누구나 쓸 수 있어요. <a href="guide.html">서비스 소개</a></p>
 <noscript><p>이 앱은 JavaScript가 필요해요.</p></noscript>
+<script>
+(function(){var b=document.getElementById('dbtn');if(!b)return;var fixed=false;
+b.onclick=function(){fixed=!fixed;
+document.getElementById('dfix').hidden=!fixed;
+document.getElementById('dl4').className='dl '+(fixed?'ok':'bad');
+document.getElementById('dc3').className=fixed?'ok':'no';
+document.getElementById('dmark').textContent=fixed?'\u2713':'\u2715';
+document.getElementById('dsr').textContent=fixed?'통과 ':'실패 ';
+document.getElementById('dwhy').hidden=fixed;
+document.getElementById('dcnt').textContent=fixed?'3 / 3':'2 / 3';
+b.textContent=fixed?'다시 틀리게 해 보기':'고쳐서 다시 채점'}})();
+</script>
 </main>
 </div>
-<footer style="text-align:center;padding:16px;font-size:13px"><a href="guide.html">서비스 소개</a></footer>
 
 <!-- Firebase (compat SDK). firebase-config.js가 비어 있으면 게스트 모드로 동작한다 -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
