@@ -20,7 +20,7 @@ ${css}
 #pv{max-width:1020px;margin:0 auto 12px;padding:8px 12px;border:1px dashed var(--line);border-radius:6px;font-size:12px;color:var(--muted);line-height:1.6}
 #pv b{color:var(--ink)}
 </style>
-<div id="pv"><b>미리보기</b> · 실제 Firebase 대신 가짜 로그인과 가상 부원 데이터로 동작해요. Google 버튼은 임시 계정으로 들어가고, 운영진은 아이디 <b>admin</b> / 비밀번호 <b>pw1234</b>로 접속해 보세요. 기록은 이 브라우저에만 남아요.</div>
+<div id="pv"><b>미리보기</b> · 실제 Firebase 대신 가짜 로그인과 가상 부원 데이터로 동작해요. Google 버튼은 임시 계정으로 들어가고, 운영진은 아이디 <b>admin</b> / 비밀번호 <b>pw1234</b>로 접속해 보세요. 기록은 이 브라우저에만 남아요. <button id="pvreset" type="button">처음 방문 화면 보기</button></div>
 <div class="wrap" id="app">${land}</div>
 <script>
 ${parts.fake}
@@ -37,6 +37,9 @@ ${parts.app}
 </script>
 <script>
 ${parts.ui}
+</script>
+<script>
+document.getElementById('pvreset').onclick=()=>{try{const d=JSON.parse(window.__fakefb.get());d.auth=null;window.__fakefb.set(JSON.stringify(d))}catch(e){}location.reload()};
 </script>
 `;
 fs.writeFileSync(process.argv[2]||path.join(__dirname,'preview.html'),html);
