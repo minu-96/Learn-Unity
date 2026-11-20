@@ -26,6 +26,7 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
  const pg=await ctx.newPage();
  pg.on('pageerror',e=>errs.push(String(e)));pg.on('console',m=>{if(m.type()==='error')errs.push(m.text())});
  await pg.goto(base+'/');
+ await pg.waitForSelector('#start');await pg.click('#start');
  await pg.waitForSelector('#g');
  ok(true,'로그인 화면 표시');
 
@@ -154,7 +155,7 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
 
  // 10. 모바일 폭
  await pg.setViewportSize({width:390,height:800});
- await pg.goto(base+'/');await pg.waitForSelector('#g');
+ await pg.goto(base+'/');await pg.waitForSelector('#start');await pg.click('#start');await pg.waitForSelector('#g');
  ok(await pg.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),'모바일: 가로 스크롤 없음');
 
  console.log('page errors:',errs.length?errs:'none');

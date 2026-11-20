@@ -760,7 +760,7 @@ async function init(){
   else if(me){me=null;guest=false;window.wantAdmin=false;S=normalize({});V={tab:'home',cat:'csharp',pid:null,mode:null,tier:null,stage:null};P=null;renderLogin()}
  });
  const wantAdmin=location.hash==='#admin';
- if(Store.configured&&!me){wantAdmin?renderAdminLogin():renderLogin();return}
+ if(Store.configured&&!me){if(wantAdmin){renderAdminLogin();return}const st=$('#start');if(st)st.onclick=()=>renderLogin();else renderLogin();return}
  if(wantAdmin&&me&&!me.admin){renderAdminLogin('이 계정은 운영진이 아니에요. 로그아웃 후 운영진 계정으로 접속해 주세요.');return}
  await boot();
 }

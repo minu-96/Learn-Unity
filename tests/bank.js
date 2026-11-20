@@ -24,7 +24,7 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
  const pg=await ctx.newPage();
  pg.on('pageerror',e=>errs.push(String(e)));pg.on('console',m=>{if(m.type()==='error')errs.push(m.text())});
 
- await pg.goto(base+'/');await pg.waitForSelector('#g');
+ await pg.goto(base+'/');await pg.waitForSelector('#start');await pg.click('#start');await pg.waitForSelector('#g');
  await pg.click('#g');await pg.waitForSelector('.hero');
  const solve=async()=>{const sol=await pg.evaluate(()=>byId(V.pid).solution);await pg.fill('#code',sol);await pg.click('#grade');await pg.waitForSelector('.sum.ok',{timeout:15000})};
 

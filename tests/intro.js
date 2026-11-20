@@ -14,7 +14,7 @@ let fails=0;const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
  await ctx.route(/fonts\.(googleapis|gstatic)\.com/,r=>r.fulfill({body:'',contentType:'text/css'}));
  await ctx.route(/firebase-config\.js$/,r=>r.fulfill({body:"window.FIREBASE_CONFIG={apiKey:'k',authDomain:'a',projectId:'p',appId:'x'};",contentType:'text/javascript'}));
  const pg=await ctx.newPage();const errs=[];pg.on('pageerror',e=>errs.push(String(e)));pg.on('console',m=>{if(m.type()==='error')errs.push(m.text())});
- await pg.goto(base+'/');await pg.waitForSelector('#g');await pg.click('#g');await pg.waitForSelector('.hero');
+ await pg.goto(base+'/');await pg.waitForSelector('#start');await pg.click('#start');await pg.waitForSelector('#g');await pg.click('#g');await pg.waitForSelector('.hero');
  ok(await pg.$('.introcard')!==null,'처음이면 홈에 "코딩이란?" 카드');
  await pg.click('.introcard [data-go="intro"]');await pg.waitForSelector('.inslide');
  // 1 순서

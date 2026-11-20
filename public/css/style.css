@@ -172,6 +172,12 @@ details.sol summary{cursor:pointer;font-weight:500}
 .who{display:flex;align-items:center;gap:10px;font-size:13px;flex-wrap:wrap}
 .login{max-width:440px;margin:8vh auto 0;display:flex;flex-direction:column;gap:16px}
 .login h1{margin:0}
+.land{max-width:560px;margin:8vh auto 0;display:flex;flex-direction:column;gap:14px;line-height:1.7}
+.land h1,.land h2,.land p,.land ol{margin:0}
+.land h2{font-size:16px;margin-top:8px}
+.land .lead{font-size:16px}
+.land ol{padding-left:20px}
+.land a{color:var(--accent)}
 .lbl{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
 .lbl input{background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:8px 10px;color:var(--ink);font:inherit}
 .statrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}
