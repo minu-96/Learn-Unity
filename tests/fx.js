@@ -23,7 +23,7 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
  await ctx.route(/firebase-config\.js$/,r=>r.fulfill({body:"window.FIREBASE_CONFIG={apiKey:'k',authDomain:'a',projectId:'p',appId:'x'};window.ADMIN_EMAIL_DOMAIN='admin.learn-unity.example';",contentType:'text/javascript'}));
  const pg=await ctx.newPage();
  pg.on('pageerror',e=>errs.push(String(e)));pg.on('console',m=>{if(m.type()==='error')errs.push(m.text())});
- await pg.goto(base+'/');await pg.waitForSelector('#g');
+ await pg.goto(base+'/');await pg.waitForSelector('#start');await pg.click('#start');await pg.waitForSelector('#g');
 
  // 운영진: 주차 과제 만들기
  await pg.evaluate(()=>{const d=JSON.parse(localStorage.getItem('fakefb')||'{"docs":{},"auth":null,"seq":0}');d.docs['admins/adm1']={ok:true};d.accounts={'admin@admin.learn-unity.example':{uid:'adm1',pw:'pw1234'}};localStorage.setItem('fakefb',JSON.stringify(d))});
@@ -40,7 +40,7 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
  ok(true,'주차 과제 저장 후 표시');
  const wkDoc=await pg.evaluate(()=>JSON.parse(localStorage.getItem('fakefb')).docs['config/weekly']);
  ok(wkDoc&&wkDoc.stages.join()==='csharp:1','config/weekly 문서에 단계 저장');
- await pg.click('#logout');await pg.waitForSelector('#g');
+ await pg.click('#logout');await pg.waitForSelector('#start');await pg.click('#start');await pg.waitForSelector('#g');
 
  // 부원: 홈 카드, 레벨 칩, 소리 토글
  await pg.click('#g');await pg.waitForSelector('.hero');
@@ -96,7 +96,7 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
  ok(cloud&&JSON.parse(cloud.json).diag!==undefined,'진단 결과가 서버 상태에 포함');
 
  // 운영진에서 과제 현황 열 확인
- await pg.click('#logout');await pg.waitForSelector('#g');
+ await pg.click('#logout');await pg.waitForSelector('#start');await pg.click('#start');await pg.waitForSelector('#g');
  await pg.click('#toadmin');await pg.waitForSelector('#aid');
  await pg.fill('#aid','admin');await pg.fill('#apw','pw1234');await pg.click('#ago');
  await pg.waitForSelector('.statrow');
@@ -111,7 +111,7 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
 
  // 모바일 가로 스크롤
  await pg.setViewportSize({width:390,height:844});
- await pg.click('#logout');await pg.waitForSelector('#g');await pg.click('#g');await pg.waitForSelector('.hero');
+ await pg.click('#logout');await pg.waitForSelector('#start');await pg.click('#start');await pg.waitForSelector('#g');await pg.click('#g');await pg.waitForSelector('.hero');
  ok(await pg.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth)<=0,'모바일 홈: 가로 스크롤 없음');
  await pg.click('.act.wk .btn');await pg.waitForSelector('#code,#startnext');if(await pg.$('#startnext'))await pg.click('#startnext');await pg.waitForSelector('#code');
  ok(await pg.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth)<=0,'모바일 문제: 가로 스크롤 없음');

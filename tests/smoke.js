@@ -26,6 +26,7 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
  const pg=await ctx.newPage();
  pg.on('pageerror',e=>errs.push(String(e)));pg.on('console',m=>{if(m.type()==='error')errs.push(m.text())});
  await pg.goto(base+'/');
+ await pg.waitForSelector('#start');await pg.click('#start');
  await pg.waitForSelector('#g');
  ok(true,'로그인 화면 표시');
 
@@ -147,14 +148,32 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
  ok(await pg.$$eval('.tblwrap tbody tr',e=>e.length)===1,'14일 미활동 필터');
  ok((await pg.textContent('main')).includes('많이 막히는 문제'),'막히는 문제 섹션');
 
+ // 8-b. 뒤로가기·앞으로가기: 사이트를 벗어나지 않고 이전 화면으로 돌아와야 한다
+ {
+  const sel=async k=>(await pg.getAttribute('nav.tabs [data-tab="'+k+'"]','aria-selected'))==='true';
+  await pg.click('nav.tabs [data-tab="dict"]');await pg.click('nav.tabs [data-tab="review"]');
+  ok(await sel('review'),'기록 테스트: 복습 탭으로 이동');
+  await pg.goBack();await pg.waitForTimeout(150);
+  ok(await sel('dict')&&pg.url().startsWith(base),'뒤로가기: 이전 탭(개념 사전)으로 돌아옴, 사이트 유지');
+  await pg.goForward();await pg.waitForTimeout(150);
+  ok(await sel('review'),'앞으로가기: 복습 탭으로 다시 감');
+  await pg.click('nav.tabs [data-tab="learn"]');await pg.waitForSelector('.sc');await pg.click('.sc');await pg.waitForSelector('#back');
+  await pg.goBack();await pg.waitForTimeout(150);
+  ok(await sel('learn')&&!(await pg.$('#back')),'뒤로가기: 단계 화면에서 학습 목록으로');
+ }
+
  // 9. 로그아웃
  await pg.click('#logout');
- await pg.waitForSelector('#g,#af');
- ok(true,'로그아웃 후 로그인 화면');
+ await pg.waitForSelector('#start');
+ ok(true,'로그아웃하면 소개 화면으로 돌아옴');
+ await pg.click('#dbtn');
+ ok((await pg.textContent('#dcnt')).trim()==='3 / 3','소개 화면 예시: 고치면 3 / 3');
+ await pg.click('#start');await pg.waitForSelector('#g');
+ ok(true,'소개에서 시작하기 → 로그인 화면');
 
  // 10. 모바일 폭
  await pg.setViewportSize({width:390,height:800});
- await pg.goto(base+'/');await pg.waitForSelector('#g');
+ await pg.goto(base+'/');await pg.waitForSelector('#start');await pg.click('#start');await pg.waitForSelector('#g');
  ok(await pg.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),'모바일: 가로 스크롤 없음');
 
  console.log('page errors:',errs.length?errs:'none');

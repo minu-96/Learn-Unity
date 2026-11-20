@@ -151,6 +151,7 @@ function render(){
  const lo=$('#logout');if(lo)lo.onclick=()=>Store.signOut();
  const sn=$('#snd');if(sn)sn.onclick=()=>{Fx.setOn(!Fx.isOn());sn.setAttribute('aria-pressed',String(Fx.isOn()));sn.textContent=Fx.isOn()?'♪ 켬':'♪ 끔'};
  const li=$('#login');if(li)li.onclick=()=>{guest=false;S=normalize({});renderLogin()};
+ navSync();
 }
 function lvHTML(){
  const li=Fx.levelInfo(S);
@@ -734,6 +735,55 @@ function mergeState(r){
  if(o.diag&&(!L.diag||(o.diag.at||0)>(L.diag.at||0)))L.diag=o.diag;
  for(const [k,x] of Object.entries(o.notes)){const y=L.notes[k];if(!y||(x.at||0)>(y.at||0))L.notes[k]=x}
 }
+/* ===== 뒤로가기·앞으로가기: 화면(탭·단계·문제)이 바뀔 때마다 브라우저 기록에 한 칸을 쌓고, 뒤로가기를 누르면 그 화면으로 되돌린다 ===== */
+let navKey='',navPop=false;
+function navSync(){
+ if(!history.pushState)return;
+ const key=JSON.stringify([V.tab,V.pid,V.mode,V.stage,V.bankStage]);
+ if(navPop){navPop=false;navKey=key;return}
+ if(key===navKey)return;
+ const st={nav:1,v:JSON.parse(JSON.stringify(Object.assign({},V,{diag:null})))};
+ /* 첫 화면이거나 진단 문제를 넘기는 중이면 기록을 늘리지 않고 현재 칸만 갱신한다 */
+ if(!navKey||V.diag)history.replaceState(st,'');else history.pushState(st,'');
+ navKey=key;
+}
+window.addEventListener('popstate',e=>{
+ const st=e.state;
+ if(!(me||guest)){/* 로그인 전: 로그인 화면 ↔ 소개 화면 */
+  if(st&&st.login)renderLogin();else if(LANDING_HTML)showLanding();
+  return;
+ }
+ if(!st||!st.nav)return;
+ Object.assign(V,{tab:'home',pid:null,mode:null,stage:null,bankStage:null,diag:null},st.v);
+ navPop=true;render();window.scrollTo(0,0);
+});
+
+/* ===== 처음 방문 소개 화면: index.html의 <main class="land">를 처음 모습 그대로 보관해 두었다가 로그아웃할 때 다시 보여 준다 ===== */
+const LANDING_HTML=(document.querySelector('#app .land')||{outerHTML:''}).outerHTML;
+function bindLanding(){
+ document.querySelectorAll('[data-start]').forEach(b=>{b.onclick=()=>{history.pushState({login:1},'');renderLogin();window.scrollTo(0,0)}});
+ const b=document.getElementById('dbtn');if(!b)return;
+ let fixed=false;
+ b.onclick=()=>{
+  fixed=!fixed;
+  document.getElementById('dfix').hidden=!fixed;
+  document.getElementById('dl4').className='dl '+(fixed?'ok':'bad');
+  document.getElementById('dc3').className=fixed?'ok':'no';
+  document.getElementById('dmark').textContent=fixed?'\u2713':'\u2715';
+  document.getElementById('dsr').textContent=fixed?'통과 ':'실패 ';
+  document.getElementById('dwhy').hidden=fixed;
+  document.getElementById('dcnt').textContent=fixed?'3 / 3':'2 / 3';
+  b.textContent=fixed?'다시 틀리게 해 보기':'고쳐서 다시 채점';
+ };
+}
+function showLanding(){
+ if(!LANDING_HTML){renderLogin();return}
+ window.wantAdmin=false;navKey='';
+ if(location.hash)history.replaceState(null,'',location.pathname);
+ $('#app').innerHTML=LANDING_HTML;
+ window.scrollTo(0,0);
+ bindLanding();
+}
 async function boot(){
  S=normalize({});loadLocal();
  render();
@@ -757,10 +807,10 @@ async function init(){
  try{me=await Store.init()}catch(e){me=null}
  Store.onChange(u=>{
   if(u){me=u;if(window.wantAdmin&&!u.admin){Store.signOut();renderAdminLogin('이 계정은 운영진이 아니에요. 운영진 아이디로 접속해 주세요.');return}boot()}
-  else if(me){me=null;guest=false;window.wantAdmin=false;S=normalize({});V={tab:'home',cat:'csharp',pid:null,mode:null,tier:null,stage:null};P=null;renderLogin()}
+  else if(me){me=null;guest=false;window.wantAdmin=false;S=normalize({});V={tab:'home',cat:'csharp',pid:null,mode:null,tier:null,stage:null};P=null;showLanding()}
  });
  const wantAdmin=location.hash==='#admin';
- if(Store.configured&&!me){wantAdmin?renderAdminLogin():renderLogin();return}
+ if(Store.configured&&!me){if(wantAdmin){renderAdminLogin();return}if(LANDING_HTML)bindLanding();else renderLogin();return}
  if(wantAdmin&&me&&!me.admin){renderAdminLogin('이 계정은 운영진이 아니에요. 로그아웃 후 운영진 계정으로 접속해 주세요.');return}
  await boot();
 }
