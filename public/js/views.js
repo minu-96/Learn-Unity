@@ -15,13 +15,14 @@ function renderLogin(msg){
  $('#app').innerHTML=`<div class="login"><h1>유니티 훈련소</h1>
   <p class="sub">Unity 개발 스터디용 코드 작성 연습장. 상황을 읽고 코드를 직접 작성하면 조건별로 채점해 줘요.</p>
   <div class="card" style="gap:12px"><button class="btn" id="g" style="padding:12px">Google 계정으로 시작하기</button>
+  <label class="chk"><input type="checkbox" id="keep" checked><span>로그인 유지 <span class="note">(끄면 이 창을 닫을 때 로그아웃돼요)</span></span></label>
   <div class="note">로그인하면 이름·이메일·진행 현황(해결한 문제 수 등)이 운영진에게 보여요. 작성 중인 코드는 운영진도 볼 수 없어요.</div>
   <div class="msg no" id="lerr" ${msg?'':'hidden'}>${esc(msg||'')}</div></div>
   <div class="row" style="justify-content:center;gap:16px"><button class="btn ghost sm" id="guest">로그인 없이 둘러보기</button><a class="note" href="#admin" id="toadmin">운영진 로그인</a></div>
   <div class="note" style="text-align:center">로그인 없이 쓰면 기록이 이 브라우저에만 저장되고 운영진에게 진행 현황이 보이지 않아요.</div></div>`;
  $('#g').onclick=async()=>{
   $('#g').disabled=true;
-  try{await Store.signInGoogle()}
+  try{await Store.signInGoogle($('#keep').checked)}
   catch(e){$('#g').disabled=false;const m=e&&e.code==='auth/popup-closed-by-user'?'로그인 창이 닫혔어요. 다시 시도해 주세요.':e&&e.code==='auth/popup-blocked'?'브라우저가 팝업을 막았어요. 이 사이트의 팝업을 허용해 주세요.':'로그인에 실패했어요. ('+((e&&e.code)||'오류')+')';$('#lerr').hidden=false;$('#lerr').textContent=m}
  };
  $('#guest').onclick=()=>{guest=true;boot()};
@@ -223,11 +224,11 @@ function drawAdmin(){
  $('#as').onchange=e=>{AD.sort=e.target.value;drawAdmin()};
  $('#ai').onchange=e=>{AD.idle=e.target.checked;drawAdmin()};
  $('#acsv').onclick=()=>adminCsv(rows);
- document.querySelectorAll('[data-sel]').forEach(b=>b.onclick=()=>{AD.sel=b.dataset.sel;drawAdmin();const d=$('#adetail');if(d)d.scrollIntoView({block:'nearest'})});
+ document.querySelectorAll('[data-sel]').forEach(b=>b.onclick=()=>{AD.sel=b.dataset.sel;drawAdmin();navSync();const d=$('#adetail');if(d)d.scrollIntoView({block:'nearest'})});
  document.querySelectorAll('[data-wkm]').forEach(b=>b.onclick=()=>{AD.wk=Math.max(WK_MIN,Math.min(0,AD.wk+(+b.dataset.wkm)));AD.club=!!$('#clubdays[open]');drawAdmin()});
  const cd=$('#clubdays');if(cd)cd.ontoggle=()=>{AD.club=cd.open};
  const adc=$('#adcsv');if(adc)adc.onclick=()=>adminUserCsv(AD.users.find(x=>x.uid===AD.sel));
- const ac=$('#aclose');if(ac)ac.onclick=()=>{AD.sel=null;drawAdmin()};
+ const ac=$('#aclose');if(ac)ac.onclick=()=>{AD.sel=null;drawAdmin();navSync()};
  const aw=$('#aw');if(aw)aw.onchange=e=>{AD.wkLeft=e.target.checked;drawAdmin()};
  const ws=$('#wksave');
  if(ws){

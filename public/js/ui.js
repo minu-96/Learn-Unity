@@ -134,10 +134,11 @@ function render(){
  cancelAnimationFrame(raf);if(aiCtl){aiCtl.abort();aiCtl=null}
  const tabs=[['home','오늘'],['learn','학습'],['bank','문제 사전'],['review','복습'],['dict','개념 사전'],['me','내 기록']].concat(me&&me.admin?[['admin','운영']]:[]);
  $('#app').innerHTML=`
- <header class="top"><div class="brand"><b>유니티 훈련소</b></div>
- <nav class="tabs" role="tablist" aria-label="메뉴">${tabs.map(([k,l])=>`<button role="tab" data-tab="${k}" aria-selected="${V.tab===k}">${l}${k==='review'?' <span class="badge new" id="revcount" hidden></span>':''}${k==='bank'&&bankNew()?' <span class="badge new bnew">'+bankNew()+'</span>':''}</button>`).join('')}</nav><div class="topr">${lvHTML()}${whoHTML()}</div></header>
+ <header class="top"><a class="brand" href="#/home" data-tab="home"><b>유니티 훈련소</b></a>
+ <nav class="tabs" role="tablist" aria-label="메뉴">${tabs.map(([k,l])=>`<a role="tab" href="#/${k}" data-tab="${k}" aria-selected="${V.tab===k}">${l}${k==='review'?' <span class="badge new" id="revcount" hidden></span>':''}${k==='bank'&&bankNew()?' <span class="badge new bnew">'+bankNew()+'</span>':''}</a>`).join('')}</nav><div class="topr">${lvHTML()}${whoHTML()}</div></header>
  <main id="main"></main>`;
- document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>gotoTab(b.dataset.tab));
+ /* 탭·제목은 진짜 링크: 그냥 누르면 화면만 바꾸고, 가운데 클릭이나 Ctrl/⌘ 클릭은 브라우저가 새 탭으로 연다 */
+ document.querySelectorAll('nav.tabs a,a.brand').forEach(a=>a.onclick=e=>{if(e.metaKey||e.ctrlKey||e.shiftKey||e.altKey||e.button)return;e.preventDefault();gotoTab(a.dataset.tab)});
  updateTotal();
  if(V.pid)renderProblem(byId(V.pid));
  else if(V.tab==='dict')renderDict();
@@ -735,33 +736,102 @@ function mergeState(r){
  if(o.diag&&(!L.diag||(o.diag.at||0)>(L.diag.at||0)))L.diag=o.diag;
  for(const [k,x] of Object.entries(o.notes)){const y=L.notes[k];if(!y||(x.at||0)>(y.at||0))L.notes[k]=x}
 }
-/* ===== 뒤로가기·앞으로가기: 화면(탭·단계·문제)이 바뀔 때마다 브라우저 기록에 한 칸을 쌓고, 뒤로가기를 누르면 그 화면으로 되돌린다 ===== */
-let navKey='',navPop=false;
+/* ===== 주소·뒤로가기·앞으로가기 =====
+   화면마다 주소(#/learn/csharp/2 처럼)가 있고, 화면이 바뀔 때마다 브라우저 기록에 한 칸씩 쌓인다.
+   → 뒤로가기·앞으로가기, 새로고침, 북마크·링크 공유, 새 탭 열기가 일반 웹사이트처럼 동작한다.
+   기록의 맨 아래에는 항상 '소개' 칸({land})이 있고, 소개에서 한 번 더 뒤로가면 사이트를 나간다.
+   로그인 화면({login})은 로그인할 때만 끼어 있고, 로그인이 끝나면 그 칸이 첫 앱 화면으로 바뀐다. */
+let navKey='',navPop=false,lastY=0,scrollT=0,pendingHash='';
+const INIT_TITLE=document.title;
+const isIn=()=>!!(me||guest);
+const NAVBASE={tab:'home',pid:null,mode:null,stage:null,bankStage:null,diag:null};
+if('scrollRestoration' in history)history.scrollRestoration='manual';
+const navKeyOf=()=>JSON.stringify([V.tab,V.pid,V.mode,V.stage,V.bankStage,
+ V.tab==='learn'&&!V.stage&&!V.pid?V.tier:null,
+ V.tab==='bank'&&!V.bankStage&&!V.pid?V.bankTier:null,
+ V.tab==='admin'&&!V.pid&&typeof AD!=='undefined'?AD.sel:null]);
+function urlFor(){
+ if(V.pid)return '#/p/'+encodeURIComponent(V.pid)+(V.mode?'?m='+V.mode:'');
+ const t=V.tab;
+ if(t==='learn')return V.stage?'#/learn/'+V.stage.cat+'/'+V.stage.stage:'#/learn'+(V.tier?'/'+V.tier:'');
+ if(t==='bank')return V.bankStage?'#/bank/'+V.bankStage.cat+'/'+V.bankStage.stage:'#/bank'+(V.bankTier&&V.bankTier!=='all'?'/'+V.bankTier:'');
+ if(t==='admin'&&typeof AD!=='undefined'&&AD.sel)return '#/admin/'+encodeURIComponent(AD.sel);
+ return '#/'+t;
+}
+function titleFor(){
+ const N={home:'오늘',learn:'학습',bank:'문제 사전',review:'복습',dict:'개념 사전',me:'내 기록',admin:'운영',intro:'코딩이란?'};
+ let t=N[V.tab]||'';
+ if(V.pid){const p=byId(V.pid);if(p&&p.title)t=p.title}
+ else{const sg=V.tab==='learn'?V.stage:V.tab==='bank'?V.bankStage:null;if(sg){const c=CATS.find(x=>x.id===sg.cat);t=(c?c.name:'')+' '+sg.stage+'단계'}}
+ return t?t+' · 유니티 훈련소':INIT_TITLE;
+}
+/* 주소 → 화면. 알아볼 수 없는 주소면 false */
+function applyRoute(h){
+ const m=String(h||'').match(/^#\/([a-z]+)(?:\/([^?]*))?(?:\?(.*))?$/);
+ if(!m)return false;
+ const t=m[1],parts=(m[2]||'').split('/').filter(Boolean).map(x=>{try{return decodeURIComponent(x)}catch(e){return x}}),q=m[3]||'';
+ const stageOf=()=>{const c=CATS.find(x=>x.id===parts[0]),n=+parts[1];return c&&n>=1&&n<=c.stages.length?{cat:c.id,stage:n}:null};
+ if(t==='p'){
+  const p=parts[0]&&byId(parts[0]);if(!p)return false;
+  const mode=/(^|&)m=review(&|$)/.test(q)?'review':null;
+  Object.assign(V,NAVBASE,{pid:p.id,mode});
+  if(mode==='review')V.tab='review';
+  else if(p.bank){V.tab='bank';V.bankStage={cat:p.cat,stage:p.stage}}
+  else{V.tab='learn';V.stage={cat:p.cat,stage:p.stage}}
+  return true;
+ }
+ if(!['home','learn','bank','review','dict','me','intro','admin'].includes(t))return false;
+ Object.assign(V,NAVBASE,{tab:t});
+ if(t==='learn'){const sg=parts.length>=2&&stageOf();if(sg)V.stage=sg;else if(parts[0]&&TIERS.some(x=>x.id===parts[0]))V.tier=parts[0]}
+ if(t==='bank'){const sg=parts.length>=2&&stageOf();if(sg)V.bankStage=sg;else if(parts[0])V.bankTier=parts[0]}
+ if(t==='admin'&&typeof AD!=='undefined')AD.sel=parts[0]||null;
+ return true;
+}
+const navState=()=>({nav:1,v:JSON.parse(JSON.stringify(Object.assign({},V,{diag:null}))),sel:typeof AD!=='undefined'?AD.sel:null});
 function navSync(){
  if(!history.pushState)return;
- const key=JSON.stringify([V.tab,V.pid,V.mode,V.stage,V.bankStage]);
- if(navPop){navPop=false;navKey=key;return}
+ document.title=titleFor();
+ const key=navKeyOf(),st=navState(),url=urlFor();
+ if(navPop){navPop=false;navKey=key;if(!(history.state&&history.state.nav))history.replaceState(Object.assign({},st,{y:lastY}),'');return}
  if(key===navKey)return;
- const st={nav:1,v:JSON.parse(JSON.stringify(Object.assign({},V,{diag:null})))};
- /* 첫 화면이거나 진단 문제를 넘기는 중이면 기록을 늘리지 않고 현재 칸만 갱신한다 */
- if(!navKey||V.diag)history.replaceState(st,'');else history.pushState(st,'');
- navKey=key;
+ const cur=history.state||{};
+ if(cur.nav){try{history.replaceState(Object.assign({},cur,{y:lastY}),'')}catch(e){}}/* 떠나는 화면의 스크롤 위치를 기록해 둔다 */
+ clearTimeout(scrollT);
+ if(!navKey){/* 앱에 처음 들어온 화면 */
+  if(cur.land)history.pushState(st,'',url);/* 소개 화면에서 시작하기 → 소개 칸 위에 쌓기 */
+  else if(cur.login)history.replaceState(st,'',url);/* 로그인 칸을 첫 앱 화면으로 바꾸기 (아래의 소개 칸은 그대로) */
+  else{history.replaceState({land:1},'',location.pathname);history.pushState(st,'',url)}/* 로그인된 채로 바로 열림: 아래에 소개 칸을 깔기 */
+ }else if(V.diag)history.replaceState(st,'',url);/* 진단 문제를 넘기는 중에는 기록을 늘리지 않는다 */
+ else history.pushState(st,'',url);
+ lastY=0;navKey=key;
 }
+/* 스크롤 위치를 현재 기록 칸에 저장 (뒤로가기로 돌아왔을 때 보던 자리로) */
+window.addEventListener('scroll',()=>{
+ lastY=window.scrollY;clearTimeout(scrollT);
+ scrollT=setTimeout(()=>{const c=history.state;if(c&&c.nav){try{history.replaceState(Object.assign({},c,{y:lastY}),'')}catch(e){}}},200);
+},{passive:true});
 window.addEventListener('popstate',e=>{
- const st=e.state;
- if(!(me||guest)){/* 로그인 전: 로그인 화면 ↔ 소개 화면 */
-  if(st&&st.login)renderLogin();else if(LANDING_HTML)showLanding();
-  return;
- }
- if(!st||!st.nav)return;
- Object.assign(V,{tab:'home',pid:null,mode:null,stage:null,bankStage:null,diag:null},st.v);
- navPop=true;render();window.scrollTo(0,0);
+ const st=e.state||{};
+ if(st.land){showLanding();return}
+ if(st.login){if(isIn())showLanding();else renderLogin();return}
+ if(!isIn()){if(st.nav)showLanding();return}/* 로그인 전에는 소개·로그인 화면만 오간다 */
+ if(st.nav){
+  Object.assign(V,NAVBASE,st.v);
+  if(typeof AD!=='undefined'&&'sel' in st)AD.sel=st.sel;
+ }else if(!applyRoute(location.hash))return;/* 주소를 직접 바꾸거나 #링크를 누른 경우 */
+ navPop=true;lastY=st.y||0;
+ render();requestAnimationFrame(()=>window.scrollTo(0,st.y||0));
 });
 
 /* ===== 처음 방문 소개 화면: index.html의 <main class="land">를 처음 모습 그대로 보관해 두었다가 로그아웃할 때 다시 보여 준다 ===== */
 const LANDING_HTML=(document.querySelector('#app .land')||{outerHTML:''}).outerHTML;
 function bindLanding(){
- document.querySelectorAll('[data-start]').forEach(b=>{b.onclick=()=>{history.pushState({login:1},'');renderLogin();window.scrollTo(0,0)}});
+ document.querySelectorAll('[data-start]').forEach(b=>{b.onclick=()=>{
+  if(isIn()){/* 이미 로그인(또는 둘러보기) 중이면 로그인 화면 없이 바로 메인으로 */
+   V={tab:'home',cat:V.cat||'csharp',pid:null,mode:null,tier:null,stage:null};navKey='';render();window.scrollTo(0,0);return
+  }
+  history.pushState({login:1},'');renderLogin();window.scrollTo(0,0)
+ }});
  const b=document.getElementById('dbtn');if(!b)return;
  let fixed=false;
  b.onclick=()=>{
@@ -779,13 +849,15 @@ function bindLanding(){
 function showLanding(){
  if(!LANDING_HTML){renderLogin();return}
  window.wantAdmin=false;navKey='';
- if(location.hash)history.replaceState(null,'',location.pathname);
+ history.replaceState({land:1},'',location.pathname);/* 지금 칸을 소개 칸으로 표시 */
+ document.title=INIT_TITLE;
  $('#app').innerHTML=LANDING_HTML;
  window.scrollTo(0,0);
  bindLanding();
 }
 async function boot(){
  S=normalize({});loadLocal();
+ {const h=pendingHash||location.hash;pendingHash='';if(h&&h!=='#admin')applyRoute(h)}/* 주소(또는 로그인 전에 열려던 주소)의 화면으로 */
  render();
  if(me){
   try{
@@ -802,6 +874,7 @@ async function boot(){
  if((location.hash==='#admin'||window.wantAdmin)&&me&&me.admin)V.tab='admin';
  if(!V.pid){render()}else{bindTutor(byId(V.pid))}
  updateTotal();
+ {const y=history.state&&history.state.y;if(y)requestAnimationFrame(()=>window.scrollTo(0,y))}/* 새로고침해도 보던 자리로 */
 }
 async function init(){
  try{me=await Store.init()}catch(e){me=null}
@@ -810,7 +883,8 @@ async function init(){
   else if(me){me=null;guest=false;window.wantAdmin=false;S=normalize({});V={tab:'home',cat:'csharp',pid:null,mode:null,tier:null,stage:null};P=null;showLanding()}
  });
  const wantAdmin=location.hash==='#admin';
- if(Store.configured&&!me){if(wantAdmin){renderAdminLogin();return}if(LANDING_HTML)bindLanding();else renderLogin();return}
+ if(!me)pendingHash=location.hash;
+ if(Store.configured&&!me){if(wantAdmin){renderAdminLogin();return}if(LANDING_HTML){history.replaceState({land:1},'',location.pathname);bindLanding()}else renderLogin();return}
  if(wantAdmin&&me&&!me.admin){renderAdminLogin('이 계정은 운영진이 아니에요. 로그아웃 후 운영진 계정으로 접속해 주세요.');return}
  await boot();
 }

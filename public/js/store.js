@@ -31,7 +31,9 @@ const Store=(()=>{
  }
  const onChange=f=>listeners.push(f);
  const adminEmail=id=>String(id).trim().toLowerCase()+'@'+(window.ADMIN_EMAIL_DOMAIN||'admin.learn-unity.example');
- async function signInGoogle(){
+ async function signInGoogle(keep){
+  /* 로그인 유지: 켜면 브라우저를 닫아도 로그인이 남고(LOCAL), 끄면 이 탭을 닫을 때까지만(SESSION) 유지된다 */
+  try{const P=firebase.auth.Auth.Persistence;await auth.setPersistence(keep===false?P.SESSION:P.LOCAL)}catch(e){}
   const pr=new firebase.auth.GoogleAuthProvider();
   await auth.signInWithPopup(pr);
  }
