@@ -812,7 +812,10 @@ window.addEventListener('scroll',()=>{
 },{passive:true});
 window.addEventListener('popstate',e=>{
  const st=e.state||{};
- if(st.land){showLanding(!!st.about);return}
+ if(st.land){
+  if(st.about&&!aboutOpen){history.back();return}/* 세부 화면은 버튼으로만 들어간다: 앞으로가기로 닿으면 바로 건너뛴다 */
+  showLanding(!!st.about);return
+ }
  if(st.login){if(isIn())showLanding();else renderLogin();return}
  if(!isIn()){if(st.nav)showLanding();return}/* 로그인 전에는 소개·로그인 화면만 오간다 */
  if(st.nav){
@@ -825,12 +828,12 @@ window.addEventListener('popstate',e=>{
 
 /* ===== 처음 방문 소개 화면: index.html의 <main class="land">를 처음 모습 그대로 보관해 두었다가 로그아웃할 때 다시 보여 준다 ===== */
 const LANDING_HTML=(document.querySelector('#app .land')||{outerHTML:''}).outerHTML;
-let booted=false,aboutPushed=false;
+let booted=false,aboutPushed=false,aboutOpen=false;
 /* 소개 화면 ↔ 서비스 소개(세부 내용): 같은 주소(/) 안에서 화면만 바꾼다 */
 function setLandView(about){
  const h=document.getElementById('lhome'),a=document.getElementById('labout');
  if(!h||!a)return;
- h.hidden=!!about;a.hidden=!about;
+ aboutOpen=!!about;h.hidden=!!about;a.hidden=!about;
  document.title=about?'서비스 소개 · 유니티 훈련소':INIT_TITLE;
  window.scrollTo(0,0);
 }
@@ -865,7 +868,7 @@ function bindLanding(){
 }
 function showLanding(about){
  if(!LANDING_HTML){renderLogin();return}
- window.wantAdmin=false;navKey='';
+ window.wantAdmin=false;navKey='';aboutOpen=false;
  if(!about)history.replaceState({land:1},'',location.pathname);/* 지금 칸을 소개 칸으로 표시 */
  document.title=INIT_TITLE;
  $('#app').innerHTML=LANDING_HTML;

@@ -136,9 +136,11 @@ let fails=0;const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
   ok(await vis(pa,'labout')&&!(await vis(pa,'lhome'))&&pa.url().endsWith('/#/about')&&(await pa.title()).startsWith('서비스 소개'),'"서비스 소개 자세히 보기" → 같은 페이지에서 세부 화면 (주소 /#/about)');
   ok((await pa.textContent('#labout')).includes('스튜디오 바드 유니티 훈련소는 무엇인가요?'),'세부 화면에 자주 묻는 질문이 있음');
   await back(pa);ok(await vis(pa,'lhome')&&!pa.url().includes('#'),'뒤로가기 → 짧은 소개로, 주소는 /');
-  await pa.goForward();await pa.waitForTimeout(200);ok(await vis(pa,'labout'),'앞으로가기 → 세부 화면');
-  await pa.click('#labout [data-home]');await pa.waitForTimeout(250);ok(await vis(pa,'lhome'),'"← 소개로 돌아가기" 버튼');
-  await pa.click('#toabout');await pa.click('#labout [data-start]');await pa.waitForSelector('#g');ok(true,'세부 화면의 시작하기 → 로그인 화면(로그아웃 상태)');
+  await pa.goForward();await pa.waitForTimeout(300);ok(await vis(pa,'lhome')&&!(await vis(pa,'labout')),'앞으로가기로는 세부 화면에 들어가지 못함(소개에 머묾)');
+  ok(await pa.locator('#labout [data-start]').count()===0,'세부 화면에는 시작하기 버튼이 없음');
+  await pa.click('#toabout');await pa.click('#labout [data-home]');await pa.waitForTimeout(250);ok(await vis(pa,'lhome'),'"← 소개로 돌아가기" 버튼');
+  await pa.click('#start');await pa.waitForSelector('#g');await back(pa);ok(await vis(pa,'lhome'),'로그인 화면에서 뒤로가기 → 소개');
+  await pa.goBack();await pa.waitForTimeout(300).catch(()=>{});
   /* 주소로 바로 열기 */
   const pb=await ctxA.newPage();pb.on('pageerror',e=>errs.push(String(e)));
   await pb.goto(base+'/#/about');await pb.waitForSelector('#labout');
@@ -149,8 +151,8 @@ let fails=0;const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
   const pc=await ctxA.newPage();pc.on('pageerror',e=>errs.push(String(e)));
   await pc.goto(base+'/#/about');await pc.waitForSelector('#labout');
   ok(await vis(pc,'labout'),'로그인된 채로 /#/about 열기 → 세부 화면');
-  await pc.click('#labout [data-start]');await pc.waitForSelector('.hero',{timeout:4000}).catch(()=>{});
-  ok(await where(pc)==='home','그 화면의 시작하기 → 로그인 화면 없이 바로 메인');
+  await pc.click('#labout [data-home]');await pc.click('#start');await pc.waitForSelector('.hero',{timeout:4000}).catch(()=>{});
+  ok(await where(pc)==='home','소개로 돌아가 시작하기 → 로그인 화면 없이 바로 메인');
   /* 검색엔진: 자바스크립트 없이 받은 HTML에 세부 내용이 들어 있음 */
   const raw=await (await ctxA.request.get(base+'/')).text();
   ok(['자주 묻는 질문','스튜디오 바드 유니티 훈련소는 무엇인가요?','한 문제는 이렇게 풀어요','Rigidbody','유니티 훈련소 — Unity C# 코드 작성 연습, 자동 채점'].every(t=>raw.includes(t)),'원본 HTML에 세부 내용·제목이 모두 들어 있음(검색엔진이 읽는 글)');
