@@ -816,7 +816,7 @@ window.addEventListener('popstate',e=>{
   if(st.about&&!aboutOpen){history.back();return}/* 세부 화면은 버튼으로만 들어간다: 앞으로가기로 닿으면 바로 건너뛴다 */
   showLanding(!!st.about);return
  }
- if(st.login){if(isIn())showLanding();else renderLogin();return}
+ if(st.login){if(me)showLanding();else renderLogin();return}
  if(!isIn()){if(st.nav)showLanding();return}/* 로그인 전에는 소개·로그인 화면만 오간다 */
  if(st.nav){
   Object.assign(V,NAVBASE,st.v);
@@ -839,13 +839,13 @@ function setLandView(about){
 }
 function bindLanding(){
  document.querySelectorAll('[data-start]').forEach(b=>{b.onclick=()=>{
-  if(isIn()){/* 이미 로그인(또는 둘러보기) 중이면 로그인 화면 없이 바로 메인으로 */
+  if(me){/* 로그인 중이면 로그인 화면 없이 바로 메인으로 (둘러보기는 로그인이 아니라서 로그인 화면을 거친다) */
    if(!booted){boot();return}
    V={tab:'home',cat:V.cat||'csharp',pid:null,mode:null,tier:null,stage:null};navKey='';render();window.scrollTo(0,0);return
   }
-  history.pushState({login:1},'');renderLogin();window.scrollTo(0,0)
+  guest=false;history.pushState({login:1},'');renderLogin();window.scrollTo(0,0)
  }});
- document.querySelectorAll('[data-about]').forEach(b=>{b.onclick=()=>{
+ document.querySelectorAll('[data-about]').forEach(b=>{b.onclick=e=>{e.preventDefault();
   history.pushState({land:1,about:1},'',location.pathname+'#/about');aboutPushed=true;setLandView(true)
  }});
  document.querySelectorAll('[data-home]').forEach(b=>{b.onclick=()=>{

@@ -141,6 +141,11 @@ let fails=0;const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
   await pa.click('#toabout');await pa.click('#labout [data-home]');await pa.waitForTimeout(250);ok(await vis(pa,'lhome'),'"← 소개로 돌아가기" 버튼');
   await pa.click('#start');await pa.waitForSelector('#g');await back(pa);ok(await vis(pa,'lhome'),'로그인 화면에서 뒤로가기 → 소개');
   await pa.goBack();await pa.waitForTimeout(300).catch(()=>{});
+  /* 둘러보기(게스트)는 로그인이 아님: 소개로 돌아와 시작하기를 누르면 로그인 화면 */
+  {const pg=await (await mk()).newPage();pg.on('pageerror',e=>errs.push(String(e)));
+   await pg.goto(base+'/');await pg.click('#start');await pg.waitForSelector('#guest');await pg.click('#guest');await pg.waitForSelector('.hero');
+   await back(pa===pg?pg:pg);await pg.waitForSelector('#start');await pg.click('#start');await pg.waitForSelector('#g',{timeout:4000}).catch(()=>{});
+   ok(await pg.locator('#g').count()===1,'게스트로 소개에 돌아와 시작하기 → 로그인 화면');}
   /* 주소로 바로 열기 */
   const pb=await ctxA.newPage();pb.on('pageerror',e=>errs.push(String(e)));
   await pb.goto(base+'/#/about');await pb.waitForSelector('#labout');

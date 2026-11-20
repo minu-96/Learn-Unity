@@ -663,7 +663,7 @@ kbd{font-family:var(--font-mono);font-size:11px;padding:1px 6px;border:1px solid
  <div class="lh-copy">
   <h1>유니티 훈련소</h1>
   <p class="lh-lead">고르는 퀴즈가 아니에요. C# 코드를 직접 쓰면, 어느 조건이 왜 틀렸는지 바로 알려 줘요.</p>
-  <p class="lh-act"><span class="lbtns"><button class="btn lbtn" id="start" data-start type="button">시작하기</button><button class="btn ghost lbtn2" id="toabout" data-about type="button">서비스 소개 자세히 보기</button></span><span class="note">설치 없이 브라우저에서 · 로그인 없이 둘러볼 수도 있어요</span></p>
+  <p class="lh-act"><span class="lbtns"><button class="btn lbtn" id="start" data-start type="button">시작하기</button></span><span class="note">설치 없이 브라우저에서 · 로그인 없이 둘러볼 수도 있어요</span></p>
  </div>
  <div class="demo" aria-label="문제 화면 예시">
   <div class="demo-bar"><span>PlayerMove.cs</span><b>문제 화면 예시</b></div>
@@ -701,7 +701,7 @@ kbd{font-family:var(--font-mono);font-size:11px;padding:1px 6px;border:1px solid
  <div><h2>코딩이 처음이어도 괜찮아요</h2><p>입문 구간은 "코딩이 뭔지"를 5분짜리 체험으로 보여 주는 것부터 시작해요.</p></div>
  <button class="btn lbtn" data-start type="button">시작하기</button>
 </section>
-<p class="lfoot">스튜디오 바드 Unity 스터디용으로 만들었고, 누구나 쓸 수 있어요.</p>
+<p class="lfoot">스튜디오 바드 Unity 스터디용으로 만들었고, 누구나 쓸 수 있어요. <a href="#/about" id="toabout" data-about>서비스 소개 자세히 보기</a></p>
 </div>
 <div class="lview" id="labout" hidden>
 <section class="lsec">
@@ -15542,7 +15542,7 @@ window.addEventListener('popstate',e=>{
   if(st.about&&!aboutOpen){history.back();return}/* 세부 화면은 버튼으로만 들어간다: 앞으로가기로 닿으면 바로 건너뛴다 */
   showLanding(!!st.about);return
  }
- if(st.login){if(isIn())showLanding();else renderLogin();return}
+ if(st.login){if(me)showLanding();else renderLogin();return}
  if(!isIn()){if(st.nav)showLanding();return}/* 로그인 전에는 소개·로그인 화면만 오간다 */
  if(st.nav){
   Object.assign(V,NAVBASE,st.v);
@@ -15565,13 +15565,13 @@ function setLandView(about){
 }
 function bindLanding(){
  document.querySelectorAll('[data-start]').forEach(b=>{b.onclick=()=>{
-  if(isIn()){/* 이미 로그인(또는 둘러보기) 중이면 로그인 화면 없이 바로 메인으로 */
+  if(me){/* 로그인 중이면 로그인 화면 없이 바로 메인으로 (둘러보기는 로그인이 아니라서 로그인 화면을 거친다) */
    if(!booted){boot();return}
    V={tab:'home',cat:V.cat||'csharp',pid:null,mode:null,tier:null,stage:null};navKey='';render();window.scrollTo(0,0);return
   }
-  history.pushState({login:1},'');renderLogin();window.scrollTo(0,0)
+  guest=false;history.pushState({login:1},'');renderLogin();window.scrollTo(0,0)
  }});
- document.querySelectorAll('[data-about]').forEach(b=>{b.onclick=()=>{
+ document.querySelectorAll('[data-about]').forEach(b=>{b.onclick=e=>{e.preventDefault();
   history.pushState({land:1,about:1},'',location.pathname+'#/about');aboutPushed=true;setLandView(true)
  }});
  document.querySelectorAll('[data-home]').forEach(b=>{b.onclick=()=>{
