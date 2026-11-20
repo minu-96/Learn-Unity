@@ -735,48 +735,46 @@ function mergeState(r){
  if(o.diag&&(!L.diag||(o.diag.at||0)>(L.diag.at||0)))L.diag=o.diag;
  for(const [k,x] of Object.entries(o.notes)){const y=L.notes[k];if(!y||(x.at||0)>(y.at||0))L.notes[k]=x}
 }
-/* ===== 뒤로가기·앞으로가기: 화면(탭·단계·문제)이 바뀔 때마다 브라우저 기록에 한 칸을 쌓고, 뒤로가기를 누르면 그 화면으로 되돌린다 ===== */
+/* ===== 뒤로가기·앞으로가기 =====
+   기록의 맨 아래에는 항상 '소개' 칸({land})이 있고, 그 위에 앱 화면(탭·단계·문제)이 한 칸씩 쌓인다.
+   소개 칸에서 한 번 더 뒤로가면 사이트를 나간다. 로그인 화면({login})은 로그인할 때만 끼어 있고, 로그인이 끝나면 그 칸이 첫 앱 화면으로 바뀐다. */
 let navKey='',navPop=false;
+const isIn=()=>!!(me||guest);
 function navSync(){
  if(!history.pushState)return;
  const key=JSON.stringify([V.tab,V.pid,V.mode,V.stage,V.bankStage]);
  if(navPop){navPop=false;navKey=key;return}
  if(key===navKey)return;
  const st={nav:1,v:JSON.parse(JSON.stringify(Object.assign({},V,{diag:null})))};
- exitArmed=false;
- if(!navKey){/* 첫 화면: 맨 아래에 '바닥' 칸을 깔고 그 위에 현재 화면을 쌓는다 (바닥에서 뒤로가기를 누르면 나가기 안내) */
-  history.replaceState(Object.assign({},st,{base:1}),'');history.pushState(st,'');
+ const cur=history.state||{};
+ if(!navKey){/* 앱에 처음 들어온 화면 */
+  if(cur.land)history.pushState(st,'');/* 소개 화면에서 시작하기 → 소개 칸 위에 쌓기 */
+  else if(cur.login)history.replaceState(st,'');/* 로그인 칸을 첫 앱 화면으로 바꾸기 (아래의 소개 칸은 그대로) */
+  else{history.replaceState({land:1},'');history.pushState(st,'')}/* 로그인된 채로 바로 열림: 아래에 소개 칸을 깔기 */
  }else if(V.diag)history.replaceState(st,'');/* 진단 문제를 넘기는 중에는 기록을 늘리지 않는다 */
  else history.pushState(st,'');
  navKey=key;
 }
-let exitArmed=false,exitT=0;
-function navToast(msg){
- let t=document.querySelector('.navtoast');if(!t){t=document.createElement('div');t.className='navtoast';t.setAttribute('role','status');document.body.appendChild(t)}
- t.textContent=msg;clearTimeout(t._t);t._t=setTimeout(()=>t.remove(),2000);
-}
 window.addEventListener('popstate',e=>{
- const st=e.state;
- if(!(me||guest)){/* 로그인 전: 로그인 화면 ↔ 소개 화면 */
-  if(st&&st.login)renderLogin();else if(LANDING_HTML)showLanding();
-  return;
+ const st=e.state||{};
+ if(st.land){showLanding();return}
+ if(st.login){if(isIn())showLanding();else renderLogin();return}
+ if(st.nav){
+  if(!isIn()){showLanding();return}/* 로그아웃 뒤에 남은 옛 화면 칸 */
+  Object.assign(V,{tab:'home',pid:null,mode:null,stage:null,bankStage:null,diag:null},st.v);
+  navPop=true;render();window.scrollTo(0,0);
  }
- if(!st||!st.nav){history.back();return}/* 소개·로그인 칸에 닿으면(이미 로그인됨) 그대로 사이트에서 나간다 */
- if(st.base){/* 맨 아래 칸: 처음 누르면 머물고 안내, 2초 안에 한 번 더 누르면 나간다 */
-  if(exitArmed){exitArmed=false;clearTimeout(exitT);history.back();return}
-  exitArmed=true;clearTimeout(exitT);exitT=setTimeout(()=>{exitArmed=false},2000);
-  navToast('한 번 더 누르면 사이트에서 나가요');
-  history.pushState({nav:1,v:JSON.parse(JSON.stringify(Object.assign({},V,{diag:null})))},'');
-  return;
- }
- Object.assign(V,{tab:'home',pid:null,mode:null,stage:null,bankStage:null,diag:null},st.v);
- navPop=true;render();window.scrollTo(0,0);
 });
 
 /* ===== 처음 방문 소개 화면: index.html의 <main class="land">를 처음 모습 그대로 보관해 두었다가 로그아웃할 때 다시 보여 준다 ===== */
 const LANDING_HTML=(document.querySelector('#app .land')||{outerHTML:''}).outerHTML;
 function bindLanding(){
- document.querySelectorAll('[data-start]').forEach(b=>{b.onclick=()=>{history.pushState({login:1},'');renderLogin();window.scrollTo(0,0)}});
+ document.querySelectorAll('[data-start]').forEach(b=>{b.onclick=()=>{
+  if(isIn()){/* 이미 로그인(또는 둘러보기) 중이면 로그인 화면 없이 바로 메인으로 */
+   V={tab:'home',cat:V.cat||'csharp',pid:null,mode:null,tier:null,stage:null};navKey='';render();window.scrollTo(0,0);return
+  }
+  history.pushState({login:1},'');renderLogin();window.scrollTo(0,0)
+ }});
  const b=document.getElementById('dbtn');if(!b)return;
  let fixed=false;
  b.onclick=()=>{
@@ -794,7 +792,7 @@ function bindLanding(){
 function showLanding(){
  if(!LANDING_HTML){renderLogin();return}
  window.wantAdmin=false;navKey='';
- if(location.hash)history.replaceState(null,'',location.pathname);
+ history.replaceState({land:1},'',location.pathname);/* 지금 칸을 소개 칸으로 표시 */
  $('#app').innerHTML=LANDING_HTML;
  window.scrollTo(0,0);
  bindLanding();
@@ -825,7 +823,7 @@ async function init(){
   else if(me){me=null;guest=false;window.wantAdmin=false;S=normalize({});V={tab:'home',cat:'csharp',pid:null,mode:null,tier:null,stage:null};P=null;showLanding()}
  });
  const wantAdmin=location.hash==='#admin';
- if(Store.configured&&!me){if(wantAdmin){renderAdminLogin();return}if(LANDING_HTML)bindLanding();else renderLogin();return}
+ if(Store.configured&&!me){if(wantAdmin){renderAdminLogin();return}if(LANDING_HTML){history.replaceState({land:1},'');bindLanding()}else renderLogin();return}
  if(wantAdmin&&me&&!me.admin){renderAdminLogin('이 계정은 운영진이 아니에요. 로그아웃 후 운영진 계정으로 접속해 주세요.');return}
  await boot();
 }

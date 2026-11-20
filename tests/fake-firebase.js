@@ -22,8 +22,9 @@
     if(!acc||acc.pw!==pw){const e=new Error('bad');e.code='auth/invalid-credential';throw e}
     d.auth={uid:acc.uid,name:null,email};save(d);listeners.forEach(f=>f(authUser(d.auth)));
    },
+   async setPersistence(v){window.__persist=v},
    async signOut(){const d=load();d.auth=null;save(d);listeners.forEach(f=>f(null))}
-  }),{GoogleAuthProvider:function(){}}),
+  }),{GoogleAuthProvider:function(){},Auth:{Persistence:{LOCAL:'local',SESSION:'session'}}}),
   firestore(){
    const docRef=path=>({
     async get(){return snap(path.split('/').pop(),load().docs[path])},
