@@ -150,8 +150,12 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
 
  // 9. 로그아웃
  await pg.click('#logout');
- await pg.waitForSelector('#g,#af');
- ok(true,'로그아웃 후 로그인 화면');
+ await pg.waitForSelector('#start');
+ ok(true,'로그아웃하면 소개 화면으로 돌아옴');
+ await pg.click('#dbtn');
+ ok((await pg.textContent('#dcnt')).trim()==='3 / 3','소개 화면 예시: 고치면 3 / 3');
+ await pg.click('#start');await pg.waitForSelector('#g');
+ ok(true,'소개에서 시작하기 → 로그인 화면');
 
  // 10. 모바일 폭
  await pg.setViewportSize({width:390,height:800});

@@ -734,6 +734,32 @@ function mergeState(r){
  if(o.diag&&(!L.diag||(o.diag.at||0)>(L.diag.at||0)))L.diag=o.diag;
  for(const [k,x] of Object.entries(o.notes)){const y=L.notes[k];if(!y||(x.at||0)>(y.at||0))L.notes[k]=x}
 }
+/* ===== 처음 방문 소개 화면: index.html의 <main class="land">를 처음 모습 그대로 보관해 두었다가 로그아웃할 때 다시 보여 준다 ===== */
+const LANDING_HTML=(document.querySelector('#app .land')||{outerHTML:''}).outerHTML;
+function bindLanding(){
+ document.querySelectorAll('[data-start]').forEach(b=>{b.onclick=()=>renderLogin()});
+ const b=document.getElementById('dbtn');if(!b)return;
+ let fixed=false;
+ b.onclick=()=>{
+  fixed=!fixed;
+  document.getElementById('dfix').hidden=!fixed;
+  document.getElementById('dl4').className='dl '+(fixed?'ok':'bad');
+  document.getElementById('dc3').className=fixed?'ok':'no';
+  document.getElementById('dmark').textContent=fixed?'\u2713':'\u2715';
+  document.getElementById('dsr').textContent=fixed?'통과 ':'실패 ';
+  document.getElementById('dwhy').hidden=fixed;
+  document.getElementById('dcnt').textContent=fixed?'3 / 3':'2 / 3';
+  b.textContent=fixed?'다시 틀리게 해 보기':'고쳐서 다시 채점';
+ };
+}
+function showLanding(){
+ if(!LANDING_HTML){renderLogin();return}
+ window.wantAdmin=false;
+ if(location.hash)history.replaceState(null,'',location.pathname);
+ $('#app').innerHTML=LANDING_HTML;
+ window.scrollTo(0,0);
+ bindLanding();
+}
 async function boot(){
  S=normalize({});loadLocal();
  render();
@@ -757,10 +783,10 @@ async function init(){
  try{me=await Store.init()}catch(e){me=null}
  Store.onChange(u=>{
   if(u){me=u;if(window.wantAdmin&&!u.admin){Store.signOut();renderAdminLogin('이 계정은 운영진이 아니에요. 운영진 아이디로 접속해 주세요.');return}boot()}
-  else if(me){me=null;guest=false;window.wantAdmin=false;S=normalize({});V={tab:'home',cat:'csharp',pid:null,mode:null,tier:null,stage:null};P=null;renderLogin()}
+  else if(me){me=null;guest=false;window.wantAdmin=false;S=normalize({});V={tab:'home',cat:'csharp',pid:null,mode:null,tier:null,stage:null};P=null;showLanding()}
  });
  const wantAdmin=location.hash==='#admin';
- if(Store.configured&&!me){if(wantAdmin){renderAdminLogin();return}const st=document.querySelectorAll('[data-start]');if(st.length)st.forEach(b=>b.onclick=()=>renderLogin());else renderLogin();return}
+ if(Store.configured&&!me){if(wantAdmin){renderAdminLogin();return}if(LANDING_HTML)bindLanding();else renderLogin();return}
  if(wantAdmin&&me&&!me.admin){renderAdminLogin('이 계정은 운영진이 아니에요. 로그아웃 후 운영진 계정으로 접속해 주세요.');return}
  await boot();
 }
