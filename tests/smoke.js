@@ -92,7 +92,9 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
 
  // 6. 새로고침 → 클라우드에서 복원
  await pg.evaluate(()=>{Object.keys(localStorage).filter(k=>k.startsWith('unity-training-lab')).forEach(k=>localStorage.removeItem(k))});
- await pg.reload();await pg.waitForSelector('.hero');
+ await pg.reload();await pg.waitForSelector('.tiergrid');
+ ok(pg.url().endsWith('#/me'),'새로고침해도 보던 화면(내 기록)에 머묾');
+ await pg.click('nav.tabs [data-tab="home"]');await pg.waitForSelector('.hero');
  ok(await pg.evaluate(()=>PROBLEMS.filter(p=>isSolved(p.id)).length)===1,'로컬 캐시를 지워도 클라우드에서 진행도 복원');
  ok(await pg.evaluate(()=>(S.notes[PROBLEMS.find(x=>x.cat==='csharp').id]||{}).t)==='스모크 메모','회고 메모도 클라우드에서 복원');
 
@@ -140,6 +142,12 @@ const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
  ok(await pg.$eval('#adetail [data-wkm="1"]',e=>e.disabled),'이번 주에서는 다음 주 버튼 비활성');
  await pg.click('#aclose');
  ok(await pg.$('#adetail')===null,'상세 닫기');
+ await pg.click('[data-sel]:has(b:text-is("김가나"))');await pg.waitForSelector('#adetail');
+ await pg.goBack();await pg.waitForTimeout(250);
+ ok(await pg.$('#adetail')===null&&!!(await pg.$('[data-sel]')),'부원 상세에서 뒤로가기 → 부원 표로 (상세만 닫힘)');
+ await pg.goForward();await pg.waitForTimeout(250);
+ ok(await pg.$('#adetail')!==null,'앞으로가기 → 그 부원의 상세');
+ await pg.click('#aclose');
  ok(await pg.$$eval('details.rep',e=>e.length)===1,'신고 목록 1건');
  await pg.click('.rep summary');await pg.click('[data-rs]');
  await pg.waitForFunction(()=>document.querySelector('.rep.done'));

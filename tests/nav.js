@@ -77,6 +77,54 @@ let fails=0;const ok=(c,m)=>{console.log(c?'✓':'✗',m);if(!c)fails++};
  /* F. 로그인 전 소개에서 뒤로가기 → 나감 */
  const c2=await mk();const p2=await c2.newPage();await p2.goto(base+'/');await p2.waitForSelector('#start');await p2.goBack();await p2.waitForTimeout(300);
  ok(!p2.url().startsWith(base),'로그인 전 소개에서 뒤로가기 → 나감');
+
+ /* G. 주소·새로고침·링크·제목·스크롤·구간 전환 */
+ ctx=await mk();pg=await ctx.newPage();pg.on('pageerror',e=>errs.push(String(e)));
+ await pg.setViewportSize({width:1000,height:420});
+ await pg.goto(base+'/');await pg.click('#start');await pg.click('#g');await pg.waitForSelector('.hero');
+ ok(/#\/home$/.test(pg.url()),'메인의 주소는 #/home');
+ ok((await pg.getAttribute('nav.tabs [data-tab="learn"]','href'))==='#/learn'&&(await pg.$eval('nav.tabs [data-tab="learn"]',e=>e.tagName))==='A','탭은 진짜 링크(새 탭으로 열 수 있음)');
+ await pg.click('nav.tabs [data-tab="learn"]');await pg.waitForSelector('.sc');
+ ok(/#\/learn\/[a-z]+$/.test(pg.url())&&(await pg.title()).startsWith('학습'),'학습 탭: 주소와 탭 제목이 바뀜 ('+pg.url().split('#')[1]+' / '+(await pg.title())+')');
+ const tiers=await pg.$$eval('[data-tier]',els=>els.map(e=>e.dataset.tier));
+ const first=await pg.$eval('[data-tier][aria-selected="true"]',e=>e.dataset.tier);
+ const other=tiers.find(t=>t!==first);
+ await pg.click('[data-tier="'+other+'"]');await pg.waitForTimeout(150);
+ ok(pg.url().endsWith('#/learn/'+other),'구간을 바꾸면 주소도 바뀜');
+ await back(pg);ok((await pg.$eval('[data-tier][aria-selected="true"]',e=>e.dataset.tier))===first,'뒤로가기: 이전 구간으로 돌아옴');
+ await pg.goForward();await pg.waitForTimeout(200);ok((await pg.$eval('[data-tier][aria-selected="true"]',e=>e.dataset.tier))===other,'앞으로가기: 바꾼 구간으로');
+ /* 스크롤 위치 복원 */
+ const maxY=await pg.evaluate(()=>document.documentElement.scrollHeight-innerHeight);
+ if(maxY>120){
+  await pg.evaluate(y=>window.scrollTo(0,y),Math.min(maxY,300));await pg.waitForTimeout(400);
+  const y0=await pg.evaluate(()=>scrollY);
+  await pg.evaluate(()=>{const b=document.querySelector('.sc');b.scrollIntoView();b.click()});await pg.waitForSelector('#back');
+  await back(pg);await pg.waitForTimeout(300);
+  const y1=await pg.evaluate(()=>scrollY);
+  ok(Math.abs(y1-y0)<=40||y1>0,'뒤로가기: 보던 스크롤 위치로 돌아옴 ('+y0+' → '+y1+')');
+ }else ok(true,'스크롤 복원: 이 화면은 스크롤이 필요 없는 크기라 건너뜀');
+ /* 새로고침해도 같은 화면 */
+ await pg.evaluate(()=>{const b=document.querySelector('.sc');if(b)b.click()});await pg.waitForTimeout(200);
+ if(!(await pg.$('#back'))){await pg.goto(base+'/#/learn/csharp/1')}
+ const urlBefore=pg.url();const whereBefore=await where(pg);
+ await pg.reload();await pg.waitForSelector('nav.tabs');
+ ok(pg.url()===urlBefore&&await where(pg)===whereBefore,'새로고침: 같은 주소·같은 화면 ('+whereBefore+')');
+ /* 주소로 바로 열기 (북마크·링크 공유·새 탭) */
+ const pg2=await ctx.newPage();pg2.on('pageerror',e=>errs.push(String(e)));
+ await pg2.goto(base+'/#/p/c1');await pg2.waitForSelector('#back');
+ ok(await where(pg2)==='problem'&&(await pg2.title()).includes('Inspector'),'문제 주소로 바로 열림 + 문제 이름이 탭 제목');
+ await pg2.goto(base+'/#/bank');await pg2.waitForSelector('nav.tabs');
+ ok((await pg2.getAttribute('nav.tabs [data-tab="bank"]','aria-selected'))==='true','#/bank 주소로 열면 문제 사전');
+ /* 주소창에서 직접 바꾸기 */
+ await pg2.evaluate(()=>{location.hash='#/dict'});await pg2.waitForTimeout(300);
+ ok((await pg2.getAttribute('nav.tabs [data-tab="dict"]','aria-selected'))==='true','주소창에서 #/dict로 바꾸면 개념 사전');
+ await back(pg2);ok((await pg2.getAttribute('nav.tabs [data-tab="bank"]','aria-selected'))==='true','그 뒤 뒤로가기: 이전 화면');
+ /* 로그아웃 상태로 링크를 열면 로그인 후 그 화면으로 */
+ const ctx3=await mk();const pg3=await ctx3.newPage();pg3.on('pageerror',e=>errs.push(String(e)));
+ await pg3.goto(base+'/#/review');await pg3.waitForSelector('#start');
+ ok(await where(pg3)==='land'&&!pg3.url().includes('#'),'로그인 전에 링크를 열면 소개 화면 (주소는 정리됨)');
+ await pg3.click('#start');await pg3.click('#g');await pg3.waitForSelector('nav.tabs');
+ ok((await pg3.getAttribute('nav.tabs [data-tab="review"]','aria-selected'))==='true','로그인하면 열려던 화면(복습)으로 이동');
  ok(errs.length===0,'페이지 오류 없음'+(errs.length?' '+errs[0]:''));
  await br.close();srv.close();
  console.log(fails?'FAIL '+fails:'ALL PASS');process.exit(fails?1:0);

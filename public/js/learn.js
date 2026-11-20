@@ -132,7 +132,7 @@ function renderLearn(){
   <div class="scgrid">${cards}</div>
   <div class="note">순서대로 하지 않아도 돼요. "추천" 표시는 지금 풀 차례인 단계예요. 수료 기준은 구간 문제의 ${PASS_SOLVED*100}% 해결, 푼 문제의 ${PASS_SELF*100}% 이상은 정답을 보지 않고 풀기예요.</div>
  </div>`;
- $('#main').querySelectorAll('[data-tier]').forEach(b=>b.onclick=()=>{V.tier=b.dataset.tier;renderLearn()});
+ $('#main').querySelectorAll('[data-tier]').forEach(b=>b.onclick=()=>{V.tier=b.dataset.tier;renderLearn();navSync()});
  const ti=$('#tointro');if(ti)ti.onclick=()=>{IN.i=0;gotoTab('intro')};
  $('#main').querySelectorAll('.sc').forEach(b=>b.onclick=()=>{V.stage={cat:b.dataset.c,stage:+b.dataset.s};render();window.scrollTo(0,0)});
 }

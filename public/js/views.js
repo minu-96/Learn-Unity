@@ -224,11 +224,11 @@ function drawAdmin(){
  $('#as').onchange=e=>{AD.sort=e.target.value;drawAdmin()};
  $('#ai').onchange=e=>{AD.idle=e.target.checked;drawAdmin()};
  $('#acsv').onclick=()=>adminCsv(rows);
- document.querySelectorAll('[data-sel]').forEach(b=>b.onclick=()=>{AD.sel=b.dataset.sel;drawAdmin();const d=$('#adetail');if(d)d.scrollIntoView({block:'nearest'})});
+ document.querySelectorAll('[data-sel]').forEach(b=>b.onclick=()=>{AD.sel=b.dataset.sel;drawAdmin();navSync();const d=$('#adetail');if(d)d.scrollIntoView({block:'nearest'})});
  document.querySelectorAll('[data-wkm]').forEach(b=>b.onclick=()=>{AD.wk=Math.max(WK_MIN,Math.min(0,AD.wk+(+b.dataset.wkm)));AD.club=!!$('#clubdays[open]');drawAdmin()});
  const cd=$('#clubdays');if(cd)cd.ontoggle=()=>{AD.club=cd.open};
  const adc=$('#adcsv');if(adc)adc.onclick=()=>adminUserCsv(AD.users.find(x=>x.uid===AD.sel));
- const ac=$('#aclose');if(ac)ac.onclick=()=>{AD.sel=null;drawAdmin()};
+ const ac=$('#aclose');if(ac)ac.onclick=()=>{AD.sel=null;drawAdmin();navSync()};
  const aw=$('#aw');if(aw)aw.onchange=e=>{AD.wkLeft=e.target.checked;drawAdmin()};
  const ws=$('#wksave');
  if(ws){
