@@ -812,7 +812,7 @@ window.addEventListener('scroll',()=>{
 },{passive:true});
 window.addEventListener('popstate',e=>{
  const st=e.state||{};
- if(st.land){showLanding();return}
+ if(st.land){showLanding(!!st.about);return}
  if(st.login){if(isIn())showLanding();else renderLogin();return}
  if(!isIn()){if(st.nav)showLanding();return}/* 로그인 전에는 소개·로그인 화면만 오간다 */
  if(st.nav){
@@ -825,12 +825,29 @@ window.addEventListener('popstate',e=>{
 
 /* ===== 처음 방문 소개 화면: index.html의 <main class="land">를 처음 모습 그대로 보관해 두었다가 로그아웃할 때 다시 보여 준다 ===== */
 const LANDING_HTML=(document.querySelector('#app .land')||{outerHTML:''}).outerHTML;
+let booted=false,aboutPushed=false;
+/* 소개 화면 ↔ 서비스 소개(세부 내용): 같은 주소(/) 안에서 화면만 바꾼다 */
+function setLandView(about){
+ const h=document.getElementById('lhome'),a=document.getElementById('labout');
+ if(!h||!a)return;
+ h.hidden=!!about;a.hidden=!about;
+ document.title=about?'서비스 소개 · 유니티 훈련소':INIT_TITLE;
+ window.scrollTo(0,0);
+}
 function bindLanding(){
  document.querySelectorAll('[data-start]').forEach(b=>{b.onclick=()=>{
   if(isIn()){/* 이미 로그인(또는 둘러보기) 중이면 로그인 화면 없이 바로 메인으로 */
+   if(!booted){boot();return}
    V={tab:'home',cat:V.cat||'csharp',pid:null,mode:null,tier:null,stage:null};navKey='';render();window.scrollTo(0,0);return
   }
   history.pushState({login:1},'');renderLogin();window.scrollTo(0,0)
+ }});
+ document.querySelectorAll('[data-about]').forEach(b=>{b.onclick=()=>{
+  history.pushState({land:1,about:1},'',location.pathname+'#/about');aboutPushed=true;setLandView(true)
+ }});
+ document.querySelectorAll('[data-home]').forEach(b=>{b.onclick=()=>{
+  if(aboutPushed&&history.state&&history.state.about){history.back();return}/* 쌓인 기록 한 칸을 되돌린다 */
+  history.replaceState({land:1},'',location.pathname);setLandView(false)
  }});
  const b=document.getElementById('dbtn');if(!b)return;
  let fixed=false;
@@ -846,16 +863,18 @@ function bindLanding(){
   b.textContent=fixed?'다시 틀리게 해 보기':'고쳐서 다시 채점';
  };
 }
-function showLanding(){
+function showLanding(about){
  if(!LANDING_HTML){renderLogin();return}
  window.wantAdmin=false;navKey='';
- history.replaceState({land:1},'',location.pathname);/* 지금 칸을 소개 칸으로 표시 */
+ if(!about)history.replaceState({land:1},'',location.pathname);/* 지금 칸을 소개 칸으로 표시 */
  document.title=INIT_TITLE;
  $('#app').innerHTML=LANDING_HTML;
  window.scrollTo(0,0);
  bindLanding();
+ if(about)setLandView(true);
 }
 async function boot(){
+ booted=true;
  S=normalize({});loadLocal();
  {const h=pendingHash||location.hash;pendingHash='';if(h&&h!=='#admin')applyRoute(h)}/* 주소(또는 로그인 전에 열려던 주소)의 화면으로 */
  render();
@@ -884,7 +903,8 @@ async function init(){
  });
  const wantAdmin=location.hash==='#admin';
  if(!me)pendingHash=location.hash;
- if(Store.configured&&!me){if(wantAdmin){renderAdminLogin();return}if(LANDING_HTML){history.replaceState({land:1},'',location.pathname);bindLanding()}else renderLogin();return}
+ if(Store.configured&&!me){if(wantAdmin){renderAdminLogin();return}if(LANDING_HTML){const ab=location.hash==='#/about';history.replaceState(ab?{land:1,about:1}:{land:1},'',location.pathname+(ab?'#/about':''));bindLanding();if(ab)setLandView(true)}else renderLogin();return}
+ if(location.hash==='#/about'&&LANDING_HTML){history.replaceState({land:1,about:1},'',location.pathname+'#/about');bindLanding();setLandView(true);return}
  if(wantAdmin&&me&&!me.admin){renderAdminLogin('이 계정은 운영진이 아니에요. 로그아웃 후 운영진 계정으로 접속해 주세요.');return}
  await boot();
 }

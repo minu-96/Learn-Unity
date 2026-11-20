@@ -15,11 +15,12 @@
 <body>
 <div class="wrap" id="app">
 <main class="land">
+<div class="lview" id="lhome">
 <section class="lh">
  <div class="lh-copy">
   <h1>유니티 훈련소</h1>
   <p class="lh-lead">고르는 퀴즈가 아니에요. C# 코드를 직접 쓰면, 어느 조건이 왜 틀렸는지 바로 알려 줘요.</p>
-  <p class="lh-act"><button class="btn lbtn" id="start" data-start type="button">시작하기</button><span class="note">설치 없이 브라우저에서 · 로그인 없이 둘러볼 수도 있어요</span></p>
+  <p class="lh-act"><span class="lbtns"><button class="btn lbtn" id="start" data-start type="button">시작하기</button><button class="btn ghost lbtn2" id="toabout" data-about type="button">서비스 소개 자세히 보기</button></span><span class="note">설치 없이 브라우저에서 · 로그인 없이 둘러볼 수도 있어요</span></p>
  </div>
  <div class="demo" aria-label="문제 화면 예시">
   <div class="demo-bar"><span>PlayerMove.cs</span><b>문제 화면 예시</b></div>
@@ -49,6 +50,24 @@
 </section>
 
 <section class="lsec">
+ <h2>13개 분야</h2>
+ <ul class="lchips"><li>코딩 첫걸음</li><li>C# 문법</li><li>Unity 핵심</li><li>컴포넌트</li><li>물리·충돌</li><li>애니메이션</li><li>파티클·VFX</li><li>게임 주스</li><li>연출</li><li>설계</li><li>수학·벡터</li><li>디버깅</li><li>최적화</li></ul>
+</section>
+
+<section class="lend">
+ <div><h2>코딩이 처음이어도 괜찮아요</h2><p>입문 구간은 "코딩이 뭔지"를 5분짜리 체험으로 보여 주는 것부터 시작해요.</p></div>
+ <button class="btn lbtn" data-start type="button">시작하기</button>
+</section>
+<p class="lfoot">스튜디오 바드 Unity 스터디용으로 만들었고, 누구나 쓸 수 있어요.</p>
+</div>
+<div class="lview" id="labout" hidden>
+<section class="lsec">
+ <p><button class="btn ghost sm" data-home type="button">← 소개로 돌아가기</button></p>
+ <h2 class="labtitle">서비스 소개</h2>
+ <p class="lh-lead">유니티 훈련소는 Unity와 C#을 문제로 배우는 코드 작성 연습장이에요. 유니티로 게임을 만들다 막히는 개념, 설계, 디버깅을 직접 코드를 써서 풀어 보며 익혀요. 개발 동아리 스터디용으로 만들었고, 누구나 둘러볼 수 있어요.</p>
+ <p><button class="btn lbtn" data-start type="button">시작하기</button></p>
+</section>
+<section class="lsec">
  <h2>한 문제는 이렇게 풀어요</h2>
  <ol class="lsteps">
   <li><b>상황과 목표를 읽어요.</b> 문제마다 상황 설명, 통과 조건, 제한이 있어요.</li>
@@ -75,12 +94,7 @@
   <div><dt>스튜디오 바드 유니티 훈련소는 무엇인가요?</dt><dd>창업동아리 스튜디오 바드 부원들이 Unity와 C#을 함께 공부하려고 만든 코드 작성 연습장(바드 유니티 훈련소)이에요. 부원이 아니어도 누구나 쓸 수 있어요.</dd></div>
  </dl>
 </section>
-
-<section class="lend">
- <div><h2>코딩이 처음이어도 괜찮아요</h2><p>입문 구간은 "코딩이 뭔지"를 5분짜리 체험으로 보여 주는 것부터 시작해요.</p></div>
- <button class="btn lbtn" data-start type="button">시작하기</button>
-</section>
-<p class="lfoot">스튜디오 바드 Unity 스터디용으로 만들었고, 누구나 쓸 수 있어요.</p>
+</div>
 <noscript><p>이 앱은 JavaScript가 필요해요.</p></noscript>
 </main>
 </div>
