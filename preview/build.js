@@ -10,8 +10,8 @@ const cfg="window.FIREBASE_CONFIG={apiKey:'preview',authDomain:'preview',project
 const parts={fake:r(path.join(root,'tests','fake-firebase.js')),cfg,logic,seed:r(path.join(__dirname,'seed.js')),app,ui:r(path.join(pub,'js','ui.js'))};
 for(const [k,v] of Object.entries(parts)){ if(/<\/script/i.test(v)||/<!--/.test(v)) throw new Error(k+' contains </script or <!--'); new Function(v); }
 const css=r(path.join(pub,'css','style.css'));
-/* 첫 화면 소개 글은 public/index.html의 <main class="land">를 그대로 가져온다 (미리보기에서는 guide.html이 없으므로 링크만 안내문으로 바꾼다) */
-const land=(r(path.join(pub,'index.html')).match(/<main class="land">[\s\S]*?<\/main>/)||[''])[0].replace(/<a href="guide\.html">([^<]*)<\/a>/,'<span>($1: 배포 후 열려요)</span>');
+/* 첫 화면 소개 글은 public/index.html의 <main class="land">를 그대로 가져온다 */
+const land=(r(path.join(pub,'index.html')).match(/<main class="land">[\s\S]*?<\/main>/)||[''])[0];
 const html=`<title>유니티 훈련소</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;700&display=swap">
