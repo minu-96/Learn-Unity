@@ -743,9 +743,17 @@ function navSync(){
  if(navPop){navPop=false;navKey=key;return}
  if(key===navKey)return;
  const st={nav:1,v:JSON.parse(JSON.stringify(Object.assign({},V,{diag:null})))};
- /* 첫 화면이거나 진단 문제를 넘기는 중이면 기록을 늘리지 않고 현재 칸만 갱신한다 */
- if(!navKey||V.diag)history.replaceState(st,'');else history.pushState(st,'');
+ exitArmed=false;
+ if(!navKey){/* 첫 화면: 맨 아래에 '바닥' 칸을 깔고 그 위에 현재 화면을 쌓는다 (바닥에서 뒤로가기를 누르면 나가기 안내) */
+  history.replaceState(Object.assign({},st,{base:1}),'');history.pushState(st,'');
+ }else if(V.diag)history.replaceState(st,'');/* 진단 문제를 넘기는 중에는 기록을 늘리지 않는다 */
+ else history.pushState(st,'');
  navKey=key;
+}
+let exitArmed=false,exitT=0;
+function navToast(msg){
+ let t=document.querySelector('.navtoast');if(!t){t=document.createElement('div');t.className='navtoast';t.setAttribute('role','status');document.body.appendChild(t)}
+ t.textContent=msg;clearTimeout(t._t);t._t=setTimeout(()=>t.remove(),2000);
 }
 window.addEventListener('popstate',e=>{
  const st=e.state;
@@ -753,7 +761,14 @@ window.addEventListener('popstate',e=>{
   if(st&&st.login)renderLogin();else if(LANDING_HTML)showLanding();
   return;
  }
- if(!st||!st.nav)return;
+ if(!st||!st.nav){history.back();return}/* 소개·로그인 칸에 닿으면(이미 로그인됨) 그대로 사이트에서 나간다 */
+ if(st.base){/* 맨 아래 칸: 처음 누르면 머물고 안내, 2초 안에 한 번 더 누르면 나간다 */
+  if(exitArmed){exitArmed=false;clearTimeout(exitT);history.back();return}
+  exitArmed=true;clearTimeout(exitT);exitT=setTimeout(()=>{exitArmed=false},2000);
+  navToast('한 번 더 누르면 사이트에서 나가요');
+  history.pushState({nav:1,v:JSON.parse(JSON.stringify(Object.assign({},V,{diag:null})))},'');
+  return;
+ }
  Object.assign(V,{tab:'home',pid:null,mode:null,stage:null,bankStage:null,diag:null},st.v);
  navPop=true;render();window.scrollTo(0,0);
 });
